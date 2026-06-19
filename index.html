@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+  <title>Manajer Liga Indonesia</title>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Manajer Liga"/>
+  <meta name="theme-color" content="#0d3b2e"/>
+  <meta name="description" content="Game manajer sepak bola kasual – Liga Indonesia"/>
+  <style>
+/* ================================================================
+   ROOT & RESET
+================================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gd:#0d3b2e;--gm:#1a5c44;--gl:#2d8c63;--gg:#3dba82;
+  --bd:#0a1f3c;--bm:#1a3a6b;--bl:#2d6abf;--bg2:#4a9eff;
+  --gold:#f0c040;--red:#e85555;--orng:#f08030;
+  --bg:#0a1812;--sf:#0f2418;--sf2:#172e20;--card:#1c3828;--cah:#234432;
+  --brd:#2a5040;--txt:#d4eadc;--dim:#7aab8a;--mut:#4a7a5a;--wh:#f0f8f2;
+  --shd:0 4px 20px rgba(0,0,0,.5);--r:10px;--rs:6px;
+}
+html,body{height:100%;background:var(--bg);color:var(--txt);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  font-size:14px;overflow-x:hidden;overscroll-behavior:none}
+
+/* ================================================================
+   APP SHELL
+================================================================ */
+#app{display:flex;flex-direction:column;height:100dvh;max-width:540px;margin:0 auto;position:relative}
+
+/* Header */
+#hdr{background:linear-gradient(135deg,var(--gd),var(--bd));border-bottom:2px solid var(--gl);
+  padding:8px 14px 6px;flex-shrink:0;position:sticky;top:0;z-index:100}
+#hdr h1{font-size:.9rem;font-weight:800;color:var(--gg);letter-spacing:.06em;text-transform:uppercase}
+#hdr-meta{display:flex;gap:8px;align-items:center;margin-top:3px;flex-wrap:wrap}
+
+.badge{background:var(--sf2);border:1px solid var(--brd);border-radius:20px;padding:2px 10px;font-size:.72rem;color:var(--dim)}
+.badge.hi{border-color:var(--gl);color:var(--gg)}
+.badge.gld{border-color:var(--gold);color:var(--gold)}
+#bgt{margin-left:auto}
+
+/* Tabs */
+#tabs{display:flex;background:var(--sf);border-bottom:2px solid var(--brd);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+#tabs::-webkit-scrollbar{display:none}
+.tb{flex:1;min-width:58px;padding:8px 2px;font-size:.68rem;font-weight:700;color:var(--mut);
+  background:none;border:none;cursor:pointer;text-align:center;letter-spacing:.02em;
+  border-bottom:3px solid transparent;text-transform:uppercase;white-space:nowrap;transition:color .2s}
+.tb:hover{color:var(--dim)}
+.tb.active{color:var(--gg);border-bottom-color:var(--gg)}
+
+/* Main scroll area */
+#main{flex:1;overflow-y:auto;padding:10px;scrollbar-width:thin;scrollbar-color:var(--brd) transparent}
+
+/* ================================================================
+   COMPONENTS
+================================================================ */
+.sec{font-size:.72rem;font-weight:700;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;
+  margin-bottom:7px;padding-bottom:4px;border-bottom:1px solid var(--brd)}
+
+.card{background:var(--card);border:1px solid var(--brd);border-radius:var(--r);padding:11px;margin-bottom:9px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:9px 14px;
+  border:none;border-radius:var(--rs);font-size:.78rem;font-weight:700;cursor:pointer;
+  transition:opacity .15s,transform .1s;letter-spacing:.03em;text-transform:uppercase}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.38;cursor:not-allowed;transform:none}
+.btn-p{background:var(--gl);color:#fff}.btn-p:hover:not(:disabled){background:var(--gg)}
+.btn-s{background:var(--bm);color:#fff}.btn-s:hover:not(:disabled){background:var(--bl)}
+.btn-g{background:var(--gold);color:#1a1200}
+.btn-d{background:var(--red);color:#fff}
+.btn-sm{padding:4px 9px;font-size:.68rem}
+.btn-blk{width:100%}
+
+.row{display:flex;gap:8px;align-items:center}
+.row.bt{justify-content:space-between}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+
+.ovr{display:inline-block;min-width:30px;text-align:center;padding:2px 4px;border-radius:4px;font-size:.78rem;font-weight:800}
+.ovr-h{background:#1a5c1a;color:#6eff6e}.ovr-m{background:#4a3a00;color:var(--gold)}.ovr-l{background:#4a1515;color:#ff7777}
+.enb{height:5px;background:var(--sf);border-radius:3px;overflow:hidden;flex:1}
+.enf{height:100%;border-radius:3px;transition:width .3s}
+.en-h{background:var(--gg)}.en-m{background:var(--gold)}.en-l{background:var(--red)}
+.mob{height:4px;background:var(--sf);border-radius:2px;overflow:hidden;flex:1}
+.mof{height:100%;border-radius:2px;transition:width .3s}
+.mo-h{background:var(--bg2)}.mo-m{background:var(--orng)}.mo-l{background:var(--red)}
+
+.pos{font-size:.6rem;font-weight:800;padding:2px 5px;border-radius:3px;letter-spacing:.04em}
+.pos-GK{background:#2a1a5a;color:#c0a0ff}.pos-DEF{background:#1a3a5a;color:#80c0ff}
+.pos-MID{background:#1a4a2a;color:#80ff90}.pos-FWD{background:#5a2020;color:#ff9090}
+
+.pill{background:var(--sf2);border-radius:20px;padding:2px 8px;font-size:.7rem;font-weight:600;border:1px solid var(--brd)}
+
+/* Tables */
+.ts{overflow-x:auto}.tbl{width:100%;border-collapse:collapse;font-size:.7rem}
+.tbl th{color:var(--mut);font-weight:700;text-align:left;padding:4px 5px;border-bottom:1px solid var(--brd)}
+.tbl td{padding:4px 5px;border-bottom:1px solid var(--sf2);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr.me td{color:var(--gg);font-weight:700}.tbl tr.lca-q td{color:var(--gold)}
+.tbl td.n,.tbl th.n{text-align:right}
+
+/* Match log */
+.mlog{list-style:none}
+.mlog li{padding:6px 9px;border-radius:var(--rs);background:var(--sf2);margin-bottom:4px;
+  font-size:.76rem;border-left:3px solid var(--brd)}
+.mlog li.win{border-left-color:var(--gg)}.mlog li.draw{border-left-color:var(--gold)}
+.mlog li.loss{border-left-color:var(--red)}.mlog li.info{border-left-color:var(--bg2)}
+
+/* Player list card */
+.plc{display:flex;align-items:center;gap:7px;padding:7px 9px;background:var(--sf2);
+  border-radius:var(--rs);border:1px solid var(--brd);margin-bottom:5px; transition: all 0.2s ease;}
+.plc:active{transform: scale(0.98);}
+.pli{flex:1;min-width:0}
+.pln{font-weight:700;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plb{display:flex;gap:5px;align-items:center;margin-top:3px}
+.brl{font-size:.6rem;color:var(--mut);min-width:12px}
+.cchip{font-size:.62rem;padding:1px 5px;border-radius:8px;border:1px solid var(--brd);color:var(--dim);background:var(--sf)}
+
+/* Fixture row */
+.fix{display:grid;grid-template-columns:1fr auto 1fr;gap:4px;align-items:center;
+  padding:7px 9px;background:var(--sf2);border-radius:var(--rs);border:1px solid var(--brd);margin-bottom:4px;font-size:.76rem}
+.fix-h{text-align:right}.fix-a{text-align:left}
+.fix-s{text-align:center;font-weight:800;font-size:.82rem;padding:2px 7px;background:var(--sf);
+  border-radius:4px;min-width:46px;color:var(--gold)}
+
+/* Toast */
+#toast{position:fixed;bottom:68px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--card);border:1px solid var(--gl);border-radius:30px;padding:9px 18px;
+  font-size:.78rem;font-weight:600;color:var(--wh);z-index:9999;transition:transform .3s;
+  pointer-events:none;white-space:nowrap;box-shadow:var(--shd);max-width:92%;text-align:center}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+/* Modal */
+#mov{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;display:none;
+  align-items:center;justify-content:center;padding:14px}
+#mov.show{display:flex}
+#mbox{background:var(--card);border:1px solid var(--gl);border-radius:var(--r);padding:18px;
+  width:100%;max-width:480px;max-height:88dvh;overflow-y:auto}
+#mbox h2{font-size:.95rem;color:var(--gg);margin-bottom:10px}
+#mbody{color:var(--txt);font-size:.8rem;line-height:1.6}
+
+/* ================================================================
+   PITCH / FORMATION DISPLAY
+================================================================ */
+.pitch-wrap{position:relative;width:100%;aspect-ratio:9/14;
+  background:linear-gradient(180deg,#1a6b30 0%,#1e7a35 50%,#1a6b30 100%);
+  border-radius:8px;overflow:hidden;border:2px solid #3a9a50}
+
+/* Grass stripes */
+.pitch-wrap::before{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(180deg,transparent 0%,transparent 7.1%,rgba(0,0,0,.08) 7.1%,rgba(0,0,0,.08) 14.3%);
+  pointer-events:none}
+
+/* Field lines */
+.pitch-lines{position:absolute;inset:0;pointer-events:none}
+.pl{position:absolute;background:rgba(255,255,255,.22)}
+.pl-hw{left:0;right:0;top:50%;height:1px}
+.pl-cc{width:22%;aspect-ratio:1;border-radius:50%;border:1px solid rgba(255,255,255,.22);
+  left:50%;top:50%;transform:translate(-50%,-50%)}
+.pl-pb-top{left:20%;right:20%;top:0;height:16%;border:1px solid rgba(255,255,255,.22);border-top:none;background:none}
+.pl-pb-bot{left:20%;right:20%;bottom:0;height:16%;border:1px solid rgba(255,255,255,.22);border-bottom:none;background:none}
+.pl-gb-top{left:34%;right:34%;top:0;height:7%;border:1px solid rgba(255,255,255,.22);border-top:none;background:none}
+.pl-gb-bot{left:34%;right:34%;bottom:0;height:7%;border:1px solid rgba(255,255,255,.22);border-bottom:none;background:none}
+
+/* Player dot on pitch */
+.pdot{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:1px;cursor:default;z-index:2; transition: transform 0.2s}
+.pdot.clickable:active{transform:translate(-50%,-50%) scale(0.9)}
+.pdot-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.58rem;font-weight:800;border:2px solid rgba(255,255,255,.5);box-shadow:0 2px 6px rgba(0,0,0,.5);
+  background:var(--bl);color:#fff;transition:all .2s}
+.pdot-circle.home-dot{background:#1a5c96;border-color:#60b0ff}
+.pdot-circle.away-dot{background:#8b1a1a;border-color:#ff8060}
+.pdot-name{font-size:.5rem;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);
+  white-space:nowrap;max-width:44px;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.pdot-ovr{font-size:.48rem;color:rgba(255,255,255,.8);text-shadow:0 1px 2px rgba(0,0,0,.8)}
+
+/* Goal animation flash */
+@keyframes goalFlash{0%{background:#fff4}50%{background:#f0c04060}100%{background:transparent}}
+.goal-flash{animation:goalFlash .6s ease-out}
+
+/* Scoreboard on pitch during live match */
+#live-board{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:600;
+  display:none;flex-direction:column;overflow-y:auto}
+#live-board.show{display:flex}
+.lb-header{background:linear-gradient(135deg,var(--gd),var(--bd));padding:10px 14px;flex-shrink:0}
+.lb-score{display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 10px 10px;flex-shrink:0}
+.lb-team{flex:1;text-align:center}
+.lb-tname{font-size:.72rem;font-weight:700;color:var(--dim);line-height:1.2}
+.lb-tgoals{font-size:2.2rem;font-weight:900;color:var(--wh)}
+.lb-sep{font-size:1.2rem;color:var(--mut);margin-top:6px}
+.lb-min{text-align:center;font-size:.7rem;color:var(--gold);font-weight:700;margin-bottom:8px}
+.lb-events{flex:1;overflow-y:auto;padding:0 12px 12px}
+.lb-evt{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;
+  background:var(--sf2);margin-bottom:4px;font-size:.74rem;border-left:3px solid var(--brd)}
+.lb-evt.goal{border-left-color:var(--gold)}
+.lb-evt.card-y{border-left-color:#f0e040}
+.lb-evt.card-r{border-left-color:var(--red)}
+.lb-evt.sub{border-left-color:var(--bg2)}
+.lb-evt .min{color:var(--gold);font-weight:800;min-width:28px}
+.lb-all-matches{padding:0 10px 14px;flex-shrink:0}
+.lb-other{display:flex;gap:6px;align-items:center;justify-content:space-between;
+  padding:5px 8px;background:var(--sf2);border-radius:4px;margin-bottom:3px;font-size:.7rem}
+.lb-other .ln{color:var(--dim);flex:1;text-align:right}
+.lb-other .sc{color:var(--gold);font-weight:700;min-width:34px;text-align:center}
+.lb-other .rn{flex:1;color:var(--dim)}
+.lb-btn-row{display:flex;gap:8px;padding:10px 12px;flex-shrink:0}
+
+/* End season */
+#end-screen{position:fixed;inset:0;background:var(--bg);z-index:800;overflow-y:auto;
+  padding:16px 14px 40px;display:none}
+#end-screen.show{display:block}
+.trophy-big{font-size:2.8rem;text-align:center;margin-bottom:6px}
+.end-t{text-align:center;font-size:1.2rem;font-weight:900;color:var(--gg);
+  margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
+.end-s{text-align:center;font-size:.76rem;color:var(--dim);margin-bottom:16px}
+.arow{display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--sf2);
+  border-radius:var(--rs);margin-bottom:5px;border:1px solid var(--brd)}
+.aicon{font-size:1.2rem}.albl{font-size:.68rem;color:var(--dim)}.aval{font-weight:700;font-size:.85rem;color:var(--wh)}
+
+/* Preseason banner */
+.preseason-banner{background:linear-gradient(135deg,#1a4a2a,#0a1f3c);border:2px solid var(--gl);
+  border-radius:var(--r);padding:18px;margin-bottom:12px;text-align:center}
+.preseason-banner h2{font-size:1.1rem;font-weight:800;color:var(--gg);margin-bottom:6px}
+.preseason-banner p{font-size:.78rem;color:var(--dim);line-height:1.6}
+
+/* Tactic selector */
+.tactic-btn{padding:6px 12px;border:1px solid var(--brd);border-radius:20px;background:var(--sf2);
+  color:var(--dim);font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s}
+.tactic-btn.sel{background:var(--gl);color:#fff;border-color:var(--gl)}
+
+/* Transfer card */
+.tc{display:flex;align-items:center;gap:8px;padding:8px 9px;background:var(--sf2);
+  border-radius:var(--rs);border:1px solid var(--brd);margin-bottom:6px}
+.tc-info{flex:1}
+.tc-name{font-weight:700;font-size:.8rem}
+.tc-det{font-size:.68rem;color:var(--dim);margin-top:1px}
+.tc-price{font-size:.78rem;font-weight:700;color:var(--gold);min-width:60px;text-align:right}
+
+/* Chemistry indicator */
+.chem-bar{height:4px;border-radius:2px;background:var(--sf);overflow:hidden;margin-top:3px}
+.chem-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--red),var(--gold),var(--gg))}
+
+@media(min-width:541px){#app{border-left:1px solid var(--brd);border-right:1px solid var(--brd)}}
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="hdr">
+    <h1>⚽ Manajer Liga Indonesia</h1>
+    <div id="hdr-meta">
+      <span class="badge hi" id="wk-badge">📍 Pramusim</span>
+      <span class="badge" id="tm-badge">–</span>
+      <span class="badge gld" id="bgt">Rp 0 M</span>
+    </div>
+  </div>
+  <nav id="tabs">
+    <button class="tb active" data-tab="dash">🏠 Utama</button>
+    <button class="tb" data-tab="squad">👥 Skuad</button>
+    <button class="tb" data-tab="league">📊 Liga</button>
+    <button class="tb" data-tab="cup">🏆 Piala</button>
+    <button class="tb" data-tab="lca">🌏 LCA</button>
+    <button class="tb" data-tab="transfer">💰 Transfer</button>
+  </nav>
+  <main id="main"></main>
+  <div id="end-screen"></div>
+  <div id="live-board"></div>
+  <div id="mov"><div id="mbox"><h2 id="mtitle"></h2><div id="mbody"></div>
+    <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-s btn-sm" onclick="closeModal()">Tutup</button>
+    </div></div></div>
+  <div id="toast"></div>
+</div>
+
+<script>
+/* ================================================================
+   ⚽ MANAJER LIGA INDONESIA v2.1
+================================================================ */
+
+/* ----------------------------------------------------------------
+   CONSTANTS
+---------------------------------------------------------------- */
+const TEAMS=[
+  "Persija Jakarta","Persib Bandung","Arema FC","Bali United","PSM Makassar",
+  "Borneo FC","Persebaya Surabaya","Madura United","PSIS Semarang","Dewa United",
+  "Barito Putera","PSS Sleman","Persik Kediri","RANS Nusantara","Persita Tangerang"
+];
+const TEAM_BUDGETS = [500, 450, 300, 480, 350, 400, 420, 320, 280, 380, 250, 260, 240, 300, 250];
+
+const CUP_WILDCARD="Nusantara Amatir FC";
+const POSITIONS={GK:4,DEF:5,MID:5,FWD:6};
+const MONTHS=["Januari","Februari","Maret","April","Mei","Juni",
+              "Juli","Agustus","September","Oktober","November","Desember"];
+const TACTICS=["4-3-3","4-4-2","3-5-2","4-2-3-1","5-3-2"];
+const SEASON_WEEKS=28;
+const CUP_ROUND_WEEKS={"16 Besar":7,"8 Besar":14,"Semifinal":21,"Final":28};
+const LCA_GROUP_WEEKS=[3,6,9,12,15,18];
+const LCA_FINAL_WEEK=25;
+
+const FN=["Andi","Budi","Candra","Deni","Eko","Fajar","Gilang","Hendra","Iwan","Joko",
+  "Kevin","Lukman","Muhamad","Novan","Okky","Pandu","Rizki","Sandi","Taufik","Umar",
+  "Victor","Wahyu","Yogi","Zaki","Ariel","Bagas","Cahyo","Daffa","Erwin","Fauzi",
+  "Geri","Hafiz","Irfan","Jafar","Karim","Luthfi","Mahdi","Naufal","Oscar","Putu",
+  "Rahmat","Satria","Teguh","Ulfan","Vian","Wahid","Yusuf","Zulfa","Amar","Bimo"];
+const LN=["Pratama","Hidayat","Santoso","Wibowo","Saputra","Kurniawan","Firmansyah","Ramadan",
+  "Setiawan","Nugroho","Prayoga","Budiman","Surya","Hakim","Putera","Ramadhan",
+  "Adi","Susanto","Gunawan","Wahyudi","Firdaus","Malik","Noor","Zainal","Iskandar",
+  "Alfarizi","Bakri","Cahyadi","Darmawan","Effendi","Febrianto","Gufron","Hadi","Ibrahim",
+  "Junaidi","Kusuma","Laksono","Muhajir","Nasution","Oktavian","Prasetyo","Rambe","Saiful"];
+
+/* ----------------------------------------------------------------
+   UTILITIES
+---------------------------------------------------------------- */
+const rnd=(lo,hi)=>Math.floor(Math.random()*(hi-lo+1))+lo;
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const fmt=n=>`Rp ${n} M`;
+const randName=()=>pick(FN)+' '+pick(LN);
+
+function weekToMonthIdx(w){
+  if(w<=0)return 6; // Juli
+  const order=[7,8,9,10,11,12,0,1,2,3,4];
+  return order[Math.min(Math.floor((w-1)/2.8),order.length-1)];
+}
+
+function ovrCls(v){return v>=78?'ovr-h':v>=70?'ovr-m':'ovr-l'}
+function enCls(v){return v>=70?'en-h':v>=40?'en-m':'en-l'}
+function moCls(v){return v>=60?'mo-h':v>=30?'mo-m':'mo-l'}
+
+/* ----------------------------------------------------------------
+   PLAYER GENERATION
+---------------------------------------------------------------- */
+function genPlayer(pos,teamIndex){
+  const ovrBase=rnd(62,84);
+  const chemBase=rnd(60,100);
+  return{
+    id:Math.random().toString(36).slice(2,10),
+    name:randName(),pos,ovr:ovrBase,energy:100,moral:80+rnd(0,20),
+    contract:rnd(1,3),goals:0,assists:0,appearances:0,
+    teamIndex,
+    inXI:false,
+    chem:chemBase,
+  };
+}
+
+function genSquad(teamIndex){
+  const sq=[];
+  Object.entries(POSITIONS).forEach(([pos,count])=>{
+    for(let i=0;i<count;i++) sq.push(genPlayer(pos,teamIndex));
+  });
+  setDefaultXI(sq);
+  return sq;
+}
+
+function setDefaultXI(squad,tactic='4-3-3'){
+  squad.forEach(p=>p.inXI=false);
+  const slots=getTacticSlots(tactic);
+  Object.entries(slots).forEach(([pos,count])=>{
+    const pool=squad.filter(p=>p.pos===pos).sort((a,b)=>b.ovr-a.ovr);
+    pool.slice(0,count).forEach(p=>p.inXI=true);
+  });
+}
+
+function getTacticSlots(t){
+  return{
+    '4-3-3':{GK:1,DEF:4,MID:3,FWD:3},
+    '4-4-2':{GK:1,DEF:4,MID:4,FWD:2},
+    '3-5-2':{GK:1,DEF:3,MID:5,FWD:2},
+    '4-2-3-1':{GK:1,DEF:4,MID:5,FWD:1},
+    '5-3-2':{GK:1,DEF:5,MID:3,FWD:2},
+  }[t]||{GK:1,DEF:4,MID:3,FWD:3};
+}
+
+/* ----------------------------------------------------------------
+   CHEMISTRY ENGINE
+---------------------------------------------------------------- */
+function calcTeamChemistry(teamIdx,tactic){
+  const squad=G.squads[teamIdx];
+  if(!squad)return 50;
+  const slots=getTacticSlots(tactic||G.tactics[teamIdx]||'4-3-3');
+  const xi=squad.filter(p=>p.inXI);
+  if(xi.length<11)return 40;
+  const avgChem=xi.reduce((s,p)=>s+p.chem,0)/xi.length;
+  let posBonus=0;
+  Object.entries(slots).forEach(([pos,need])=>{
+    const have=xi.filter(p=>p.pos===pos).length;
+    if(have===need)posBonus+=8;
+    else posBonus-=Math.abs(have-need)*4;
+  });
+  return clamp(avgChem+posBonus,0,100);
+}
+
+/* ----------------------------------------------------------------
+   MATCH ENGINE (Chemistry + OVR based)
+---------------------------------------------------------------- */
+function teamStrength(teamIdx,tactic){
+  if(teamIdx===15)return 58+rnd(-3,3); 
+  const squad=G.squads[teamIdx];
+  if(!squad||!squad.length)return 60;
+  const xi=squad.filter(p=>p.inXI);
+  const players=xi.length>=11?xi:squad;
+  const avgOvr=players.reduce((s,p)=>s+p.ovr,0)/players.length;
+  const avgMoral=players.reduce((s,p)=>s+p.moral,0)/players.length;
+  const avgEnergy=players.reduce((s,p)=>s+p.energy,0)/players.length;
+  const chem=calcTeamChemistry(teamIdx,tactic);
+  
+  let str=avgOvr;
+  str+=avgMoral*0.05;
+  if(avgEnergy>80)str+=3;
+  else if(avgEnergy<40)str-=4;
+  str+=chem*0.08;
+  return str;
+}
+
+function simulateMatch(hIdx,aIdx,hTactic,aTactic){
+  const hStr=teamStrength(hIdx,hTactic);
+  const aStr=teamStrength(aIdx,aTactic);
+  const hChem=hIdx===15?50:calcTeamChemistry(hIdx,hTactic);
+  const aChem=aIdx===15?50:calcTeamChemistry(aIdx,aTactic);
+  const hRng=rnd(-5,5)*(1-hChem/200);
+  const aRng=rnd(-5,5)*(1-aChem/200);
+  const diff=(hStr+hRng)-(aStr+aRng)+2;
+
+  let h,a;
+  if(diff>10){h=rnd(2,4);a=rnd(0,1);}
+  else if(diff>5){h=rnd(1,3);a=rnd(0,2);}
+  else if(diff>1){h=rnd(0,2);a=rnd(0,2);}
+  else if(diff>-5){h=rnd(0,2);a=rnd(0,2);}
+  else if(diff>-10){h=rnd(0,2);a=rnd(1,3);}
+  else{h=rnd(0,1);a=rnd(2,4);}
+  return{home:h,away:a,hStr,aStr,hChem,aChem};
+}
+
+function generateEvents(hIdx,aIdx,homeGoals,awayGoals){
+  const events=[];
+  const allGoals=[
+    ...Array(homeGoals).fill(0).map(()=>({team:'home',min:rnd(5,90)})),
+    ...Array(awayGoals).fill(0).map(()=>({team:'away',min:rnd(5,90)}))
+  ].sort((a,b)=>a.min-b.min);
+
+  allGoals.forEach(g=>{
+    const scorerSquad=g.team==='home'?hIdx:aIdx;
+    let scorerName='?';
+    if(scorerSquad!==15){
+      const sq=G.squads[scorerSquad];
+      const xi=sq.filter(p=>p.inXI&&(p.pos==='FWD'||p.pos==='MID'));
+      if(xi.length)scorerName=pick(xi).name;
+    }
+    events.push({type:'goal',min:g.min,team:g.team,player:scorerName});
+  });
+
+  const extraCount=rnd(2,5);
+  for(let i=0;i<extraCount;i++){
+    const type=Math.random()<0.5?'sub':(Math.random()<0.7?'card-y':'card-r');
+    const team=Math.random()<0.5?'home':'away';
+    const idx=team==='home'?hIdx:aIdx;
+    let pname='–';
+    if(idx!==15){
+      const sq=G.squads[idx];
+      if(sq&&sq.length)pname=pick(sq).name;
+    }
+    events.push({type,min:rnd(1,90),team,player:pname});
+  }
+  return events.sort((a,b)=>a.min-b.min);
+}
+
+function penaltyShootout(){return Math.random()<0.5?'home':'away'}
+
+function applyMatchEffects(teamIdx,result){
+  if(teamIdx===15)return;
+  G.squads[teamIdx].forEach(p=>{
+    p.energy=clamp(p.energy-rnd(10,15),0,100);
+    if(result==='win')p.moral=clamp(p.moral+5,0,100);
+    if(result==='loss')p.moral=clamp(p.moral-5,0,100);
+  });
+}
+
+function applyByeRecovery(teamIdx){
+  if(teamIdx===15)return;
+  G.squads[teamIdx].forEach(p=>{p.energy=clamp(p.energy+10,0,100)});
+}
+
+function awardGoals(teamIdx,goals,comp){
+  if(teamIdx===15||goals===0)return;
+  const sq=G.squads[teamIdx];
+  const xi=sq.filter(p=>p.inXI&&(p.pos==='FWD'||p.pos==='MID'));
+  const pool=xi.length?xi:sq.filter(p=>p.pos==='FWD'||p.pos==='MID');
+  if(!pool.length)return;
+  for(let i=0;i<goals;i++){
+    const p=pick(pool);p.goals++;
+    const key=`${teamIdx}_${p.id}`;
+    if(!G.topScorers[comp])G.topScorers[comp]={};
+    G.topScorers[comp][key]=(G.topScorers[comp][key]||0)+1;
+  }
+}
+
+function awardAppearance(teamIdx){
+  if(teamIdx===15)return;
+  G.squads[teamIdx].filter(p=>p.inXI).forEach(p=>p.appearances++);
+}
+
+/* ----------------------------------------------------------------
+   SCHEDULE
+---------------------------------------------------------------- */
+function buildSchedule(){
+  const tms=[...Array(15).keys(),15];
+  function genRounds(arr){
+    const T=arr.length;
+    const a=[...arr];const fixed=a.shift();const rds=[];
+    for(let r=0;r<T-1;r++){
+      const pairs=[[fixed,a[0]]];
+      for(let i=1;i<T/2;i++)pairs.push([a[i],a[T-1-i]]);
+      rds.push(pairs);a.unshift(a.pop());
+    }
+    return rds;
+  }
+  const first=genRounds(tms);
+  const second=first.map(rd=>rd.map(([a,b])=>[b,a]));
+  return[...first,...second].slice(0,28);
+}
+
+function buildCupBracket(){
+  const shuffled=[...Array(15).keys(),15].sort(()=>Math.random()-.5);
+  const r16=[];
+  for(let i=0;i<16;i+=2)r16.push([shuffled[i],shuffled[i+1]]);
+  return{"16 Besar":r16,"8 Besar":null,"Semifinal":null,"Final":null};
+}
+
+function genMarket(){
+  const ps=[];const poss=['GK','DEF','MID','FWD'];
+  for(let i=0;i<24;i++){
+    const pos=pick(poss);const ovr=rnd(65,86);
+    ps.push({id:Math.random().toString(36).slice(2,10),name:randName(),pos,ovr,
+      contract:rnd(1,3),chem:rnd(60,100),price:Math.round((ovr-60)*2.5+rnd(0,12))});
+  }
+  return ps;
+}
+
+/* ----------------------------------------------------------------
+   STATE
+---------------------------------------------------------------- */
+let G;
+
+function freshState(){
+  const squads=TEAMS.map((_,i)=>genSquad(i));
+  const tactics=TEAMS.map(()=>pick(TACTICS));
+  const leagueTable=TEAMS.map((name,i)=>({teamIdx:i,name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0}));
+  const lcaInitial=[...Array(15).keys()].sort(()=>Math.random()-.5).slice(0,4);
+  return{
+    season:1,week:0,phase:'preseason', 
+    preseasonWeeksLeft:2, 
+    playerTeamIdx:0, // Akan di-override saat Select Team
+    budget:0, // Akan di-override saat Select Team
+    squads,tactics,
+    leagueTable,
+    schedule:buildSchedule(),
+    leagueResults:[],
+    cupBracket:buildCupBracket(),
+    cupResults:{},cupWinner:null,cupRoundsPlayed:{},
+    lcaTeamIndices:lcaInitial,
+    lcaResults:[],
+    lcaTable:lcaInitial.map(idx=>({teamIdx:idx,p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0})),
+    lcaFinalResult:null,lcaWinner:null,
+    lcaGroupDone:false,lcaFinalDone:false,
+    transferMarket:genMarket(),
+    transfersDone:0,
+    log:[{cls:'info',text:'🌟 Selamat datang! Kamu punya 2 minggu transfer sebelum liga dimulai.'}],
+    topScorers:{league:{},cup:{},lca:{}},
+    history:[],
+    byeHistory:[],
+  };
+}
+
+function saveState(){try{localStorage.setItem('mli2_save',JSON.stringify(G));}catch(e){}}
+function loadState(){try{const s=localStorage.getItem('mli2_save');if(s){G=JSON.parse(s);return true;}}catch(e){}return false;}
+
+/* ----------------------------------------------------------------
+   LEAGUE WEEK
+---------------------------------------------------------------- */
+function playLeagueWeek(){
+  if(G.phase==='preseason'){
+    if(G.preseasonWeeksLeft>1){
+      G.preseasonWeeksLeft--;
+      G.log.unshift({cls:'info',text:`⏳ Pramusim Minggu ${3-G.preseasonWeeksLeft}: ${G.preseasonWeeksLeft} minggu lagi sebelum liga!`});
+      saveState();renderAll();
+      showToast(`⏳ Pramusim: ${G.preseasonWeeksLeft} minggu lagi`);
+      return;
+    } else {
+      G.phase='league';
+      G.preseasonWeeksLeft=0;
+      G.log.unshift({cls:'info',text:'🏁 Liga dimulai! Semangat!'});
+    }
+  }
+  if(G.week>=SEASON_WEEKS){showEndSeason();return;}
+
+  G.week++;
+  const weekMatches=G.schedule[G.week-1];
+  let byeTeam=null;
+  const allResults=[];
+
+  weekMatches.forEach(([hIdx,aIdx])=>{
+    if(hIdx===15||aIdx===15){byeTeam=hIdx===15?aIdx:hIdx;return;}
+    const ht=G.tactics[hIdx]||'4-3-3';
+    const at=G.tactics[aIdx]||'4-3-3';
+    const score=simulateMatch(hIdx,aIdx,ht,at);
+    let hr,ar;
+    if(score.home>score.away){hr='win';ar='loss';}
+    else if(score.home<score.away){hr='loss';ar='win';}
+    else{hr='draw';ar='draw';}
+    updateTable(hIdx,score.home,score.away,hr);
+    updateTable(aIdx,score.away,score.home,ar);
+    applyMatchEffects(hIdx,hr);applyMatchEffects(aIdx,ar);
+    awardGoals(hIdx,score.home,'league');awardGoals(aIdx,score.away,'league');
+    awardAppearance(hIdx);awardAppearance(aIdx);
+    const events=generateEvents(hIdx,aIdx,score.home,score.away);
+    const r={week:G.week,homeIdx:hIdx,awayIdx:aIdx,homeScore:score.home,awayScore:score.away,
+      hChem:Math.round(score.hChem),aChem:Math.round(score.aChem),events};
+    G.leagueResults.push(r);
+    allResults.push(r);
+    if(hIdx===G.playerTeamIdx||aIdx===G.playerTeamIdx){
+      const isH=hIdx===G.playerTeamIdx;
+      const my=isH?score.home:score.away;
+      const op=isH?score.away:score.home;
+      const oi=isH?aIdx:hIdx;
+      const cls=my>op?'win':my<op?'loss':'draw';
+      G.log.unshift({cls,text:`Liga P${G.week}: ${TEAMS[G.playerTeamIdx]} ${my}–${op} ${TEAMS[oi]}`});
+    }
+  });
+
+  if(byeTeam!==null){
+    applyByeRecovery(byeTeam);
+    G.byeHistory.push({week:G.week,teamIdx:byeTeam});
+    if(byeTeam===G.playerTeamIdx)G.log.unshift({cls:'info',text:`Pekan ${G.week}: Bye – Energi tim pulih +10% 💪`});
+  }
+
+  sortTable();
+
+  if(LCA_GROUP_WEEKS.includes(G.week)&&!G.lcaGroupDone)simulateLCAGroupWeek();
+  if(G.week===LCA_FINAL_WEEK&&!G.lcaFinalDone&&G.lcaGroupDone)simulateLCAFinal();
+
+  G.log=G.log.slice(0,30);
+
+  if(G.week>=SEASON_WEEKS){
+    if(!G.lcaGroupDone)finalizeLCAGroup();
+    if(!G.lcaFinalDone)simulateLCAFinal();
+    saveState();
+    showLiveBoard(allResults,()=>showEndSeason());
+    return;
+  }
+
+  saveState();
+  showLiveBoard(allResults,()=>{
+    renderAll();
+    const cup=getCupRoundForCurrentWeek();
+    if(cup)setTimeout(()=>showToast(`🏆 Jadwal ${cup} Piala siap!`),800);
+  });
+}
+
+function updateTable(ti,gf,ga,res){
+  const r=G.leagueTable.find(r=>r.teamIdx===ti);if(!r)return;
+  r.played++;r.gf+=gf;r.ga+=ga;r.gd=r.gf-r.ga;
+  if(res==='win'){r.won++;r.pts+=3;}
+  if(res==='draw'){r.drawn++;r.pts+=1;}
+  if(res==='loss')r.lost++;
+}
+
+function sortTable(){
+  G.leagueTable.sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||a.name.localeCompare(b.name));
+}
+
+/* ----------------------------------------------------------------
+   LIVE MATCH BOARD ANIMATION
+---------------------------------------------------------------- */
+let liveInterval=null;
+
+function showLiveBoard(allResults,onDone){
+  if(!allResults||!allResults.length){onDone&&onDone();return;}
+  const lb=document.getElementById('live-board');
+  const myMatch=allResults.find(r=>r.homeIdx===G.playerTeamIdx||r.awayIdx===G.playerTeamIdx);
+  const otherMatches=allResults.filter(r=>r!==myMatch);
+  const myEvents=myMatch?[...myMatch.events]:[];
+  const maxMin=90;
+  let currentMin=0;
+  let hScore=0,aScore=0;
+
+  function render(min){
+    const eventsToShow=myEvents.filter(e=>e.min<=min);
+    const hGoals=eventsToShow.filter(e=>e.type==='goal'&&e.team==='home').length;
+    const aGoals=eventsToShow.filter(e=>e.type==='goal'&&e.team==='away').length;
+    hScore=myMatch?hGoals:0;aScore=myMatch?aGoals:0;
+
+    const hName=myMatch?(myMatch.homeIdx===G.playerTeamIdx?`<b style="color:var(--gg)">${TEAMS[G.playerTeamIdx]}</b>`:TEAMS[myMatch.homeIdx]):'–';
+    const aName=myMatch?(myMatch.awayIdx===G.playerTeamIdx?`<b style="color:var(--gg)">${TEAMS[G.playerTeamIdx]}</b>`:TEAMS[myMatch.awayIdx]):'–';
+
+    const eventIcons={goal:'⚽',sub:'🔄','card-y':'🟨','card-r':'🟥'};
+
+    lb.innerHTML=`
+      <div class="lb-header">
+        <div class="row bt">
+          <span style="font-size:.8rem;font-weight:700;color:var(--gg)">⚽ Pekan ${G.week} – Sedang Berlangsung</span>
+          <span class="pill" style="color:var(--gold)">Liga</span>
+        </div>
+      </div>
+      ${myMatch?`
+      <div style="background:var(--sf);padding:6px 10px 2px;font-size:.68rem;color:var(--dim);text-align:center;">
+        Tim Kamu | Chemistry: ${myMatch.homeIdx===G.playerTeamIdx?myMatch.hChem:myMatch.aChem}%
+        <div class="chem-bar"><div class="chem-fill" style="width:${myMatch.homeIdx===G.playerTeamIdx?myMatch.hChem:myMatch.aChem}%"></div></div>
+      </div>
+      <div class="lb-score">
+        <div class="lb-team"><div class="lb-tname">${hName}</div><div class="lb-tgoals">${hScore}</div></div>
+        <div class="lb-sep">–</div>
+        <div class="lb-team"><div class="lb-tname">${aName}</div><div class="lb-tgoals">${aScore}</div></div>
+      </div>
+      <div class="lb-min">${min>=90?'⏱️ Selesai':`⏱️ Menit ${min}'`}</div>
+      `:
+      `<div style="padding:14px;text-align:center;color:var(--dim);font-size:.8rem;">Tim kamu tidak bermain pekan ini (Bye)</div>`}
+
+      ${myMatch?renderLivePitch(myMatch,eventsToShow,min):''}
+
+      <div class="lb-events">
+        ${eventsToShow.slice().reverse().map(e=>`
+          <div class="lb-evt ${e.type}">
+            <span class="min">${e.min}'</span>
+            <span>${eventIcons[e.type]||'•'}</span>
+            <span style="flex:1">${e.player} <span style="color:var(--dim)">(${e.team==='home'?'Tuan Rumah':'Tamu'})</span></span>
+          </div>`).join('')}
+        ${!eventsToShow.length?`<p style="color:var(--mut);font-size:.76rem;text-align:center;padding:10px">Menunggu aksi pertama...</p>`:''}
+      </div>
+
+      <div class="lb-all-matches">
+        <div class="sec" style="margin-bottom:6px">Semua Pertandingan Pekan ${G.week}</div>
+        ${allResults.map(r=>{
+          const evDone=r.events.filter(e=>e.type==='goal'&&e.min<=min);
+          const gh=evDone.filter(e=>e.team==='home').length;
+          const ga=evDone.filter(e=>e.team==='away').length;
+          const isMy=r===myMatch;
+          return`<div class="lb-other" style="${isMy?'border:1px solid var(--gl);border-radius:4px;':''}">
+            <span class="ln">${TEAMS[r.homeIdx]||'?'}</span>
+            <span class="sc">${min>=90?r.homeScore:gh} – ${min>=90?r.awayScore:ga}</span>
+            <span class="rn">${TEAMS[r.awayIdx]||'?'}</span>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div class="lb-btn-row">
+        ${min<90?`<button class="btn btn-s btn-sm" onclick="skipToEnd()">⏩ Skip ke Akhir</button>`:''}
+        ${min>=90?`<button class="btn btn-p" style="flex:1" onclick="closeLiveBoard()">✅ Lanjut</button>`:''}
+      </div>
+    `;
+    lb.classList.add('show');
+  }
+
+  function tick(){
+    currentMin=Math.min(currentMin+rnd(3,8),90);
+    render(currentMin);
+    if(currentMin>=90){
+      clearInterval(liveInterval);liveInterval=null;
+      window._liveDone=onDone;
+    }
+  }
+
+  clearInterval(liveInterval);
+  currentMin=0;render(0);
+  liveInterval=setInterval(tick,600);
+
+  window._liveDone=onDone;
+  window._liveAllResults=allResults;
+  window._liveMaxMin=maxMin;
+}
+
+function renderLivePitch(match,events,currentMin){
+  const hIdx=match.homeIdx;const aIdx=match.awayIdx;
+  const hSquad=hIdx!==15?G.squads[hIdx].filter(p=>p.inXI).slice(0,11):[];
+  const aSquad=aIdx!==15?G.squads[aIdx].filter(p=>p.inXI).slice(0,11):[];
+  const hTactic=hIdx!==15?(G.tactics[hIdx]||'4-3-3'):'4-3-3';
+  const aTactic=aIdx!==15?(G.tactics[aIdx]||'4-3-3'):'4-3-3';
+  const hPos=getFormationPositions(hTactic,'home');
+  const aPos=getFormationPositions(aTactic,'away');
+  
+  const lastGoal=events.filter(e=>e.type==='goal').slice(-1)[0];
+  const flashClass=lastGoal&&lastGoal.min>=currentMin-5?'goal-flash':'';
+
+  const hDots=hSquad.slice(0,hPos.length).map((p,i)=>{
+    const pos=hPos[i]||{x:50,y:50};
+    return`<div class="pdot" style="left:${pos.x}%;top:${pos.y}%;">
+      <div class="pdot-circle home-dot">${p.ovr}</div>
+      <div class="pdot-name">${p.name.split(' ')[0]}</div>
+    </div>`;
+  }).join('');
+  const aDots=aSquad.slice(0,aPos.length).map((p,i)=>{
+    const pos=aPos[i]||{x:50,y:50};
+    return`<div class="pdot" style="left:${pos.x}%;top:${pos.y}%;">
+      <div class="pdot-circle away-dot">${p.ovr}</div>
+      <div class="pdot-name">${p.name.split(' ')[0]}</div>
+    </div>`;
+  }).join('');
+
+  return`<div style="padding:8px 10px;flex-shrink:0;">
+    <div class="pitch-wrap ${flashClass}">
+      <div class="pitch-lines">
+        <div class="pl pl-hw"></div>
+        <div class="pl pl-cc"></div>
+        <div class="pl pl-pb-top"></div>
+        <div class="pl pl-pb-bot"></div>
+        <div class="pl pl-gb-top"></div>
+        <div class="pl pl-gb-bot"></div>
+      </div>
+      ${hDots}${aDots}
+      <div class="pdot" style="left:${45+rnd(-20,20)}%;top:${45+rnd(-30,30)}%;z-index:3;">
+        <div style="width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 0 6px #fff8;border:1px solid #ccc;"></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function getFormationPositions(tactic,side){
+  const isHome=side==='home';
+  const rows=tacticRows(tactic);
+  const positions=[];
+  positions.push({x:50,y:isHome?93:7});
+  const ySteps=isHome?[75,58,40,20]:[25,42,60,80];
+  rows.forEach((count,ri)=>{
+    const y=ySteps[ri]||50;
+    const step=80/(count+1);
+    for(let i=0;i<count;i++){
+      positions.push({x:10+(i+1)*step,y});
+    }
+  });
+  return positions;
+}
+
+function tacticRows(t){
+  const m={
+    '4-3-3':[4,3,3],'4-4-2':[4,4,2],'3-5-2':[3,5,2],
+    '4-2-3-1':[4,2,3,1],'5-3-2':[5,3,2]
+  };
+  return m[t]||[4,3,3];
+}
+
+function skipToEnd(){
+  clearInterval(liveInterval);liveInterval=null;
+  const allResults=window._liveAllResults||[];
+  const lb=document.getElementById('live-board');
+  const myMatch=allResults.find(r=>r.homeIdx===G.playerTeamIdx||r.awayIdx===G.playerTeamIdx);
+  showLiveFinal(allResults,myMatch);
+}
+
+function showLiveFinal(allResults,myMatch){
+  const lb=document.getElementById('live-board');
+  const hName=myMatch?TEAMS[myMatch.homeIdx]:'–';
+  const aName=myMatch?TEAMS[myMatch.awayIdx]:'–';
+  lb.innerHTML=`
+    <div class="lb-header">
+      <div class="row bt">
+        <span style="font-size:.8rem;font-weight:700;color:var(--gg)">⚽ Pekan ${G.week} – Hasil Akhir</span>
+        <span class="pill" style="color:var(--gold)">FT</span>
+      </div>
+    </div>
+    ${myMatch?`
+    <div class="lb-score">
+      <div class="lb-team">
+        <div class="lb-tname" style="${myMatch.homeIdx===G.playerTeamIdx?'color:var(--gg)':''}">${hName}</div>
+        <div class="lb-tgoals">${myMatch.homeScore}</div>
+      </div>
+      <div style="font-size:1.5rem;color:var(--mut);margin-top:8px">–</div>
+      <div class="lb-team">
+        <div class="lb-tname" style="${myMatch.awayIdx===G.playerTeamIdx?'color:var(--gg)':''}">${aName}</div>
+        <div class="lb-tgoals">${myMatch.awayScore}</div>
+      </div>
+    </div>
+    <div class="lb-min">⏱️ 90' Selesai</div>
+    `:
+    `<div style="padding:18px;text-align:center;color:var(--dim)">Tim kamu tidak bermain (Bye ✅)</div>`}
+    <div class="lb-all-matches">
+      <div class="sec" style="margin-bottom:6px">Semua Hasil Pekan ${G.week}</div>
+      ${allResults.map(r=>`<div class="lb-other">
+        <span class="ln">${TEAMS[r.homeIdx]}</span>
+        <span class="sc">${r.homeScore} – ${r.awayScore}</span>
+        <span class="rn">${TEAMS[r.awayIdx]}</span>
+      </div>`).join('')}
+    </div>
+    <div class="lb-btn-row">
+      <button class="btn btn-p" style="flex:1" onclick="closeLiveBoard()">✅ Lanjut</button>
+    </div>
+  `;
+}
+
+function closeLiveBoard(){
+  clearInterval(liveInterval);liveInterval=null;
+  document.getElementById('live-board').classList.remove('show');
+  const done=window._liveDone;
+  window._liveDone=null;
+  if(done)done();
+}
+
+/* ----------------------------------------------------------------
+   CUP
+---------------------------------------------------------------- */
+function getCupRoundForCurrentWeek(){
+  return Object.entries(CUP_ROUND_WEEKS).find(([r,w])=>w===G.week)?.[0];
+}
+
+function playCupRound(){
+  const rn=getCupRoundForCurrentWeek();
+  if(!rn)return;
+  if(G.cupRoundsPlayed[rn]){showToast('Babak ini sudah dimainkan!');return;}
+  const pairs=G.cupBracket[rn];
+  if(!pairs){showToast('Bracket belum tersedia');return;}
+  const results=[];const winners=[];
+
+  pairs.forEach(([hIdx,aIdx])=>{
+    const ht=G.tactics[hIdx]||'4-3-3';const at=G.tactics[aIdx]||'4-3-3';
+    const score=simulateMatch(hIdx,aIdx,ht,at);
+    let winner;
+    if(score.home>score.away)winner=hIdx;
+    else if(score.home<score.away)winner=aIdx;
+    else winner=penaltyShootout()==='home'?hIdx:aIdx;
+    const r={homeIdx:hIdx,awayIdx:aIdx,homeScore:score.home,awayScore:score.away,winner,
+      events:generateEvents(hIdx,aIdx,score.home,score.away)};
+    results.push(r);winners.push(winner);
+    const hr=score.home>score.away?'win':score.home<score.away?'loss':(winner===hIdx?'win':'loss');
+    const ar=hr==='win'?'loss':hr==='loss'?'win':'draw';
+    applyMatchEffects(hIdx,hr);applyMatchEffects(aIdx,ar);
+    awardGoals(hIdx,score.home,'cup');awardGoals(aIdx,score.away,'cup');
+    if(hIdx===G.playerTeamIdx||aIdx===G.playerTeamIdx){
+      const isH=hIdx===G.playerTeamIdx;
+      const my=isH?score.home:score.away;const op=isH?score.away:score.home;
+      const oi=isH?aIdx:hIdx;
+      const cls=winner===G.playerTeamIdx?'win':'loss';
+      const on=oi===15?CUP_WILDCARD:TEAMS[oi];
+      G.log.unshift({cls,text:`Piala ${rn}: ${TEAMS[G.playerTeamIdx]} ${my}–${op} ${on}`});
+    }
+  });
+
+  G.cupResults[rn]=results;G.cupRoundsPlayed[rn]=true;
+  const next={"16 Besar":"8 Besar","8 Besar":"Semifinal","Semifinal":"Final"}[rn];
+  if(next){
+    const np=[];for(let i=0;i<winners.length;i+=2)np.push([winners[i],winners[i+1]]);
+    G.cupBracket[next]=np;
+  } else {G.cupWinner=winners[0];G.cupBracket.Final=pairs;}
+
+  saveState();
+  showLiveBoard(results.filter(r=>r.homeIdx===G.playerTeamIdx||r.awayIdx===G.playerTeamIdx),()=>{
+    renderAll();showToast(`🏆 ${rn} Piala selesai!`);
+  });
+}
+
+/* ----------------------------------------------------------------
+   LCA
+---------------------------------------------------------------- */
+function simulateLCAGroupWeek(){
+  const teams=G.lcaTeamIndices;
+  const lcaWeekIdx=LCA_GROUP_WEEKS.indexOf(G.week);
+  if(lcaWeekIdx<0)return;
+  const allPairs=[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
+  const pair=allPairs[lcaWeekIdx];
+  const[ai,bi]=[teams[pair[0]],teams[pair[1]]];
+  const ht=G.tactics[ai]||'4-3-3';const at=G.tactics[bi]||'4-3-3';
+  const score=simulateMatch(ai,bi,ht,at);
+  let res='draw';
+  if(score.home>score.away)res='win';
+  else if(score.home<score.away)res='loss';
+  G.lcaResults.push({homeIdx:ai,awayIdx:bi,homeScore:score.home,awayScore:score.away,week:G.week});
+  updateLCATable(ai,score.home,score.away,res);
+  updateLCATable(bi,score.away,score.home,res==='win'?'loss':res==='loss'?'win':'draw');
+  awardGoals(ai,score.home,'lca');awardGoals(bi,score.away,'lca');
+  if(G.lcaResults.length>=6)finalizeLCAGroup();
+  if(ai===G.playerTeamIdx||bi===G.playerTeamIdx){
+    const isH=ai===G.playerTeamIdx;
+    const my=isH?score.home:score.away;const op=isH?score.away:score.home;
+    const oi=isH?bi:ai;
+    const cls=(isH&&res==='win')||(!isH&&res==='loss')?'win':res==='draw'?'draw':'loss';
+    G.log.unshift({cls,text:`LCA: ${TEAMS[G.playerTeamIdx]} ${my}–${op} ${TEAMS[oi]}`});
+  }
+}
+
+function updateLCATable(ti,gf,ga,res){
+  let r=G.lcaTable.find(r=>r.teamIdx===ti);if(!r)return;
+  r.p++;r.gf+=gf;r.ga+=ga;
+  if(res==='win'){r.w++;r.pts+=3;}
+  if(res==='draw'){r.d++;r.pts+=1;}
+  if(res==='loss')r.l++;
+}
+
+function finalizeLCAGroup(){
+  if(G.lcaGroupDone)return;
+  G.lcaGroupDone=true;
+  G.lcaTable.sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga));
+}
+
+function simulateLCAFinal(){
+  if(G.lcaFinalDone||!G.lcaGroupDone)return;
+  G.lcaFinalDone=true;
+  const top2=G.lcaTable.slice(0,2).map(r=>r.teamIdx);
+  const score=simulateMatch(top2[0],top2[1],G.tactics[top2[0]],G.tactics[top2[1]]);
+  let winner;
+  if(score.home>score.away)winner=top2[0];
+  else if(score.home<score.away)winner=top2[1];
+  else winner=penaltyShootout()==='home'?top2[0]:top2[1];
+  G.lcaFinalResult={homeIdx:top2[0],awayIdx:top2[1],homeScore:score.home,awayScore:score.away,winner};
+  G.lcaWinner=winner;
+  G.log.unshift({cls:'info',text:`🌏 Final LCA: ${TEAMS[top2[0]]} ${score.home}–${score.away} ${TEAMS[top2[1]]}`});
+}
+
+/* ----------------------------------------------------------------
+   END OF SEASON
+---------------------------------------------------------------- */
+function getTopScorer(comp){
+  const data=G.topScorers[comp];
+  if(!data||!Object.keys(data).length)return'Belum ada gol';
+  let best=null,bestG=0;
+  Object.entries(data).forEach(([k,g])=>{if(g>bestG){bestG=g;best=k;}});
+  if(!best)return'Belum ada gol';
+  const[ti,pid]=best.split('_');
+  const sq=G.squads[parseInt(ti)];
+  const p=sq?.find(x=>x.id===pid);
+  return p?`${p.name} (${TEAMS[parseInt(ti)]}) – ${bestG} gol`:'N/A';
+}
+
+function getTopScorersList(comp,limit=5){
+  const data=G.topScorers[comp];
+  if(!data||!Object.keys(data).length)return[];
+  return Object.entries(data).sort((a,b)=>b[1]-a[1]).slice(0,limit).map(([k,goals])=>{
+    const[ti,pid]=k.split('_');
+    const sq=G.squads[parseInt(ti)];
+    const p=sq?.find(x=>x.id===pid);
+    return{name:p?.name||'?',team:TEAMS[parseInt(ti)]||'?',goals};
+  });
+}
+
+function showEndSeason(){
+  sortTable();
+  const champ=G.leagueTable[0];
+  const lcaQ=G.leagueTable.slice(0,4);
+  const cupChamp=G.cupWinner!=null?(G.cupWinner===15?CUP_WILDCARD:TEAMS[G.cupWinner]):'–';
+  const lcaChamp=G.lcaWinner!=null?TEAMS[G.lcaWinner]:'–';
+  const ts=getTopScorer('league');
+  const best11=G.squads.flat().sort((a,b)=>b.ovr-a.ovr).slice(0,11);
+  G.history.push({season:G.season,champion:champ.name,lcaChamp,cupChamp,topScorer:ts});
+  const el=document.getElementById('end-screen');
+  el.innerHTML=`
+    <div class="trophy-big">🏆</div>
+    <div class="end-t">Musim ${G.season} Selesai!</div>
+    <div class="end-s">Tutup buku Liga Indonesia Musim ${G.season}</div>
+    <div class="arow"><span class="aicon">🥇</span><div><div class="albl">Juara Liga</div><div class="aval">${champ.name} (${champ.pts} pts)</div></div></div>
+    <div class="arow"><span class="aicon">🏆</span><div><div class="albl">Juara Piala</div><div class="aval">${cupChamp}</div></div></div>
+    <div class="arow"><span class="aicon">🌏</span><div><div class="albl">Juara LCA</div><div class="aval">${lcaChamp}</div></div></div>
+    <div class="arow"><span class="aicon">👟</span><div><div class="albl">Top Skorer Liga</div><div class="aval">${ts}</div></div></div>
+    <div class="arow"><span class="aicon">📊</span><div><div class="albl">Tim Kamu</div>
+      <div class="aval">${TEAMS[G.playerTeamIdx]} – #${G.leagueTable.findIndex(r=>r.teamIdx===G.playerTeamIdx)+1} · ${G.leagueTable.find(r=>r.teamIdx===G.playerTeamIdx)?.pts||0} pts</div></div></div>
+    <div class="card" style="margin-top:12px">
+      <div class="sec">🌟 Lolos LCA Musim Depan</div>
+      ${lcaQ.map((t,i)=>`<div class="row bt" style="padding:4px 0;border-bottom:1px solid var(--sf2)">
+        <span>${i+1}. ${t.name}</span><span class="pill">${t.pts} pts</span>
+      </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="sec">⭐ Best Eleven</div>
+      ${best11.map(p=>`<div class="plc">
+        <span class="pos pos-${p.pos}">${p.pos}</span>
+        <div class="pli"><div class="pln">${p.name}</div>
+        <div style="font-size:.68rem;color:var(--dim)">${TEAMS[p.teamIndex]||'–'} · ${p.goals} gol</div></div>
+        <span class="ovr ${ovrCls(p.ovr)}">${p.ovr}</span>
+      </div>`).join('')}
+    </div>
+    <button class="btn btn-p btn-blk" style="margin-top:10px" onclick="startNewSeason()">🔄 Lanjut Musim Baru</button>
+    <div style="height:20px"></div>
+  `;
+  el.classList.add('show');
+}
+
+function startNewSeason(){
+  const lcaNext=G.leagueTable.slice(0,4).map(r=>r.teamIdx);
+  G.squads.forEach((squad,ti)=>{
+    squad.forEach(p=>{
+      p.ovr=clamp(p.ovr+rnd(-1,1),58,88);
+      p.energy=100;p.moral=85+rnd(0,15);p.contract--;
+      p.goals=0;p.assists=0;p.appearances=0;
+    });
+    const expired=squad.filter(p=>p.contract<=0);
+    expired.forEach(p=>{const i=squad.indexOf(p);const np=genPlayer(p.pos,ti);np.contract=rnd(1,3);squad[i]=np;});
+    setDefaultXI(squad,G.tactics[ti]||'4-3-3');
+  });
+  G.budget+=rnd(20,40);G.season++;G.week=0;G.phase='preseason';G.preseasonWeeksLeft=2;
+  G.leagueTable=TEAMS.map((name,i)=>({teamIdx:i,name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0}));
+  G.leagueResults=[];G.schedule=buildSchedule();
+  G.cupBracket=buildCupBracket();G.cupResults={};G.cupWinner=null;G.cupRoundsPlayed={};
+  G.lcaTeamIndices=lcaNext;
+  G.lcaResults=[];G.lcaTable=lcaNext.map(idx=>({teamIdx:idx,p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0}));
+  G.lcaFinalResult=null;G.lcaWinner=null;G.lcaGroupDone=false;G.lcaFinalDone=false;G.byeHistory=[];
+  G.transferMarket=genMarket();G.transfersDone=0;
+  G.topScorers={league:{},cup:{},lca:{}};
+  G.log=[{cls:'info',text:`🌟 Musim ${G.season} pramusim! 2 minggu transfer window.`}];
+  document.getElementById('end-screen').classList.remove('show');
+  saveState();renderAll();showToast(`🎉 Musim ${G.season} dimulai!`);
+}
+
+/* ----------------------------------------------------------------
+   TRANSFER WINDOW CHECK
+---------------------------------------------------------------- */
+function checkTransferWindow(){
+  if(G.phase==='preseason')return true;
+  const mi=weekToMonthIdx(G.week);
+  return mi===0; // January
+}
+
+/* ----------------------------------------------------------------
+   HEADER
+---------------------------------------------------------------- */
+function updateHeader(){
+  const mi=weekToMonthIdx(G.week||0);
+  let wl;
+  if(G.phase==='preseason'){
+    wl=`Pramusim (${G.preseasonWeeksLeft} minggu lagi)`;
+  } else {
+    wl=`Pekan ${G.week} – ${MONTHS[mi]}`;
+  }
+  document.getElementById('wk-badge').textContent=`📍 ${wl}`;
+  document.getElementById('tm-badge').textContent=TEAMS[G.playerTeamIdx];
+  document.getElementById('bgt').textContent=fmt(G.budget);
+}
+
+/* ----------------------------------------------------------------
+   TAB: DASHBOARD
+---------------------------------------------------------------- */
+function renderDash(){
+  const myRow=G.leagueTable.find(r=>r.teamIdx===G.playerTeamIdx);
+  const pos=G.leagueTable.findIndex(r=>r.teamIdx===G.playerTeamIdx)+1;
+  const sq=G.squads[G.playerTeamIdx];
+  const xi=sq.filter(p=>p.inXI);
+  const avgEn=Math.round(sq.reduce((s,p)=>s+p.energy,0)/sq.length);
+  const avgMo=Math.round(sq.reduce((s,p)=>s+p.moral,0)/sq.length);
+  const avgOvr=Math.round((xi.length?xi:sq).reduce((s,p)=>s+p.ovr,0)/(xi.length||sq.length));
+  const chem=Math.round(calcTeamChemistry(G.playerTeamIdx,G.tactics[G.playerTeamIdx]));
+  const inTW=checkTransferWindow();
+  const cupDue=getCupRoundForCurrentWeek();
+  const cupOk=cupDue&&!G.cupRoundsPlayed[cupDue];
+  const leagueOk=G.phase!=='preseason'&&G.week<SEASON_WEEKS;
+  const preOk=G.phase==='preseason';
+
+  let nextMatchHtml='';
+  for(let w=G.week+1;w<=Math.min(G.week+3,SEASON_WEEKS);w++){
+    if(G.phase==='preseason')break;
+    const rd=G.schedule[w-1];
+    const m=rd?.find(([h,a])=>h===G.playerTeamIdx||a===G.playerTeamIdx);
+    if(!m)continue;
+    const[h,a]=m;const isH=h===G.playerTeamIdx;const oi=isH?a:h;
+    nextMatchHtml+=`<div class="fix">
+      <div class="fix-h" style="${isH?'font-weight:700;color:var(--wh)':'color:var(--dim)'}">${TEAMS[G.playerTeamIdx]}</div>
+      <div class="fix-s">P${w}</div>
+      <div class="fix-a" style="${!isH?'font-weight:700;color:var(--wh)':'color:var(--dim)'}">${oi<15?TEAMS[oi]:'Bye'}</div>
+    </div>`;
+  }
+
+  document.getElementById('main').innerHTML=`
+    <div class="sec">📋 Dashboard Musim ${G.season}</div>
+
+    ${G.phase==='preseason'?`
+    <div class="preseason-banner">
+      <h2>🏋️ Pramusim Musim ${G.season}</h2>
+      <p>Kamu punya <b style="color:var(--gold)">${G.preseasonWeeksLeft} minggu</b> transfer window sebelum liga bergulir.<br>
+      Gunakan waktu ini untuk beli/jual pemain, atur formasi, dan perpanjang kontrak!</p>
+      <div style="display:flex;gap:8px;margin-top:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-g" onclick="switchTab('transfer')">💰 Buka Transfer</button>
+        <button class="btn btn-s" onclick="switchTab('squad')">👥 Atur Skuad</button>
+        <button class="btn btn-p" onclick="playLeagueWeek()">${G.preseasonWeeksLeft>1?'⏭️ Lewati 1 Minggu':'🏁 Mulai Liga!'}</button>
+      </div>
+    </div>`:''}
+
+    <div class="g3" style="margin-bottom:9px">
+      <div class="card" style="text-align:center;padding:9px 5px">
+        <div style="font-size:1.2rem;font-weight:900;color:var(--gold)">#${pos}</div>
+        <div style="font-size:.62rem;color:var(--dim)">Posisi</div>
+      </div>
+      <div class="card" style="text-align:center;padding:9px 5px">
+        <div style="font-size:1.2rem;font-weight:900;color:var(--bg2)">${myRow?.pts||0}</div>
+        <div style="font-size:.62rem;color:var(--dim)">Poin</div>
+      </div>
+      <div class="card" style="text-align:center;padding:9px 5px">
+        <div style="font-size:1.2rem;font-weight:900;color:var(--gg)">${avgOvr}</div>
+        <div style="font-size:.62rem;color:var(--dim)">OVR XI</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec">🔮 Chemistry Tim</div>
+      <div class="row bt" style="margin-bottom:4px">
+        <span style="font-size:.76rem">Keselarasan (${G.tactics[G.playerTeamIdx]})</span>
+        <span style="font-size:.78rem;font-weight:800;color:${chem>=70?'var(--gg)':chem>=40?'var(--gold)':'var(--red)'}">${chem}%</span>
+      </div>
+      <div class="chem-bar" style="height:7px"><div class="chem-fill" style="width:${chem}%"></div></div>
+      <p style="font-size:.67rem;color:var(--dim);margin-top:6px">Chemistry lebih tinggi = hasil lebih konsisten & lebih sedikit kejutan</p>
+    </div>
+
+    <div class="card">
+      <div class="sec">💪 Kondisi Tim</div>
+      <div class="row bt" style="margin-bottom:4px"><span style="font-size:.76rem">Energi</span><span style="font-size:.76rem;color:var(--gg)">${avgEn}%</span></div>
+      <div class="enb"><div class="enf ${enCls(avgEn)}" style="width:${avgEn}%"></div></div>
+      <div class="row bt" style="margin-top:8px;margin-bottom:4px"><span style="font-size:.76rem">Moral</span><span style="font-size:.76rem;color:var(--bg2)">${avgMo}%</span></div>
+      <div class="mob"><div class="mof ${moCls(avgMo)}" style="width:${avgMo}%"></div></div>
+    </div>
+
+    <div class="card">
+      <div class="sec">⚡ Aksi</div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        ${preOk?`<button class="btn btn-p btn-blk" onclick="playLeagueWeek()">${G.preseasonWeeksLeft>1?`⏭️ Lewati Minggu Pramusim (${G.preseasonWeeksLeft} sisa)`:'🏁 Mulai Liga Sekarang!'}</button>`:''}
+        ${leagueOk?`<button class="btn btn-p btn-blk" onclick="playLeagueWeek()">⚽ Mainkan Pekan ${G.week+1}</button>`:''}
+        ${cupOk?`<button class="btn btn-g btn-blk" onclick="playCupRound()">🏆 Mainkan ${cupDue} Piala</button>`:''}
+        ${inTW?`<button class="btn btn-s btn-blk" onclick="switchTab('transfer')">💰 Transfer Window Terbuka!</button>`:''}
+      </div>
+    </div>
+
+    ${nextMatchHtml?`<div class="card"><div class="sec">📅 Jadwal Mendatang</div>${nextMatchHtml}</div>`:''}
+
+    <div class="card">
+      <div class="sec">📰 Berita Terakhir</div>
+      ${G.log.length?`<ul class="mlog">${G.log.slice(0,8).map(l=>`<li class="${l.cls}">${l.text}</li>`).join('')}</ul>`:
+        '<p style="color:var(--mut);font-size:.76rem">Belum ada berita.</p>'}
+    </div>
+
+    <div class="card">
+      <div class="sec">🗓️ Info Musim</div>
+      <div style="font-size:.76rem;color:var(--dim);line-height:1.9">
+        <div>Status: <b style="color:var(--wh)">${G.phase==='preseason'?`Pramusim (${G.preseasonWeeksLeft} minggu tersisa)`:`Pekan ${G.week}/${SEASON_WEEKS}`}</b></div>
+        <div>Transfer: <b style="color:${inTW?'var(--gg)':'var(--red)'}">${inTW?'TERBUKA':'TERTUTUP'}</b></div>
+        <div>Musim: <b style="color:var(--wh)">Agt ${2024+G.season-1} – Mei ${2024+G.season}</b></div>
+      </div>
+    </div>
+
+    ${G.history.length?`<div class="card">
+      <div class="sec">📜 Riwayat</div>
+      ${G.history.slice().reverse().map(h=>`<div style="padding:4px 0;border-bottom:1px solid var(--sf2);font-size:.72rem">
+        <span style="color:var(--dim)">S${h.season}:</span> 🥇 ${h.champion} | 🏆 ${h.cupChamp} | 🌏 ${h.lcaChamp}
+      </div>`).join('')}
+    </div>`:''}
+
+    <div style="text-align:center;margin-top:14px;margin-bottom:6px">
+      <button class="btn btn-sm" style="background:var(--sf2);color:var(--mut)" onclick="confirmReset()">🔁 Game Baru</button>
+    </div>
+  `;
+}
+
+/* ----------------------------------------------------------------
+   TAB: SQUAD (with Formation Pitch View)
+---------------------------------------------------------------- */
+function renderSquad(){
+  const sq=G.squads[G.playerTeamIdx];
+  const tactic=G.tactics[G.playerTeamIdx]||'4-3-3';
+  const chem=Math.round(calcTeamChemistry(G.playerTeamIdx,tactic));
+  const xiCount=sq.filter(p=>p.inXI).length;
+  const xiStatus = xiCount === 11 ? `<span style="color:var(--gg)">Lengkap (11/11)</span>` : `<span style="color:var(--red)">Kurang (${xiCount}/11)</span>`;
+
+  document.getElementById('main').innerHTML=`
+    <div class="sec">👥 Skuad – ${TEAMS[G.playerTeamIdx]}</div>
+
+    <div class="card">
+      <div class="sec">⚙️ Taktik Formasi</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        ${TACTICS.map(t=>`<button class="tactic-btn ${t===tactic?'sel':''}" onclick="setTactic('${t}')">${t}</button>`).join('')}
+      </div>
+      <div class="row bt">
+        <span style="font-size:.74rem;color:var(--dim)">Chemistry saat ini</span>
+        <span style="font-weight:700;color:${chem>=70?'var(--gg)':chem>=40?'var(--gold)':'var(--red)'}">${chem}%</span>
+      </div>
+      <div class="chem-bar" style="margin-top:4px"><div class="chem-fill" style="width:${chem}%"></div></div>
+    </div>
+
+    <div class="card">
+      <div class="sec">🟢 Starting XI – ${tactic} | ${xiStatus}</div>
+      ${renderFormationPitch(sq,tactic,'squad')}
+      <p style="font-size:.66rem;color:var(--dim);margin-top:10px;text-align:center">💡 <b>Cara ganti pemain:</b> Klik pemain di lapangan untuk mengeluarkan, lalu klik pemain cadangan untuk memasukkan ke <i>Starting XI</i>.</p>
+    </div>
+
+    ${renderSquadByPosition(sq)}
+  `;
+}
+
+function setTactic(t){
+  G.tactics[G.playerTeamIdx]=t;
+  setDefaultXI(G.squads[G.playerTeamIdx],t);
+  saveState();renderTab(activeTab);
+  showToast(`✅ Formasi ${t} diterapkan!`);
+}
+
+function toggleXI(playerId){
+  const sq=G.squads[G.playerTeamIdx];
+  const p=sq.find(x=>x.id===playerId);if(!p)return;
+  const xiCount=sq.filter(x=>x.inXI).length;
+  if(p.inXI){
+    p.inXI=false; // Boleh dikeluarkan kapan saja
+  } else {
+    if(xiCount>=11){showToast('❌ Starting XI sudah penuh (11 pemain)! Keluarkan 1 pemain dulu.');return;}
+    p.inXI=true; // Masukkan jika slot masih ada
+  }
+  saveState();renderTab(activeTab);
+}
+
+function renderFormationPitch(squad,tactic,mode){
+  const xi=squad.filter(p=>p.inXI).slice(0,11);
+  const byPos={GK:[],DEF:[],MID:[],FWD:[]};
+  xi.forEach(p=>byPos[p.pos].push(p));
+
+  const slots=getTacticSlots(tactic);
+  let dots=[];
+  const gk=byPos.GK[0];
+  if(gk){
+    dots.push({p:gk,x:50,y:92,clickable:mode==='squad'});
+  }
+  const defs=byPos.DEF.slice(0,slots.DEF);
+  defs.forEach((p,i)=>{
+    const step=80/(slots.DEF+1);
+    dots.push({p,x:10+(i+1)*step,y:72,clickable:mode==='squad'});
+  });
+  const mids=byPos.MID.slice(0,slots.MID);
+  if(tactic==='4-2-3-1'){
+    mids.slice(0,2).forEach((p,i)=>{const s=80/3;dots.push({p,x:10+(i+1)*s,y:60,clickable:mode==='squad'});});
+    mids.slice(2,5).forEach((p,i)=>{const s=80/4;dots.push({p,x:10+(i+1)*s,y:42,clickable:mode==='squad'});});
+  } else {
+    mids.forEach((p,i)=>{const s=80/(slots.MID+1);dots.push({p,x:10+(i+1)*s,y:52,clickable:mode==='squad'});});
+  }
+  const fwds=byPos.FWD.slice(0,slots.FWD);
+  fwds.forEach((p,i)=>{const s=80/(slots.FWD+1);dots.push({p,x:10+(i+1)*s,y:20,clickable:mode==='squad'});});
+
+  const subs=squad.filter(p=>!p.inXI);
+
+  return`<div class="pitch-wrap" style="aspect-ratio:9/13">
+    <div class="pitch-lines">
+      <div class="pl pl-hw"></div><div class="pl pl-cc"></div>
+      <div class="pl pl-pb-top"></div><div class="pl pl-pb-bot"></div>
+      <div class="pl pl-gb-top"></div><div class="pl pl-gb-bot"></div>
+    </div>
+    ${dots.map(d=>`<div class="pdot ${d.clickable?'clickable':''}"
+      style="left:${d.x}%;top:${d.y}%;${d.clickable?'cursor:pointer;':''}"
+      ${d.clickable?`onclick="toggleXI('${d.p.id}')"`:''}
+      title="${d.p.name} (${d.p.pos}) OVR ${d.p.ovr}">
+      <div class="pdot-circle home-dot" style="width:32px;height:32px;font-size:.62rem">${d.p.ovr}</div>
+      <div class="pdot-name">${d.p.name.split(' ')[0]}</div>
+      <div class="pdot-ovr">${d.p.pos}</div>
+    </div>`).join('')}
+  </div>
+  <div style="margin-top:8px">
+    <div class="sec" style="margin-bottom:4px">🪑 Cadangan (${subs.length})</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px">
+      ${subs.slice(0,12).map(p=>`<div style="background:var(--sf2);border:1px solid ${p.inXI?'var(--gl)':'var(--brd)'};border-radius:5px;padding:3px 7px;
+        font-size:.66rem;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all 0.15s"
+        onclick="toggleXI('${p.id}')" title="Klik untuk masukkan ke XI"
+        onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
+        <span class="pos pos-${p.pos}">${p.pos}</span>
+        <span>${p.name.split(' ')[0]}</span>
+        <span class="ovr ${ovrCls(p.ovr)}" style="font-size:.6rem">${p.ovr}</span>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderSquadByPosition(squad){
+  const byPos={GK:[],DEF:[],MID:[],FWD:[]};
+  squad.forEach(p=>byPos[p.pos].push(p));
+  const labels={GK:'🥅 Penjaga Gawang',DEF:'🛡️ Bek',MID:'⚙️ Gelandang',FWD:'🔥 Penyerang'};
+  return Object.entries(byPos).map(([pos,players])=>`
+    <div class="card">
+      <div class="sec">${labels[pos]} (${players.length})</div>
+      ${players.sort((a,b)=>b.ovr-a.ovr).map(p=>playerCardHTML(p)).join('')}
+    </div>
+  `).join('');
+}
+
+function playerCardHTML(p){
+  return`<div class="plc" style="${p.inXI?'border-color:var(--gl);':''}; cursor:pointer" onclick="toggleXI('${p.id}')">
+    <span class="pos pos-${p.pos}">${p.pos}</span>
+    <div class="pli">
+      <div class="pln">${p.name} ${p.inXI?'<span style="font-size:.58rem;color:var(--gg)">★ XI</span>':''}</div>
+      <div class="plb">
+        <span class="brl">⚡</span>
+        <div class="enb"><div class="enf ${enCls(p.energy)}" style="width:${p.energy}%"></div></div>
+        <span style="font-size:.62rem;color:var(--dim);min-width:26px">${p.energy}%</span>
+        <span class="brl">💙</span>
+        <div class="mob"><div class="mof ${moCls(p.moral)}" style="width:${p.moral}%"></div></div>
+        <span style="font-size:.62rem;color:var(--dim);min-width:26px">${p.moral}%</span>
+      </div>
+      <div class="row" style="margin-top:3px;gap:3px;flex-wrap:wrap">
+        <span class="cchip">📋 ${p.contract}m</span>
+        <span class="cchip">⚽ ${p.goals}</span>
+        <span class="cchip">🎮 ${p.appearances}</span>
+        <span class="cchip">🤝 ${p.chem}%</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+      <span class="ovr ${ovrCls(p.ovr)}">${p.ovr}</span>
+      ${p.contract===1?`<button class="btn btn-sm btn-g" onclick="event.stopPropagation();extendContract('${p.id}')">+1</button>`:''}
+    </div>
+  </div>`;
+}
+
+function extendContract(pid){
+  const sq=G.squads[G.playerTeamIdx];const p=sq.find(x=>x.id===pid);if(!p)return;
+  const cost=Math.round(p.ovr*0.8);
+  if(G.budget<cost){showToast(`❌ Butuh ${fmt(cost)}`);return;}
+  G.budget-=cost;p.contract=3;saveState();
+  showToast(`✅ Kontrak ${p.name} diperpanjang!`);renderTab(activeTab);updateHeader();
+}
+
+/* ----------------------------------------------------------------
+   TAB: LEAGUE
+---------------------------------------------------------------- */
+function renderLeague(){
+  const mi=G.playerTeamIdx;
+  let th=`<div class="ts"><table class="tbl">
+    <thead><tr><th>#</th><th>Tim</th>
+    <th class="n">M</th><th class="n">W</th><th class="n">D</th><th class="n">L</th>
+    <th class="n">GF</th><th class="n">GA</th><th class="n">GD</th><th class="n">Pts</th></tr></thead><tbody>`;
+  G.leagueTable.forEach((r,i)=>{
+    const isMe=r.teamIdx===mi;const isQ=i<4;
+    th+=`<tr class="${isMe?'me':''} ${isQ&&!isMe?'lca-q':''}">
+      <td>${i+1}</td><td>${r.name}</td>
+      <td class="n">${r.played}</td><td class="n">${r.won}</td><td class="n">${r.drawn}</td><td class="n">${r.lost}</td>
+      <td class="n">${r.gf}</td><td class="n">${r.ga}</td>
+      <td class="n">${r.gd>0?'+':''}${r.gd}</td>
+      <td class="n" style="font-weight:800">${r.pts}</td>
+    </tr>`;
+  });
+  th+='</tbody></table></div>';
+  const ts=getTopScorersList('league');
+  const rr=G.leagueResults.slice(-12).reverse();
+  document.getElementById('main').innerHTML=`
+    <div class="sec">📊 Klasemen Liga – Musim ${G.season}</div>
+    <p style="font-size:.67rem;color:var(--dim);margin-bottom:5px"><span style="color:var(--gg)">■</span> Tim kamu &nbsp; <span style="color:var(--gold)">■</span> Top 4 (lolos LCA)</p>
+    <div style="font-size:.65rem;color:var(--mut);text-align:right;margin-bottom:3px">← geser →</div>
+    ${th}
+    <div class="card" style="margin-top:10px">
+      <div class="sec">👟 Top Skorer Liga</div>
+      ${ts.length?ts.map((s,i)=>`<div class="row bt" style="padding:5px 0;border-bottom:1px solid var(--sf2)">
+        <div><span style="color:var(--mut);margin-right:5px">${i+1}.</span>${s.name} <span style="color:var(--dim);font-size:.68rem">${s.team}</span></div>
+        <span class="pill">⚽ ${s.goals}</span>
+      </div>`).join(''):'<p style="color:var(--mut);font-size:.76rem">Belum ada gol.</p>'}
+    </div>
+    <div class="card">
+      <div class="sec">📋 Hasil Terbaru</div>
+      ${rr.length?rr.map(r=>`<div class="fix">
+        <div class="fix-h" style="${r.homeIdx===mi?'font-weight:700;color:var(--wh)':'color:var(--dim)'}">${TEAMS[r.homeIdx]}</div>
+        <div class="fix-s">${r.homeScore}–${r.awayScore}</div>
+        <div class="fix-a" style="${r.awayIdx===mi?'font-weight:700;color:var(--wh)':'color:var(--dim)'}">${TEAMS[r.awayIdx]}</div>
+      </div>`).join(''):'<p style="color:var(--mut);font-size:.76rem">Belum ada hasil.</p>'}
+    </div>
+  `;
+}
+
+/* ----------------------------------------------------------------
+   TAB: CUP
+---------------------------------------------------------------- */
+function renderCup(){
+  let html=`<div class="sec">🏆 Piala Domestik – Musim ${G.season}</div>`;
+  ['16 Besar','8 Besar','Semifinal','Final'].forEach(rn=>{
+    const pairs=G.cupBracket[rn];
+    const res=G.cupResults[rn];
+    const done=!!G.cupRoundsPlayed[rn];
+    const due=CUP_ROUND_WEEKS[rn];
+    const avail=G.week>=due&&!done&&pairs&&G.phase!=='preseason';
+    html+=`<div class="card">
+      <div class="row bt" style="margin-bottom:7px">
+        <span class="sec" style="margin:0;border:none">${rn}</span>
+        ${avail?`<span class="pill" style="color:var(--gold);border-color:var(--gold)">Siap!</span>`:''}
+        ${done?`<span class="pill" style="color:var(--gg);border-color:var(--gl)">✓ Selesai</span>`:''}
+        ${!done&&!avail?`<span class="pill">Setelah Pekan ${due}</span>`:''}
+      </div>`;
+    if(pairs){
+      pairs.forEach(([hi,ai],idx)=>{
+        const hn=hi===15?CUP_WILDCARD:TEAMS[hi];
+        const an=ai===15?CUP_WILDCARD:TEAMS[ai];
+        const r=res?.[idx];
+        const isMyM=hi===G.playerTeamIdx||ai===G.playerTeamIdx;
+        html+=`<div class="fix" style="${isMyM?'border-color:var(--gl);':''}">
+          <div class="fix-h" style="${hi===G.playerTeamIdx?'font-weight:700;color:var(--wh)':''}">${hn}</div>
+          <div class="fix-s">${r?`${r.homeScore}–${r.awayScore}`:'vs'}</div>
+          <div class="fix-a" style="${ai===G.playerTeamIdx?'font-weight:700;color:var(--wh)':''}">${an}</div>
+        </div>`;
+        if(r?.winner!==undefined){
+          const wn=r.winner===15?CUP_WILDCARD:TEAMS[r.winner];
+          html+=`<p style="font-size:.65rem;color:var(--dim);text-align:center;margin-bottom:3px">→ ${wn} lanjut</p>`;
+        }
+      });
+    } else {
+      html+=`<p style="font-size:.76rem;color:var(--mut)">Bracket tersedia setelah babak sebelumnya.</p>`;
+    }
+    html+='</div>';
+  });
+  if(G.cupWinner!=null){
+    const cw=G.cupWinner===15?CUP_WILDCARD:TEAMS[G.cupWinner];
+    html+=`<div class="card" style="border-color:var(--gold);text-align:center">
+      <div style="font-size:2rem">🏆</div>
+      <div style="font-size:.95rem;font-weight:800;color:var(--gold)">Juara: ${cw}</div>
+    </div>`;
+  }
+  const ts=getTopScorersList('cup');
+  html+=`<div class="card"><div class="sec">👟 Top Skorer Piala</div>
+    ${ts.length?ts.map((s,i)=>`<div class="row bt" style="padding:5px 0;border-bottom:1px solid var(--sf2)">
+      <div><span style="color:var(--mut);margin-right:5px">${i+1}.</span>${s.name} <span style="color:var(--dim);font-size:.68rem">${s.team}</span></div>
+      <span class="pill">⚽ ${s.goals}</span>
+    </div>`).join(''):'<p style="color:var(--mut);font-size:.76rem">Belum ada gol.</p>'}
+  </div>`;
+  document.getElementById('main').innerHTML=html;
+}
+
+/* ----------------------------------------------------------------
+   TAB: LCA
+---------------------------------------------------------------- */
+function renderLCA(){
+  const inLCA=G.lcaTeamIndices.includes(G.playerTeamIdx);
+  let html=`<div class="sec">🌏 Liga Champions Asia – Musim ${G.season}</div>
+    <div class="card">
+      <div class="sec">Peserta LCA</div>
+      ${G.lcaTeamIndices.map((idx,i)=>`<div class="row bt" style="padding:5px 0;border-bottom:1px solid var(--sf2)">
+        <span style="${idx===G.playerTeamIdx?'color:var(--gg);font-weight:700':''}">${i+1}. ${TEAMS[idx]}</span>
+        ${idx===G.playerTeamIdx?`<span class="pill" style="color:var(--gg)">👑 Kamu</span>`:''}
+      </div>`).join('')}
+      ${!inLCA?`<p style="font-size:.72rem;color:var(--mut);margin-top:7px">Raih top 4 untuk lolos LCA musim depan!</p>`:''}
+    </div>
+    <div class="card">
+      <div class="sec">Grup Tunggal</div>
+      <div class="ts"><table class="tbl">
+        <thead><tr><th>Tim</th><th class="n">M</th><th class="n">W</th><th class="n">D</th><th class="n">L</th><th class="n">GF</th><th class="n">GA</th><th class="n">Pts</th></tr></thead>
+        <tbody>${G.lcaTable.map((r,i)=>`<tr class="${r.teamIdx===G.playerTeamIdx?'me':''} ${i<2&&r.teamIdx!==G.playerTeamIdx?'lca-q':''}">
+          <td>${TEAMS[r.teamIdx]}</td><td class="n">${r.p}</td><td class="n">${r.w}</td>
+          <td class="n">${r.d}</td><td class="n">${r.l}</td><td class="n">${r.gf}</td><td class="n">${r.ga}</td>
+          <td class="n" style="font-weight:800">${r.pts}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+      <p style="font-size:.65rem;color:var(--dim);margin-top:4px"><span style="color:var(--gold)">■</span> Top 2 ke Final</p>
+    </div>
+    <div class="card">
+      <div class="sec">Hasil Grup</div>
+      ${G.lcaResults.length?G.lcaResults.map(r=>`<div class="fix">
+        <div class="fix-h" style="${r.homeIdx===G.playerTeamIdx?'font-weight:700;color:var(--wh)':''}">${TEAMS[r.homeIdx]}</div>
+        <div class="fix-s">${r.homeScore}–${r.awayScore}</div>
+        <div class="fix-a" style="${r.awayIdx===G.playerTeamIdx?'font-weight:700;color:var(--wh)':''}">${TEAMS[r.awayIdx]}</div>
+      </div>`).join(''):'<p style="color:var(--mut);font-size:.76rem">Belum dimainkan.</p>'}
+    </div>`;
+  if(G.lcaFinalResult){
+    const r=G.lcaFinalResult;
+    html+=`<div class="card" style="${G.lcaWinner===G.playerTeamIdx?'border-color:var(--gold)':''}">
+      <div class="sec">🏆 Final LCA</div>
+      <div class="fix">
+        <div class="fix-h" style="${r.homeIdx===G.playerTeamIdx?'font-weight:700;color:var(--wh)':''}">${TEAMS[r.homeIdx]}</div>
+        <div class="fix-s">${r.homeScore}–${r.awayScore}</div>
+        <div class="fix-a" style="${r.awayIdx===G.playerTeamIdx?'font-weight:700;color:var(--wh)':''}">${TEAMS[r.awayIdx]}</div>
+      </div>
+      <div style="text-align:center;margin-top:7px;font-size:.88rem;font-weight:800;color:var(--gold)">🏆 Juara: ${TEAMS[G.lcaWinner]}</div>
+    </div>`;
+  }
+  const ts=getTopScorersList('lca');
+  html+=`<div class="card"><div class="sec">👟 Top Skorer LCA</div>
+    ${ts.length?ts.map((s,i)=>`<div class="row bt" style="padding:5px 0;border-bottom:1px solid var(--sf2)">
+      <div><span style="color:var(--mut);margin-right:5px">${i+1}.</span>${s.name} <span style="color:var(--dim);font-size:.68rem">${s.team}</span></div>
+      <span class="pill">⚽ ${s.goals}</span>
+    </div>`).join(''):'<p style="color:var(--mut);font-size:.76rem">Belum ada gol.</p>'}
+  </div>`;
+  document.getElementById('main').innerHTML=html;
+}
+
+/* ----------------------------------------------------------------
+   TAB: TRANSFER
+---------------------------------------------------------------- */
+function renderTransfer(){
+  const inTW=checkTransferWindow();
+  let html=`<div class="sec">💰 Pasar Transfer</div>
+    <div class="card" style="margin-bottom:9px">
+      <div class="row bt"><span>Budget</span><span style="font-weight:800;color:var(--gold)">${fmt(G.budget)}</span></div>
+      <div class="row bt" style="margin-top:5px">
+        <span>Status Window</span>
+        <span style="font-weight:800;color:${inTW?'var(--gg)':'var(--red)'}">${inTW?'🟢 TERBUKA':'🔴 TERTUTUP'}</span>
+      </div>
+      ${G.phase==='preseason'?`<p style="font-size:.7rem;color:var(--gg);margin-top:5px">✅ Pramusim: transfer bebas terbuka!</p>`:''}
+      ${!inTW?`<p style="font-size:.7rem;color:var(--mut);margin-top:5px">Window buka: Pramusim & Januari</p>`:''}
+    </div>`;
+
+  if(inTW){
+    html+=`<div class="card">
+      <div class="sec">Pemain Tersedia</div>
+      ${G.transferMarket.map(p=>transferCardHTML(p,true)).join('')}
+    </div>
+    <div class="card">
+      <div class="sec">Jual Pemain</div>
+      ${G.squads[G.playerTeamIdx].map(p=>{
+        const sp=Math.round((p.ovr-60)*1.5);
+        return`<div class="tc">
+          <span class="pos pos-${p.pos}">${p.pos}</span>
+          <div class="tc-info"><div class="tc-name">${p.name}</div>
+          <div class="tc-det">OVR ${p.ovr} · ${p.contract} musim · Chem ${p.chem}%</div></div>
+          <span class="tc-price">${fmt(sp)}</span>
+          <button class="btn btn-d btn-sm" onclick="sellPlayer('${p.id}')">Jual</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+  } else {
+    html+=`<div class="card">
+      <div class="sec">Daftar Pemain (Baca Saja)</div>
+      ${G.transferMarket.map(p=>transferCardHTML(p,false)).join('')}
+    </div>`;
+  }
+  document.getElementById('main').innerHTML=html;
+}
+
+function transferCardHTML(p,canBuy){
+  const af=G.budget>=p.price;
+  const tooMany=G.squads[G.playerTeamIdx].filter(x=>x.pos===p.pos).length>=(POSITIONS[p.pos]||4)+2;
+  return`<div class="tc">
+    <span class="pos pos-${p.pos}">${p.pos}</span>
+    <div class="tc-info">
+      <div class="tc-name">${p.name}</div>
+      <div class="tc-det">OVR ${p.ovr} · ${p.contract}m · Chem ${p.chem}%</div>
+    </div>
+    <span class="tc-price">${fmt(p.price)}</span>
+    ${canBuy?`<button class="btn btn-p btn-sm" ${!af||tooMany?'disabled':''} onclick="buyPlayer('${p.id}')">
+      ${!af?'💸':tooMany?'✋':'Beli'}</button>`:
+    `<button class="btn btn-sm" disabled>Tutup</button>`}
+  </div>`;
+}
+
+function buyPlayer(id){
+  const idx=G.transferMarket.findIndex(p=>p.id===id);if(idx<0)return;
+  const p=G.transferMarket[idx];
+  if(G.budget<p.price){showToast('❌ Budget kurang!');return;}
+  G.budget-=p.price;
+  const np={...p,id:Math.random().toString(36).slice(2,10),energy:100,moral:85,
+    goals:0,assists:0,appearances:0,inXI:false,teamIndex:G.playerTeamIdx};
+  G.squads[G.playerTeamIdx].push(np);
+  G.transferMarket.splice(idx,1);G.transfersDone++;
+  saveState();showToast(`✅ ${p.name} dibeli!`);renderTab(activeTab);updateHeader();
+}
+
+function sellPlayer(pid){
+  const sq=G.squads[G.playerTeamIdx];const idx=sq.findIndex(p=>p.id===pid);if(idx<0)return;
+  if(sq.length<=14){showToast('❌ Skuad minimum 14 pemain');return;}
+  const p=sq[idx];const sp=Math.round((p.ovr-60)*1.5);
+  G.budget+=sp;sq.splice(idx,1);
+  saveState();showToast(`✅ ${p.name} dijual ${fmt(sp)}`);renderTab(activeTab);updateHeader();
+}
+
+/* ----------------------------------------------------------------
+   MODAL & TOAST
+---------------------------------------------------------------- */
+function openModal(title,body){
+  document.getElementById('mtitle').textContent=title;
+  document.getElementById('mbody').innerHTML=body;
+  document.getElementById('mov').classList.add('show');
+}
+function closeModal(){document.getElementById('mov').classList.remove('show');}
+
+let toastTmr;
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTmr);toastTmr=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+/* ----------------------------------------------------------------
+   RESET & TEAM SELECT
+---------------------------------------------------------------- */
+function confirmReset(){
+  openModal('🔁 Mulai Game Baru?',`
+    <p style="color:var(--dim);margin-bottom:14px">Semua data akan dihapus. Lanjutkan?</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-d" onclick="hardReset()">Ya, Reset!</button>
+      <button class="btn btn-s" onclick="closeModal()">Batal</button>
+    </div>`);
+}
+
+function hardReset(){
+  localStorage.removeItem('mli2_save');closeModal();
+  G=freshState();showTeamSelector();updateHeader();
+}
+
+function showTeamSelector(){
+  document.getElementById('mtitle').textContent='⚽ Pilih Tim Kamu!';
+  
+  let html = `<p style="color:var(--dim);margin-bottom:10px;font-size:.8rem">Selamat datang! Pilih tim untuk kamu pimpin musim ini.</p>
+    <div style="display:flex;flex-direction:column;gap:5px;max-height:60vh;overflow-y:auto;padding-right:5px">`;
+
+  TEAMS.forEach((name, i) => {
+    const sq = G.squads[i];
+    const avgOvr = Math.round(sq.reduce((s,p)=>s+p.ovr,0)/sq.length);
+    const bgt = TEAM_BUDGETS[i];
+    html += `<button class="btn btn-s" style="justify-content:space-between;padding:9px 12px;display:flex;align-items:center;" onclick="selectTeam(${i}, ${bgt})">
+      <span style="font-weight:700">${i+1}. ${name}</span>
+      <span style="font-size:.7rem;color:var(--wh);font-weight:normal">OVR: <b style="color:var(--gg)">${avgOvr}</b> | 💰 ${bgt}M</span>
+    </button>`;
+  });
+  
+  html += `</div>`;
+  document.getElementById('mbody').innerHTML=html;
+  document.querySelector('#mbox > div:last-child button').style.display='none';
+  document.getElementById('mov').classList.add('show');
+}
+
+function selectTeam(idx, budget){
+  G.playerTeamIdx = idx;
+  G.budget = budget;
+  G.tactics[idx] = '4-3-3';
+  setDefaultXI(G.squads[idx], '4-3-3');
+  
+  document.querySelector('#mbox > div:last-child button').style.display='';
+  closeModal();
+  saveState();
+  updateHeader();
+  showToast(`🎉 Kamu memilih ${TEAMS[idx]}!`);
+  renderTab('dash');
+}
+
+/* ----------------------------------------------------------------
+   TAB ROUTER
+---------------------------------------------------------------- */
+let activeTab='dash';
+const RENDERERS={dash:renderDash,squad:renderSquad,league:renderLeague,
+  cup:renderCup,lca:renderLCA,transfer:renderTransfer};
+
+function renderTab(tab){
+  activeTab=tab;
+  document.querySelectorAll('.tb').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  const fn=RENDERERS[tab];if(fn)fn();
+}
+function renderAll(){updateHeader();renderTab(activeTab);}
+function switchTab(tab){renderTab(tab);document.getElementById('main').scrollTop=0;}
+
+document.querySelectorAll('.tb').forEach(btn=>{
+  btn.addEventListener('click',()=>switchTab(btn.dataset.tab));
+});
+document.getElementById('mov').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+/* ----------------------------------------------------------------
+   INIT
+---------------------------------------------------------------- */
+function init(){
+  const loaded=loadState();
+  if(!loaded){
+    G=freshState();
+    showTeamSelector();
+  } else {
+    if(!G.preseasonWeeksLeft)G.preseasonWeeksLeft=0;
+    if(!G.tactics)G.tactics=TEAMS.map(()=>pick(TACTICS));
+    if(!G.byeHistory)G.byeHistory=[];
+    if(!G.lcaGroupDone)G.lcaGroupDone=false;
+    if(!G.lcaFinalDone)G.lcaFinalDone=false;
+    if(!G.cupRoundsPlayed)G.cupRoundsPlayed={};
+    if(!G.history)G.history=[];
+    G.squads.forEach((sq,ti)=>{
+      sq.forEach(p=>{
+        if(p.inXI===undefined)p.inXI=false;
+        if(p.chem===undefined)p.chem=rnd(60,100);
+        if(p.teamIndex===undefined)p.teamIndex=ti;
+      });
+      if(!sq.some(p=>p.inXI))setDefaultXI(sq,G.tactics[ti]||'4-3-3');
+    });
+  }
+  updateHeader();
+  if(loaded) renderTab('dash');
+}
+
+init();
+</script>
+</body>
+</html>
