@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
-  <title>Manajer Liga Indonesia</title>
+  <title>Football Manager Web</title>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="theme-color" content="#0d3b2e"/>
+  <!-- Favicon / Bookmark Logo -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
   <style>
 /* ================================================================
    ROOT & RESET
@@ -26,14 +28,14 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Segoe U
 
 /* Header & Tabs */
 #hdr{background:linear-gradient(135deg,var(--gd),var(--bd));border-bottom:2px solid var(--gl);padding:8px 14px 6px;position:sticky;top:0;z-index:100}
-#hdr h1{font-size:.9rem;font-weight:800;color:var(--gg);letter-spacing:.06em;text-transform:uppercase}
+#hdr h1{font-size:.9rem;font-weight:800;color:var(--gg);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px;}
 #hdr-meta{display:flex;gap:8px;align-items:center;margin-top:3px}
 .badge{background:var(--sf2);border:1px solid var(--brd);border-radius:20px;padding:2px 10px;font-size:.72rem;color:var(--dim)}
 .badge.hi{border-color:var(--gl);color:var(--gg)}.badge.gld{border-color:var(--gold);color:var(--gold)}
 #bgt{margin-left:auto}
 #tabs{display:flex;background:var(--sf);border-bottom:2px solid var(--brd);overflow-x:auto;scrollbar-width:none;flex-shrink:0}
 #tabs::-webkit-scrollbar{display:none}
-.tb{flex:1;min-width:58px;padding:8px 2px;font-size:.68rem;font-weight:700;color:var(--mut);background:none;border:none;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+.tb{flex:1;min-width:58px;padding:8px 2px;font-size:.65rem;font-weight:700;color:var(--mut);background:none;border:none;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
 .tb.active{color:var(--gg);border-bottom-color:var(--gg)}
 
 /* Main */
@@ -42,18 +44,18 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Segoe U
 .card{background:var(--card);border:1px solid var(--brd);border-radius:var(--r);padding:11px;margin-bottom:9px}
 
 /* UI Elements */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:9px 14px;border:none;border-radius:var(--rs);font-size:.78rem;font-weight:700;cursor:pointer;text-transform:uppercase}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:9px 14px;border:none;border-radius:var(--rs);font-size:.78rem;font-weight:700;cursor:pointer;text-transform:uppercase;transition:all 0.15s}
 .btn:active{transform:scale(.97)}.btn:disabled{opacity:.4;pointer-events:none}
 .btn-p{background:var(--gl);color:#fff}.btn-s{background:var(--bm);color:#fff}
 .btn-g{background:var(--gold);color:#1a1200}.btn-d{background:var(--red);color:#fff}
 .btn-sm{padding:4px 9px;font-size:.68rem}.btn-blk{width:100%}
 .row{display:flex;gap:8px;align-items:center}.row.bt{justify-content:space-between}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
 
 .ovr{display:inline-block;min-width:30px;text-align:center;padding:2px 4px;border-radius:4px;font-size:.78rem;font-weight:800}
 .ovr-h{background:#1a5c1a;color:#6eff6e}.ovr-m{background:#4a3a00;color:var(--gold)}.ovr-l{background:#4a1515;color:#ff7777}
 .pos{font-size:.6rem;font-weight:800;padding:2px 5px;border-radius:3px}
-.pos-GK{background:#2a1a5a;color:#c0a0ff}.pos-DEF{background:#1a3a5a;color:#80c0ff}
-.pos-MID{background:#1a4a2a;color:#80ff90}.pos-FWD{background:#5a2020;color:#ff9090}
+.pos-GK{background:#2a1a5a;color:#c0a0ff}.pos-DEF{background:#1a3a5a;color:#80c0ff}.pos-MID{background:#1a4a2a;color:#80ff90}.pos-FWD{background:#5a2020;color:#ff9090}
 .pill{background:var(--sf2);border-radius:20px;padding:2px 8px;font-size:.7rem;font-weight:600;border:1px solid var(--brd)}
 
 /* Tables & Lists */
@@ -61,21 +63,20 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Segoe U
 .tbl th{color:var(--mut);text-align:left;padding:4px;border-bottom:1px solid var(--brd)}
 .tbl td{padding:4px;border-bottom:1px solid var(--sf2)}.tbl tr.me td{color:var(--gg);font-weight:700}
 .tbl td.n,.tbl th.n{text-align:right}
+.team-link{color:var(--bg2);cursor:pointer;text-decoration:underline;font-weight:600}
 .fix{display:grid;grid-template-columns:1fr auto 1fr;gap:4px;align-items:center;padding:7px 9px;background:var(--sf2);border-radius:var(--rs);border:1px solid var(--brd);margin-bottom:4px;font-size:.76rem}
 .fix-h{text-align:right}.fix-a{text-align:left}.fix-s{text-align:center;font-weight:800;background:var(--sf);border-radius:4px;min-width:46px;color:var(--gold)}
 .mlog{list-style:none}.mlog li{padding:6px 9px;background:var(--sf2);border-radius:var(--rs);margin-bottom:4px;font-size:.76rem;border-left:3px solid var(--brd)}
 .mlog li.win{border-left-color:var(--gg)}.mlog li.draw{border-left-color:var(--gold)}.mlog li.loss{border-left-color:var(--red)}
 
-/* Select-to-Swap Highlight */
+/* Player Cards & Swap */
 .selected-swap { border: 2px dashed var(--gold) !important; transform: scale(0.96); opacity: 0.8; box-shadow: 0 0 12px var(--gold); }
-
-/* Player Cards */
 .plc{display:flex;align-items:center;gap:7px;padding:7px 9px;background:var(--sf2);border-radius:var(--rs);border:1px solid var(--brd);margin-bottom:5px;cursor:pointer;transition:all .15s}
 .pln{font-weight:700;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tc{display:flex;align-items:center;gap:8px;padding:8px 9px;background:var(--sf2);border-radius:var(--rs);border:1px solid var(--brd);margin-bottom:6px}
-.tc-info{flex:1}.tc-name{font-weight:700;font-size:.8rem}.tc-price{font-size:.78rem;font-weight:700;color:var(--gold);min-width:60px;text-align:right}
+.info-btn{background:var(--brd);color:var(--wh);border:none;border-radius:50%;width:22px;height:22px;font-size:.65rem;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center}
 
-/* Pitch */
+/* Pitch & Live Animations */
 .pitch-wrap{position:relative;width:100%;aspect-ratio:9/14;background:linear-gradient(180deg,#1a6b30 0%,#1e7a35 50%,#1a6b30 100%);border-radius:8px;overflow:hidden;border:2px solid #3a9a50}
 .pitch-lines{position:absolute;inset:0;pointer-events:none}
 .pl{position:absolute;background:rgba(255,255,255,.22)}
@@ -83,11 +84,12 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Segoe U
 .pl-pb-top{left:20%;right:20%;top:0;height:16%;border:1px solid rgba(255,255,255,.22);border-top:none;background:none}
 .pl-pb-bot{left:20%;right:20%;bottom:0;height:16%;border:1px solid rgba(255,255,255,.22);border-bottom:none;background:none}
 
-.pdot{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:1px;z-index:2;transition:all .2s;cursor:pointer}
+.pdot{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:1px;z-index:2;transition:left 0.5s ease, top 0.5s ease, transform 0.2s;cursor:pointer}
 .pdot-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:800;border:2px solid rgba(255,255,255,.5);background:var(--bl);color:#fff}
 .pdot-circle.home-dot{background:#1a5c96;border-color:#60b0ff}.pdot-circle.away-dot{background:#8b1a1a;border-color:#ff8060}
 .pdot-name{font-size:.5rem;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);white-space:nowrap;max-width:44px;overflow:hidden;text-overflow:ellipsis}
 .pdot-ovr{font-size:.55rem;color:var(--gold);font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,.8);background:#0008;padding:1px 3px;border-radius:3px}
+.match-ball{width:12px;height:12px;background:#fff;border-radius:50%;position:absolute;z-index:5;transition:left 0.4s linear, top 0.4s linear;box-shadow:0 2px 5px rgba(0,0,0,0.5);border:1px solid #ccc;transform:translate(-50%,-50%);}
 
 /* Live Match Board */
 #live-board{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:600;display:none;flex-direction:column;overflow-y:auto}
@@ -109,41 +111,72 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Segoe U
 <body>
 <div id="app">
   <div id="hdr">
-    <h1>⚽ Manajer Liga Indonesia</h1>
+    <h1>⚽ Football Manager Web</h1>
     <div id="hdr-meta">
-      <span class="badge hi" id="wk-badge">📍 Pramusim</span>
+      <span class="badge hi" id="wk-badge">📍 Pre-Season</span>
       <span class="badge" id="tm-badge">–</span>
-      <span class="badge gld" id="bgt">Rp 0 M</span>
+      <span class="badge gld" id="bgt">€ 0 M</span>
     </div>
   </div>
   <nav id="tabs">
-    <button class="tb active" data-tab="dash">🏠 Utama</button>
-    <button class="tb" data-tab="squad">👥 Skuad</button>
-    <button class="tb" data-tab="league">📊 Liga</button>
-    <button class="tb" data-tab="cup">🏆 Piala</button>
-    <button class="tb" data-tab="lca">🌏 LCA</button>
+    <button class="tb active" data-tab="dash">🏠 Home</button>
+    <button class="tb" data-tab="squad">👥 Squad</button>
+    <button class="tb" data-tab="league">📊 League</button>
+    <button class="tb" data-tab="cup">🏆 Cup</button>
+    <button class="tb" data-tab="lca">🌏 ACL</button>
     <button class="tb" data-tab="transfer">💰 Transfer</button>
+    <button class="tb" data-tab="manager">👔 Manager</button>
   </nav>
   <main id="main"></main>
   
   <div id="live-board"></div>
-  <div id="mov"><div id="mbox"><h2 id="mtitle"></h2><div id="mbody"></div><div id="mfoot" style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"></div></div></div>
+  <div id="mov">
+    <div id="mbox">
+      <h2 id="mtitle"></h2>
+      <div id="mbody"></div>
+      <div id="mfoot" style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-s btn-sm" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+  </div>
   <div id="toast"></div>
 </div>
 
 <script>
 /* ================================================================
-   ⚽ MANAJER LIGA INDONESIA v3.2 (FIX SWAP, BUDGET, SELL)
+   ⚽ FOOTBALL MANAGER WEB v4.0 (FULL ENGLISH & OPTIMIZED)
 ================================================================ */
 
 /* ----------------------------------------------------------------
    CONSTANTS & CONFIG
 ---------------------------------------------------------------- */
 const TEAMS=["Persija","Persib","Arema FC","Bali Utd","PSM","Borneo FC","Persebaya","Madura Utd","PSIS","Dewa Utd","Barito Putera","PSS","Persik","RANS","Persita"];
-const FOREIGN_TEAMS=["Al Hilal", "Ulsan HD", "Yokohama FM", "Al Nassr", "Buriram Utd", "Kawasaki F.", "Pohang Steelers", "Johor DT"];
-const BASE_BUDGETS=[70, 75, 40, 65, 45, 55, 60, 35, 30, 45, 25, 25, 20, 30, 20];
 
-// Sistem Posisi Spesifik & Taktik
+// Background Asian Leagues (For ACL)
+const ASIAN_LEAGUES = {
+  'J-League': ["Yokohama FM", "Vissel Kobe", "Kawasaki F.", "Urawa Reds"],
+  'K-League': ["Ulsan HD", "Jeonbuk", "Pohang Steelers", "FC Seoul"],
+  'Saudi Pro': ["Al Hilal", "Al Nassr", "Al Ittihad", "Al Ahli"]
+};
+
+// Initial Budgets (Max 50M)
+const BASE_BUDGETS=[50, 48, 35, 45, 40, 42, 45, 30, 25, 38, 20, 20, 15, 25, 15];
+
+const CUP_WILDCARD="Nusantara Amatir";
+const POSITIONS={GK:4,DEF:5,MID:5,FWD:6};
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const TACTICS=["4-3-3","4-4-2","3-5-2","4-2-3-1","5-3-2"];
+const SEASON_WEEKS=28;
+const CUP_ROUND_WEEKS={"Round of 16":7,"Quarter Final":14,"Semi Final":21,"Final":28};
+const LCA_GROUP_WEEKS=[3,6,9,12,15,18];
+const LCA_FINAL_WEEK=25;
+
+const FN=["Andi","Budi","Candra","Deni","Eko","Fajar","Gilang","Hendra","Iwan","Joko","Kevin","Lukman","Novan","Rizki","Sandi","Taufik","Victor","Wahyu","Zaki"];
+const LN=["Pratama","Hidayat","Santoso","Wibowo","Saputra","Kurniawan","Firmansyah","Ramadan","Setiawan","Nugroho","Prayoga","Budiman","Surya","Hakim"];
+
+// Specific Positions & Order
+const POS_ORDER = {'GK':1,'RB':2,'CB':3,'LB':4,'CDM':5,'RM':6,'CM':7,'LM':8,'CAM':9,'RW':10,'LW':11,'ST':12};
+
 const POS_MAP = {
   GK:  { c: 'GK',  s: [] },
   CB:  { c: 'DEF', s: ['CDM','RB','LB'] },
@@ -167,18 +200,20 @@ const FORMATIONS = {
   '5-3-2':   ['GK', 'RB', 'CB', 'CB', 'CB', 'LB', 'CM', 'CM', 'CM', 'ST', 'ST']
 };
 
-const TACTICS = Object.keys(FORMATIONS);
-const SEASON_WEEKS=28;
-const CUP_ROUND_WEEKS={"16 Besar":7,"8 Besar":14,"Semifinal":21,"Final":28};
-
 /* ----------------------------------------------------------------
    UTILITIES
 ---------------------------------------------------------------- */
 const rnd=(lo,hi)=>Math.floor(Math.random()*(hi-lo+1))+lo;
 const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 const pick=a=>a[Math.floor(Math.random()*a.length)];
-const fmt=n=>`Rp ${n} M`;
-const randName=()=>pick(["Andi","Budi","Candra","Deni","Eko","Fajar","Gilang","Hendra","Iwan","Joko","Kevin","Lukman","Novan","Rizki","Sandi","Taufik","Victor","Wahyu","Zaki"])+' '+pick(["Pratama","Hidayat","Santoso","Wibowo","Saputra","Kurniawan","Firmansyah","Ramadan","Setiawan","Nugroho","Prayoga","Budiman","Surya","Hakim"]);
+const fmt=n=>`€ ${n} M`;
+const randName=()=>pick(FN)+' '+pick(LN);
+
+function weekToMonthIdx(w){
+  if(w<=0)return 6; // July
+  const order=[7,8,9,10,11,12,0,1,2,3,4];
+  return order[Math.min(Math.floor((w-1)/2.8),order.length-1)];
+}
 
 function ovrCls(v){return v>=80?'ovr-h':v>=70?'ovr-m':'ovr-l'}
 function getEffOvr(p, slotPos) {
@@ -188,30 +223,33 @@ function getEffOvr(p, slotPos) {
 }
 
 /* ----------------------------------------------------------------
-   PLAYER GENERATION
+   PLAYER GENERATION (MAX OVR 70, CHEM MAX 60 INITIALLY)
 ---------------------------------------------------------------- */
-function genPlayer(posReq, teamIndex){
+function genPlayer(posReq, teamIndex, isInitial = false){
   let pos = posReq;
   if(posReq==='DEF') pos = pick(['CB','CB','LB','RB']);
   if(posReq==='MID') pos = pick(['CDM','CM','CAM','RM','LM']);
   if(posReq==='FWD') pos = pick(['ST','ST','LW','RW']);
   
-  const ovrBase = rnd(62,85);
+  // Initial players max 70. Later generation can be up to 85.
+  const ovrBase = isInitial ? rnd(50, 70) : rnd(55, 80);
+  const chemBase = isInitial ? rnd(40, 60) : rnd(50, 90);
+  
   return{
     id:Math.random().toString(36).slice(2,10),
     name:randName(), pos: pos, mainCat: POS_MAP[pos].c,
-    ovr:ovrBase, isStar: ovrBase >= 80,
+    ovr:ovrBase, isStar: ovrBase >= 80, age: rnd(17,33),
     energy:100, moral:80+rnd(0,20),
     contract:rnd(1,3), goals:0, appearances:0,
-    teamIndex, inXI:false, slotPos:null, chem:rnd(60,100)
+    teamIndex, inXI:false, slotPos:null, chem:chemBase
   };
 }
 
-function genSquad(teamIndex){
+function genSquad(teamIndex, isInitial = false){
   const sq=[];
   ['GK','GK','GK','DEF','DEF','DEF','DEF','DEF','DEF','DEF',
    'MID','MID','MID','MID','MID','MID','MID',
-   'FWD','FWD','FWD','FWD','FWD'].forEach(c => sq.push(genPlayer(c, teamIndex)));
+   'FWD','FWD','FWD','FWD','FWD'].forEach(c => sq.push(genPlayer(c, teamIndex, isInitial)));
   setDefaultXI(sq, '4-3-3');
   return sq;
 }
@@ -233,32 +271,31 @@ function setDefaultXI(squad, tactic){
   });
 }
 
-function getPrice(ovr){ return Math.max(1, Math.round((ovr-60)*1.2)); }
+function getPrice(ovr){ return Math.max(1, Math.round((ovr-45)*0.5)); } // Cheaper prices to fit 50M budget
 
 function genMarket(){
   const ps=[];
   for(let i=0;i<18;i++){
     const cat=pick(['GK','DEF','MID','FWD']);
-    const p = genPlayer(cat, -1);
-    p.price = getPrice(p.ovr) + rnd(0,3);
+    const p = genPlayer(cat, -1, false);
+    p.price = getPrice(p.ovr) + rnd(0,2);
     ps.push(p);
   }
   return ps.sort((a,b)=>b.ovr-a.ovr);
 }
 
 /* ----------------------------------------------------------------
-   SELECT TO SWAP LOGIC (BUG FIXED)
+   SELECT TO SWAP LOGIC
 ---------------------------------------------------------------- */
 let swapIdA = null;
 
 function handleSwapClick(pid, isLiveMatch = false) {
   if(!swapIdA) {
     swapIdA = pid;
-    showToast("Pilih pemain kedua untuk ditukar...");
+    showToast("Select second player to swap...");
   } else if (swapIdA === pid) {
-    swapIdA = null; // Batal jika klik pemain yang sama
+    swapIdA = null;
   } else {
-    // Eksekusi Swap
     const sq = G.squads[G.playerTeamIdx];
     const p1 = sq.find(x=>x.id===swapIdA);
     const p2 = sq.find(x=>x.id===pid);
@@ -266,22 +303,18 @@ function handleSwapClick(pid, isLiveMatch = false) {
     if(p1 && p2) {
       if(isLiveMatch) {
         if((p1.inXI && !p2.inXI) || (!p1.inXI && p2.inXI)) {
-          if(liveMatchState.subsLeft <= 0) { showToast("❌ Jatah pergantian habis!"); swapIdA=null; return; }
+          if(liveMatchState.subsLeft <= 0) { showToast("❌ No substitutions left!"); swapIdA=null; return; }
           liveMatchState.subsLeft--;
         }
       }
-      // Tukar atribut Starter
-      const tempXI = p1.inXI;
-      const tempSlot = p1.slotPos;
+      const tempXI = p1.inXI; const tempSlot = p1.slotPos;
       p1.inXI = p2.inXI; p1.slotPos = p2.slotPos;
       p2.inXI = tempXI; p2.slotPos = tempSlot;
-      showToast("🔄 Pemain berhasil ditukar!");
+      showToast("🔄 Players swapped!");
     }
-    swapIdA = null; // Reset setelah sukses
+    swapIdA = null;
   }
-  
-  if(isLiveMatch) openSubModal(false); // False = Jangan reset swap id jika belum beres
-  else renderTab(activeTab); // Re-render tab skuad
+  if(isLiveMatch) openSubModal(false); else renderTab(activeTab);
 }
 
 /* ----------------------------------------------------------------
@@ -298,11 +331,9 @@ function calcTeamChemistry(teamIdx,tactic){
   
   const slotCounts = {};
   slots.forEach(s => slotCounts[s] = (slotCounts[s]||0) + 1);
-  
   Object.entries(slotCounts).forEach(([pos,need])=>{
     const have=xi.filter(p=>p.pos===pos).length;
-    if(have===need)posBonus+=8;
-    else posBonus-=Math.abs(have-need)*4;
+    if(have===need)posBonus+=8; else posBonus-=Math.abs(have-need)*4;
   });
   return clamp(avgChem+posBonus,0,100);
 }
@@ -361,23 +392,33 @@ function generateEvents(hIdx, aIdx, hGoals, aGoals) {
 }
 
 /* ----------------------------------------------------------------
-   LCA (ASIAN CHAMPIONS LEAGUE)
+   ACL (ASIAN CHAMPIONS LEAGUE)
 ---------------------------------------------------------------- */
+function simulateAsianLeagues() {
+  G.asianChampions = {
+    'J-League': pick(ASIAN_LEAGUES['J-League']),
+    'K-League': pick(ASIAN_LEAGUES['K-League']),
+    'Saudi Pro': pick(ASIAN_LEAGUES['Saudi Pro'])
+  };
+}
+
 function buildLCABracket() {
   const domestic = G.lcaTeamIndices; 
-  const foreign = [...FOREIGN_TEAMS].sort(()=>Math.random()-0.5).slice(0,4); 
+  if(!G.asianChampions) simulateAsianLeagues();
+  // We need 4 foreign teams. Let's pick the 3 champs + 1 random runner up.
+  const foreign = [G.asianChampions['J-League'], G.asianChampions['K-League'], G.asianChampions['Saudi Pro'], "Al Duhail"].sort(()=>Math.random()-0.5); 
   const qf = [];
-  for(let i=0; i<4; i++) qf.push([domestic[i], 15+i, foreign[i]]); 
-  return { "QF": qf, "SF": null, "Final": null };
+  for(let i=0; i<4; i++) {
+    G.lcaForeignMap[15+i] = foreign[i]; // Store name
+    qf.push([domestic[i], 15+i]); 
+  }
+  return { "Quarter Final": qf, "Semi Final": null, "Final": null };
 }
 
 function getTeamName(idx) {
   if(idx < 15) return TEAMS[idx];
   if(idx === 99) return CUP_WILDCARD;
-  if(idx >= 15 && idx <= 18) {
-    const match = G.lcaBracket["QF"]?.find(m=>m[1]===idx);
-    return match ? match[2] : "Klub Asing";
-  }
+  if(idx >= 15 && idx <= 18) return G.lcaForeignMap[idx] || "Asian Club";
   return "?";
 }
 
@@ -389,20 +430,21 @@ let liveInterval = null;
 let liveMatchState = { min:0, matches:[], myMatch:null, isPaused:false, subsLeft:5 };
 
 function freshState(){
-  const squads=TEAMS.map((_,i)=>genSquad(i));
+  const squads=TEAMS.map((_,i)=>genSquad(i, true)); // isInitial = true
   const tactics=TEAMS.map(()=>pick(TACTICS));
   return{
     season:1, week:0, phase:'preseason', preseasonWeeksLeft:2,
     playerTeamIdx:0, budget:0, squads, tactics,
     leagueTable: TEAMS.map((name,i)=>({teamIdx:i,name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0})),
     schedule: buildSchedule(), leagueResults:[],
-    cupBracket: {"16 Besar": [...Array(16).keys()].sort(()=>Math.random()-.5).reduce((res,k,i,arr)=>i%2===0?[...res,[arr[i],arr[i+1]==15?99:arr[i+1]]]:res, [])},
+    cupBracket: {"Round of 16": [...Array(16).keys()].sort(()=>Math.random()-.5).reduce((res,k,i,arr)=>i%2===0?[...res,[arr[i],arr[i+1]==15?99:arr[i+1]]]:res, [])},
     cupResults:{}, cupRoundsPlayed:{}, cupWinner:null,
     lcaTeamIndices: [0,1,2,3],
-    lcaBracket: {}, lcaResults:{}, lcaRoundsPlayed:{}, lcaWinner:null,
+    lcaBracket: {}, lcaResults:{}, lcaRoundsPlayed:{}, lcaWinner:null, lcaForeignMap:{}, asianChampions: null,
     transferMarket:genMarket(),
-    log:[{cls:'info',text:'🌟 Selamat datang! Kamu punya 2 minggu transfer sebelum liga dimulai.'}],
-    topScorers:{league:{}}
+    inbox: [{id:1, title:'Welcome Manager!', body:'Good luck in your new career.', action:null}],
+    managerName: 'Manager ' + randName().split(' ')[0],
+    log:[{cls:'info',text:'🌟 Welcome! You have 2 weeks of transfers before the league starts.'}],
   };
 }
 
@@ -418,8 +460,8 @@ function buildSchedule(){
   return [...rds, ...rds.map(r=>r.map(([a,b])=>[b,a]))].slice(0,28);
 }
 
-function saveState(){try{localStorage.setItem('mliv3',JSON.stringify(G));}catch(e){}}
-function loadState(){const s=localStorage.getItem('mliv3'); if(s){G=JSON.parse(s);return true;} return false;}
+function saveState(){try{localStorage.setItem('mliv4',JSON.stringify(G));}catch(e){}}
+function loadState(){const s=localStorage.getItem('mliv4'); if(s){G=JSON.parse(s);return true;} return false;}
 
 /* ----------------------------------------------------------------
    MAIN GAME LOOP
@@ -427,9 +469,9 @@ function loadState(){const s=localStorage.getItem('mliv3'); if(s){G=JSON.parse(s
 function playLeagueWeek(){
   if(G.phase==='preseason'){
     G.preseasonWeeksLeft--;
-    if(G.preseasonWeeksLeft<=0) { G.phase='league'; G.log.unshift({cls:'info',text:'🏁 Liga dimulai!'}); }
-    else { G.log.unshift({cls:'info',text:`⏳ Pramusim: ${G.preseasonWeeksLeft} minggu lagi!`}); }
-    saveState(); renderAll(); showToast('Minggu berganti!'); return;
+    if(G.preseasonWeeksLeft<=0) { G.phase='league'; G.log.unshift({cls:'info',text:'🏁 The League begins!'}); }
+    else { G.log.unshift({cls:'info',text:`⏳ Pre-season: ${G.preseasonWeeksLeft} weeks left!`}); }
+    saveState(); renderAll(); showToast('Advanced 1 week!'); return;
   }
   if(G.week>=SEASON_WEEKS){ showEndSeason(); return; }
 
@@ -449,18 +491,22 @@ function playLeagueWeek(){
     const hT = G.squads[h], aT = G.squads[a];
     hT.forEach(p=>{ p.energy = clamp(p.energy-rnd(10,15), 0, 100); if(score.home>score.away) p.moral = clamp(p.moral+5,0,100); });
     aT.forEach(p=>{ p.energy = clamp(p.energy-rnd(10,15), 0, 100); if(score.away>score.home) p.moral = clamp(p.moral+5,0,100); });
+    
+    // Apps
+    hT.filter(p=>p.inXI).forEach(p=>p.appearances++);
+    aT.filter(p=>p.inXI).forEach(p=>p.appearances++);
 
     if(h===G.playerTeamIdx || a===G.playerTeamIdx){
       const isH = h===G.playerTeamIdx;
       const my = isH?score.home:score.away; const op = isH?score.away:score.home;
-      G.log.unshift({cls:my>op?'win':my<op?'loss':'draw', text:`P${G.week}: ${TEAMS[G.playerTeamIdx]} ${my}–${op} ${TEAMS[isH?a:h]}`});
+      G.log.unshift({cls:my>op?'win':my<op?'loss':'draw', text:`W${G.week}: ${TEAMS[G.playerTeamIdx]} ${my}–${op} ${TEAMS[isH?a:h]}`});
     }
   });
 
   G.leagueTable.sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga));
   
-  if(G.week===6 && !G.lcaBracket["QF"]) { G.lcaBracket = buildLCABracket(); playLCARound("QF"); }
-  if(G.week===12 && G.lcaBracket["SF"]) playLCARound("SF");
+  if(G.week===6 && !G.lcaBracket["Quarter Final"]) { G.lcaBracket = buildLCABracket(); playLCARound("Quarter Final"); }
+  if(G.week===12 && G.lcaBracket["Semi Final"]) playLCARound("Semi Final");
   if(G.week===18 && G.lcaBracket["Final"]) playLCARound("Final");
 
   saveState();
@@ -473,9 +519,6 @@ function updateTable(ti, gf, ga){
   if(gf>ga){r.won++; r.pts+=3;} else if(gf===ga){r.drawn++; r.pts+=1;} else r.lost++;
 }
 
-/* ----------------------------------------------------------------
-   KNOCKOUT ENGINE (Cup & LCA)
----------------------------------------------------------------- */
 function playKnockout(bracketObj, resObj, playedTracker, roundName, nextRoundName) {
   if(!bracketObj[roundName] || playedTracker[roundName]) return [];
   const results = []; const winners = [];
@@ -501,20 +544,20 @@ function playKnockout(bracketObj, resObj, playedTracker, roundName, nextRoundNam
 function playCupRound(){
   const rn = Object.entries(CUP_ROUND_WEEKS).find(([r,w])=>w===G.week)?.[0];
   if(!rn || G.cupRoundsPlayed[rn]) return;
-  const next = {"16 Besar":"8 Besar","8 Besar":"Semifinal","Semifinal":"Final"}[rn];
+  const next = {"Round of 16":"Quarter Final","Quarter Final":"Semi Final","Semi Final":"Final"}[rn];
   const res = playKnockout(G.cupBracket, G.cupResults, G.cupRoundsPlayed, rn, next);
   if(!next) G.cupWinner = res[0].winner;
   saveState(); startLiveBoard(res);
 }
 
 function playLCARound(rn) {
-  const next = {"QF":"SF", "SF":"Final"}[rn];
+  const next = {"Quarter Final":"Semi Final", "Semi Final":"Final"}[rn];
   const res = playKnockout(G.lcaBracket, G.lcaResults, G.lcaRoundsPlayed, rn, next);
   if(!next && res.length) G.lcaWinner = res[0].winner;
 }
 
 /* ----------------------------------------------------------------
-   LIVE BOARD & IN-GAME SUBS
+   LIVE BOARD & ANIMATIONS (BALL + PLAYERS)
 ---------------------------------------------------------------- */
 function startLiveBoard(matches){
   if(!matches.length){ renderAll(); return; }
@@ -526,6 +569,19 @@ function startLiveBoard(matches){
     if(liveMatchState.isPaused) return;
     liveMatchState.min = Math.min(liveMatchState.min + rnd(3,8), 90);
     renderLiveBoard();
+    
+    // Dynamic Animations for Pitch
+    if(liveMatchState.myMatch && liveMatchState.min < 90) {
+      document.querySelectorAll('.pdot-live').forEach(dot => {
+        const bx = parseFloat(dot.dataset.bx); const by = parseFloat(dot.dataset.by);
+        dot.style.left = `${bx + rnd(-4, 4)}%`; dot.style.top = `${by + rnd(-4, 4)}%`;
+      });
+      const ball = document.getElementById('live-ball');
+      if(ball) {
+        ball.style.left = `${rnd(15, 85)}%`; ball.style.top = `${rnd(15, 85)}%`;
+      }
+    }
+
     if(liveMatchState.min >= 90) { clearInterval(liveInterval); }
   }, 600);
   renderLiveBoard();
@@ -545,7 +601,7 @@ function renderLiveBoard() {
 
   lb.innerHTML = `
     <div style="background:var(--bd);padding:10px;text-align:center;font-weight:bold;color:var(--gold)">
-      ${st.min>=90?'FT - LAGA SELESAI':`LIVE - MENIT ${st.min}'`}
+      ${st.min>=90?'FT - FULL TIME':`LIVE - MIN ${st.min}'`}
     </div>
     ${my ? `
       <div class="lb-score">
@@ -554,12 +610,12 @@ function renderLiveBoard() {
         <div class="lb-team"><div style="font-size:.8rem;color:var(--dim)">${getTeamName(my.awayIdx)}</div><div class="lb-tgoals">${st.min>=90?my.awayScore:myScoreA}</div></div>
       </div>
       <div style="text-align:center;margin-bottom:10px">
-        ${st.min<90 ? `<button class="btn btn-g btn-sm" onclick="openSubModal(true)">🔄 Substitusi (${st.subsLeft})</button>` : ''}
+        ${st.min<90 ? `<button class="btn btn-g btn-sm" onclick="openSubModal(true)">🔄 Subs (${st.subsLeft})</button>` : ''}
       </div>
-    ` : `<div style="padding:20px;text-align:center;color:var(--dim)">Kamu tidak bermain hari ini (Bye).</div>`}
+    ` : `<div style="padding:20px;text-align:center;color:var(--dim)">You don't have a match this week (Bye).</div>`}
     
     <div style="flex:1;overflow-y:auto;padding:10px">
-      <div class="sec">Semua Hasil Pertandingan</div>
+      <div class="sec">All Live Matches</div>
       ${st.matches.map(m=>{
         const gh = st.min>=90 ? m.homeScore : m.events.filter(e=>e.team==='home' && e.min<=st.min).length;
         const ga = st.min>=90 ? m.awayScore : m.events.filter(e=>e.team==='away' && e.min<=st.min).length;
@@ -571,8 +627,8 @@ function renderLiveBoard() {
       }).join('')}
     </div>
     <div style="padding:10px">
-      ${st.min>=90 ? `<button class="btn btn-p btn-blk" onclick="document.getElementById('live-board').classList.remove('show'); renderAll();">Selesai</button>` 
-                   : `<button class="btn btn-s btn-blk" onclick="liveMatchState.min=90; renderLiveBoard();">⏩ Lewati Pertandingan</button>`}
+      ${st.min>=90 ? `<button class="btn btn-p btn-blk" onclick="document.getElementById('live-board').classList.remove('show'); renderAll();">Continue</button>` 
+                   : `<button class="btn btn-s btn-blk" onclick="liveMatchState.min=90; renderLiveBoard();">⏩ Skip Match</button>`}
     </div>
   `;
 }
@@ -585,20 +641,15 @@ function openSubModal(resetSwap = true) {
   const tactic = G.tactics[G.playerTeamIdx];
   
   let html = `
-    <p style="font-size:.7rem;color:var(--dim);text-align:center">Pilih pemain di lapangan, lalu pilih cadangan (Tersisa: <b>${liveMatchState.subsLeft}</b>).</p>
+    <p style="font-size:.7rem;color:var(--dim);text-align:center">Select player on pitch, then bench (Subs left: <b>${liveMatchState.subsLeft}</b>).</p>
     <div style="transform:scale(0.9); transform-origin:top center; margin-bottom:-20px;">
       ${renderFormationPitch(sq, tactic, 'live')}
     </div>
   `;
   
-  const mbox = document.getElementById('mbox');
-  mbox.innerHTML = `
-    <h2 style="color:var(--gold)">🔄 Substitusi In-Game</h2>
-    <div id="mbody">${html}</div>
-    <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-p btn-sm" onclick="closeSubModal()">Tutup & Lanjut Laga</button>
-    </div>
-  `;
+  document.getElementById('mtitle').innerHTML = '<span style="color:var(--gold)">🔄 Live Substitution</span>';
+  document.getElementById('mbody').innerHTML = html;
+  document.getElementById('mfoot').innerHTML = `<button class="btn btn-p btn-sm" onclick="closeSubModal()">Back to Match</button>`;
   document.getElementById('mov').classList.add('show');
 }
 
@@ -612,7 +663,7 @@ function closeSubModal() {
    UI RENDERERS
 ---------------------------------------------------------------- */
 function updateHeader(){
-  document.getElementById('wk-badge').textContent=`📍 ${G.phase==='preseason'?`Pramusim (${G.preseasonWeeksLeft})`:`Pekan ${G.week}`}`;
+  document.getElementById('wk-badge').textContent=`📍 ${G.phase==='preseason'?`Pre-Season (${G.preseasonWeeksLeft})`:`Week ${G.week}`}`;
   document.getElementById('tm-badge').textContent=TEAMS[G.playerTeamIdx];
   document.getElementById('bgt').textContent=fmt(G.budget);
 }
@@ -625,28 +676,26 @@ function renderDash(){
   const inTW = G.phase==='preseason' || weekToMonthIdx(G.week)===0;
 
   document.getElementById('main').innerHTML=`
-    <div class="sec">📋 Dashboard Musim ${G.season}</div>
+    <div class="sec">📋 Dashboard Season ${G.season}</div>
     <div class="g3" style="margin-bottom:10px">
-      <div class="card" style="text-align:center;padding:10px 5px"><div style="font-size:1.2rem;font-weight:900;color:var(--gold)">#${pos}</div><div style="font-size:.6rem;color:var(--dim)">Klasemen</div></div>
-      <div class="card" style="text-align:center;padding:10px 5px"><div style="font-size:1.2rem;font-weight:900;color:var(--bg2)">${row?.pts||0}</div><div style="font-size:.6rem;color:var(--dim)">Poin</div></div>
+      <div class="card" style="text-align:center;padding:10px 5px"><div style="font-size:1.2rem;font-weight:900;color:var(--gold)">#${pos}</div><div style="font-size:.6rem;color:var(--dim)">Position</div></div>
+      <div class="card" style="text-align:center;padding:10px 5px"><div style="font-size:1.2rem;font-weight:900;color:var(--bg2)">${row?.pts||0}</div><div style="font-size:.6rem;color:var(--dim)">Points</div></div>
       <div class="card" style="text-align:center;padding:10px 5px"><div style="font-size:1.2rem;font-weight:900;color:var(--gg)">${effOvr}</div><div style="font-size:.6rem;color:var(--dim)">OVR XI (Eff)</div></div>
     </div>
     
     <div class="card">
-      <div class="sec">⚡ Aksi Utama</div>
+      <div class="sec">⚡ Quick Actions</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <button class="btn btn-p btn-blk" onclick="playLeagueWeek()">${G.phase==='preseason'?'⏭️ Lanjut Pramusim':'⚽ Mainkan Laga Liga'}</button>
-        ${CUP_ROUND_WEEKS[Object.keys(CUP_ROUND_WEEKS).find(k=>CUP_ROUND_WEEKS[k]===G.week)] && !G.cupRoundsPlayed[Object.keys(CUP_ROUND_WEEKS).find(k=>CUP_ROUND_WEEKS[k]===G.week)] ? `<button class="btn btn-g btn-blk" onclick="playCupRound()">🏆 Mainkan Laga Piala</button>`:''}
-        ${inTW ? `<button class="btn btn-s btn-blk" onclick="switchTab('transfer')">💰 Buka Pasar Transfer</button>` : ''}
+        <button class="btn btn-p btn-blk" onclick="playLeagueWeek()">${G.phase==='preseason'?'⏭️ Advance Pre-Season':'⚽ Play League Match'}</button>
+        ${CUP_ROUND_WEEKS[Object.keys(CUP_ROUND_WEEKS).find(k=>CUP_ROUND_WEEKS[k]===G.week)] && !G.cupRoundsPlayed[Object.keys(CUP_ROUND_WEEKS).find(k=>CUP_ROUND_WEEKS[k]===G.week)] ? `<button class="btn btn-g btn-blk" onclick="playCupRound()">🏆 Play Cup Match</button>`:''}
+        ${inTW ? `<button class="btn btn-s btn-blk" onclick="switchTab('transfer')">💰 Open Transfer Market</button>` : ''}
       </div>
     </div>
 
     <div class="card">
-      <div class="sec">📰 Berita</div>
+      <div class="sec">📰 Latest News</div>
       <ul class="mlog">${G.log.slice(0,5).map(l=>`<li class="${l.cls}">${l.text}</li>`).join('')}</ul>
     </div>
-    
-    <div style="text-align:center;margin-top:20px"><button class="btn btn-sm btn-d" onclick="hardReset()">🛑 Save Baru (Reset)</button></div>
   `;
 }
 
@@ -657,18 +706,19 @@ function renderSquad(){
   const xiCount = sq.filter(p=>p.inXI).length;
   
   document.getElementById('main').innerHTML=`
-    <div class="sec">👥 Skuad (${xiCount}/11 XI)</div>
+    <div class="sec">👥 Squad (${xiCount}/11 XI)</div>
     <div class="card">
       <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:5px;margin-bottom:5px">
         ${TACTICS.map(t=>`<button class="btn btn-sm ${t===tactic?'btn-p':'btn-s'}" onclick="setTactic('${t}')">${t}</button>`).join('')}
       </div>
       ${renderFormationPitch(sq, tactic, 'squad')}
-      <p style="font-size:.65rem;color:var(--gold);text-align:center;margin-top:8px">💡 Tip: Klik pemain (garis putus-putus kuning) lalu klik pemain lain untuk <b>menukar posisi</b>.</p>
+      <p style="font-size:.65rem;color:var(--gold);text-align:center;margin-top:8px">💡 Tip: Click player on pitch, then click another to <b>swap positions</b>.</p>
     </div>
     
-    <div class="sec" style="margin-top:15px">Daftar Lengkap Skuad</div>
+    <div class="sec" style="margin-top:15px">Full Squad List</div>
     ${['GK','DEF','MID','FWD'].map(cat => {
-      const players = sq.filter(p=>p.mainCat===cat).sort((a,b)=>b.ovr-a.ovr);
+      // Sort by POS_ORDER, then OVR
+      const players = sq.filter(p=>p.mainCat===cat).sort((a,b)=> POS_ORDER[a.pos] - POS_ORDER[b.pos] || b.ovr-a.ovr);
       if(!players.length) return '';
       return `
         <div style="margin-bottom:10px">
@@ -703,7 +753,7 @@ function renderFormationPitch(squad, tactic, mode){
     if(p) {
       const isSel = swapIdA === p.id;
       const eff = getEffOvr(p, slotName);
-      return `<div class="pdot ${isSel?'selected-swap':''}" style="left:${xMap[i]}%;top:${yMap[i]}%;" onclick="handleSwapClick('${p.id}', ${mode==='live'})">
+      return `<div class="pdot ${mode==='live'?'pdot-live':''} ${isSel?'selected-swap':''}" data-bx="${xMap[i]}" data-by="${yMap[i]}" style="left:${xMap[i]}%;top:${yMap[i]}%;" onclick="handleSwapClick('${p.id}', ${mode==='live'})">
         <div class="pdot-circle home-dot">${eff}</div>
         <div class="pdot-name">${p.name.split(' ')[0]}${p.isStar?'⭐':''}</div>
         <div class="pdot-ovr" style="${eff<p.ovr?'color:var(--red)':''}">${slotName}</div>
@@ -717,6 +767,9 @@ function renderFormationPitch(squad, tactic, mode){
   }).join('');
 
   const bench = squad.filter(p=>!p.inXI);
+  
+  // Add a ball if live mode
+  const ballHtml = mode === 'live' ? `<div id="live-ball" class="match-ball" style="left:50%;top:50%"></div>` : '';
 
   return `
     <div class="pitch-wrap" style="aspect-ratio:9/12">
@@ -726,9 +779,10 @@ function renderFormationPitch(squad, tactic, mode){
         <div class="pl pl-gb-top"></div><div class="pl pl-gb-bot"></div>
       </div>
       ${dots}
+      ${ballHtml}
     </div>
     <div style="margin-top:10px">
-      <div style="font-size:.65rem;color:var(--dim);margin-bottom:5px">🪑 Bangku Cadangan (${bench.length})</div>
+      <div style="font-size:.65rem;color:var(--dim);margin-bottom:5px">🪑 Bench (${bench.length})</div>
       <div style="display:flex;flex-wrap:wrap;gap:4px">
         ${bench.map(p=>`
           <div class="pill ${swapIdA===p.id?'selected-swap':''}" style="cursor:pointer;font-size:.65rem;border-color:var(--brd);padding:4px 8px;display:flex;align-items:center;gap:4px" onclick="handleSwapClick('${p.id}', ${mode==='live'})">
@@ -752,10 +806,11 @@ function playerCardHTML(p){
       <div style="flex:1;min-width:0">
         <div class="pln">${p.name} ${p.isStar?'⭐':''} ${p.inXI?`<span style="font-size:.55rem;color:var(--gg);border:1px solid var(--gg);padding:0 3px;border-radius:3px">XI : ${p.slotPos}</span>`:''}</div>
         <div style="font-size:.6rem;color:var(--dim);margin-top:2px">
-          ${effStr} | Kontrak: ${p.contract}m | En: ${p.energy}%
+          ${effStr} | Con: ${p.contract}y | En: ${p.energy}%
         </div>
       </div>
       <div class="ovr ${ovrCls(p.ovr)}">${p.ovr}</div>
+      <button class="info-btn" onclick="event.stopPropagation(); openPlayerModal('${p.id}')">i</button>
     </div>
   `;
 }
@@ -764,14 +819,14 @@ function setTactic(t) {
   G.tactics[G.playerTeamIdx] = t;
   setDefaultXI(G.squads[G.playerTeamIdx], t);
   swapIdA = null;
-  saveState(); renderTab(activeTab); showToast("Taktik diterapkan!");
+  saveState(); renderTab(activeTab); showToast("Tactic Applied!");
 }
 
 /* RENDERING LEAGUE */
 function renderLeague(){
   const th = G.leagueTable.map((r,i)=>`
     <tr class="${r.teamIdx===G.playerTeamIdx?'me':''}">
-      <td>${i+1}</td><td>${r.name}</td>
+      <td>${i+1}</td><td><span class="team-link" onclick="openTeamModal(${r.teamIdx})">${r.name}</span></td>
       <td class="n">${r.played}</td><td class="n">${r.won}</td><td class="n">${r.drawn}</td><td class="n">${r.lost}</td>
       <td class="n">${r.gd>0?'+':''}${r.gd}</td>
       <td class="n" style="font-weight:800">${r.pts}</td>
@@ -779,27 +834,27 @@ function renderLeague(){
   `).join('');
 
   document.getElementById('main').innerHTML=`
-    <div class="sec">📊 Klasemen Liga</div>
+    <div class="sec">📊 League Table</div>
     <table class="tbl" style="margin-bottom:15px">
-      <thead><tr><th>#</th><th>Tim</th><th class="n">P</th><th class="n">W</th><th class="n">D</th><th class="n">L</th><th class="n">GD</th><th class="n">Pts</th></tr></thead>
+      <thead><tr><th>#</th><th>Team</th><th class="n">P</th><th class="n">W</th><th class="n">D</th><th class="n">L</th><th class="n">GD</th><th class="n">Pts</th></tr></thead>
       <tbody>${th}</tbody>
     </table>
     <div class="card">
-      <div class="sec">Hasil Terakhir Kamu</div>
+      <div class="sec">Your Latest Results</div>
       ${G.leagueResults.filter(r=>r.homeIdx===G.playerTeamIdx||r.awayIdx===G.playerTeamIdx).slice(-5).reverse().map(r=>`
         <div class="row bt" style="font-size:.75rem;padding:5px 0;border-bottom:1px solid var(--sf2)">
           <span>vs ${TEAMS[r.homeIdx===G.playerTeamIdx?r.awayIdx:r.homeIdx]}</span>
           <b style="color:var(--gold)">${r.homeScore} - ${r.awayScore}</b>
         </div>
-      `).join('')||'<div style="font-size:.7rem;color:var(--dim)">Belum ada laga.</div>'}
+      `).join('')||'<div style="font-size:.7rem;color:var(--dim)">No matches played yet.</div>'}
     </div>
   `;
 }
 
 /* RENDERING CUP & LCA */
 function renderCup(){
-  let html=`<div class="sec">🏆 Piala Domestik</div>`;
-  ['16 Besar','8 Besar','Semifinal','Final'].forEach(rn=>{
+  let html=`<div class="sec">🏆 Domestic Cup</div>`;
+  ['Round of 16','Quarter Final','Semi Final','Final'].forEach(rn=>{
     const p=G.cupBracket[rn]; const r=G.cupResults[rn];
     if(p) {
       html += `<div class="card"><div class="sec" style="color:var(--gold)">${rn}</div>`;
@@ -811,15 +866,15 @@ function renderCup(){
       html += `</div>`;
     }
   });
-  if(G.cupWinner!==null) html += `<div class="card" style="text-align:center"><div style="font-size:2rem">🏆</div><b>Juara: ${getTeamName(G.cupWinner)}</b></div>`;
+  if(G.cupWinner!==null) html += `<div class="card" style="text-align:center"><div style="font-size:2rem">🏆</div><b>Winner: ${getTeamName(G.cupWinner)}</b></div>`;
   document.getElementById('main').innerHTML = html;
 }
 
 function renderLCA(){
-  let html=`<div class="sec">🌏 Liga Champions Asia (Knockout)</div>
-    <p style="font-size:.7rem;color:var(--dim);margin-bottom:10px">Diikuti 4 Top Liga Domestik vs 4 Raksasa Asia.</p>`;
+  let html=`<div class="sec">🌏 Asian Champions League</div>
+    <p style="font-size:.7rem;color:var(--dim);margin-bottom:10px">Top 4 Domestic vs 4 Asian Giants.</p>`;
   
-  ['QF', 'SF', 'Final'].forEach(rn => {
+  ['Quarter Final', 'Semi Final', 'Final'].forEach(rn => {
     const p=G.lcaBracket[rn]; const r=G.lcaResults[rn];
     if(p) {
       html += `<div class="card"><div class="sec" style="color:var(--gold)">${rn}</div>`;
@@ -831,55 +886,64 @@ function renderLCA(){
       html += `</div>`;
     }
   });
-  if(G.lcaWinner!==null) html += `<div class="card" style="text-align:center"><div style="font-size:2rem">🥇</div><b>Juara Asia: ${getTeamName(G.lcaWinner)}</b></div>`;
-  else if(!G.lcaBracket["QF"]) html += `<div class="card"><div style="font-size:.75rem;color:var(--dim);text-align:center">Turnamen dimulai pada Pekan ke-6.</div></div>`;
+  if(G.lcaWinner!==null) html += `<div class="card" style="text-align:center"><div style="font-size:2rem">🥇</div><b>Champions of Asia: ${getTeamName(G.lcaWinner)}</b></div>`;
+  else if(!G.lcaBracket["Quarter Final"]) html += `<div class="card"><div style="font-size:.75rem;color:var(--dim);text-align:center">Tournament starts Week 6.</div></div>`;
+  
+  // Show simulated asian leagues
+  if(G.asianChampions) {
+    html += `<div class="card"><div class="sec">Regional Champions (Background)</div>`;
+    Object.entries(G.asianChampions).forEach(([lg, team])=>{
+      html += `<div class="row bt" style="font-size:.7rem;margin-bottom:4px"><span>${lg}</span><b style="color:var(--gold)">${team}</b></div>`;
+    });
+    html += `</div>`;
+  }
   document.getElementById('main').innerHTML = html;
 }
 
-/* RENDERING TRANSFER (JUAL BELI DIPERBAIKI) */
+/* RENDERING TRANSFER */
 function renderTransfer(){
   const inTW = G.phase==='preseason' || weekToMonthIdx(G.week)===0;
   let html = `
-    <div class="sec">💰 Pasar Transfer</div>
+    <div class="sec">💰 Transfer Market</div>
     <div class="card" style="display:flex;justify-content:space-between;align-items:center">
-      <span style="font-weight:bold;color:var(--dim)">Sisa Budget:</span>
+      <span style="font-weight:bold;color:var(--dim)">Remaining Budget:</span>
       <span style="font-size:1.2rem;font-weight:900;color:var(--gold)">${fmt(G.budget)}</span>
     </div>
   `;
 
   if(!inTW) {
-    html += `<div class="card" style="text-align:center;color:var(--red);font-weight:bold">🔴 Jendela Transfer Ditutup!</div>`;
+    html += `<div class="card" style="text-align:center;color:var(--red);font-weight:bold">🔴 Transfer Window Closed!</div>`;
   } else {
-    html += `<div class="card"><div class="sec">Pemain Tersedia (Beli)</div>`;
+    html += `<div class="card"><div class="sec">Available Players</div>`;
     G.transferMarket.forEach(p=>{
       const canBuy = G.budget >= p.price;
       html += `
         <div class="row bt" style="background:var(--sf2);padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--brd)">
           <div>
-            <div style="font-weight:bold;font-size:.8rem"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> ${p.name}${p.isStar?'⭐':''}</div>
-            <div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | Umur: ${rnd(18,32)} | Kontrak: ${p.contract}m</div>
+            <div style="font-weight:bold;font-size:.8rem;cursor:pointer" onclick="openPlayerModal('${p.id}')"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> ${p.name}${p.isStar?'⭐':''} <span style="font-size:0.6rem;color:var(--bg2)">[i]</span></div>
+            <div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | Age: ${p.age} | Con: ${p.contract}y</div>
           </div>
           <div style="text-align:right">
             <div style="font-weight:bold;color:var(--gold);margin-bottom:4px">${fmt(p.price)}</div>
-            <button class="btn btn-sm ${canBuy?'btn-p':'btn-s'}" ${!canBuy?'disabled':''} onclick="buyPlayer('${p.id}')">BELI</button>
+            <button class="btn btn-sm ${canBuy?'btn-p':'btn-s'}" ${!canBuy?'disabled':''} onclick="buyPlayer('${p.id}')">BUY</button>
           </div>
         </div>
       `;
     });
     html += `</div>
     
-    <div class="card"><div class="sec">Pemain Kamu (Jual)</div>`;
+    <div class="card"><div class="sec">Sell Your Players</div>`;
     G.squads[G.playerTeamIdx].forEach(p=>{
-      const sp = Math.max(1, getPrice(p.ovr) - rnd(0,2)); // Hitung harga jual yg masuk akal
+      const sp = Math.max(1, getPrice(p.ovr) - rnd(0,1));
       html += `
         <div class="row bt" style="background:var(--sf2);padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--brd)">
           <div>
             <div style="font-weight:bold;font-size:.8rem"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> ${p.name}${p.isStar?'⭐':''}</div>
-            <div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | Status: ${p.inXI?'<span style="color:var(--gg)">Bermain di XI</span>':'<span style="color:var(--dim)">Cadangan</span>'}</div>
+            <div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | Status: ${p.inXI?'<span style="color:var(--gg)">In XI</span>':'<span style="color:var(--dim)">Bench</span>'}</div>
           </div>
           <div style="text-align:right">
             <div style="font-weight:bold;color:var(--gold);margin-bottom:4px">+ ${fmt(sp)}</div>
-            <button class="btn btn-sm btn-d" onclick="sellPlayer('${p.id}')">JUAL</button>
+            <button class="btn btn-sm btn-d" onclick="sellPlayer('${p.id}')">SELL</button>
           </div>
         </div>
       `;
@@ -892,12 +956,12 @@ function renderTransfer(){
 function buyPlayer(id){
   const idx=G.transferMarket.findIndex(p=>p.id===id); if(idx<0)return;
   const p=G.transferMarket[idx];
-  if(G.budget<p.price){showToast('❌ Budget tidak cukup!');return;}
+  if(G.budget<p.price){showToast('❌ Not enough budget!');return;}
   G.budget -= p.price;
   p.teamIndex = G.playerTeamIdx;
   G.squads[G.playerTeamIdx].push(p);
   G.transferMarket.splice(idx,1);
-  saveState(); showToast(`✅ Sukses merekrut ${p.name}!`); renderAll();
+  saveState(); showToast(`✅ Successfully signed ${p.name}!`); renderAll();
 }
 
 function sellPlayer(id){
@@ -905,13 +969,56 @@ function sellPlayer(id){
   const idx = sq.findIndex(p=>p.id===id); if(idx<0)return;
   const p = sq[idx];
   
-  if(p.inXI) { showToast('❌ Keluarkan dari Starting XI (ganti dengan cadangan) terlebih dulu!'); return; }
-  if(sq.length <= 16) { showToast('❌ Skuad minimum batasnya 16 pemain!'); return; }
+  if(p.inXI) { showToast('❌ Remove from Starting XI first!'); return; }
+  if(sq.length <= 16) { showToast('❌ Squad minimum limit is 16 players!'); return; }
   
-  const sp = Math.max(1, getPrice(p.ovr) - rnd(0,2));
+  const sp = Math.max(1, getPrice(p.ovr) - rnd(0,1));
   G.budget += sp;
   sq.splice(idx, 1);
-  saveState(); showToast(`✅ ${p.name} dijual seharga ${fmt(sp)}!`); renderAll();
+  saveState(); showToast(`✅ ${p.name} sold for ${fmt(sp)}!`); renderAll();
+}
+
+/* RENDERING MANAGER TAB */
+function renderManager(){
+  let inboxHtml = G.inbox.length === 0 ? `<p style="font-size:.7rem;color:var(--dim)">No messages.</p>` : '';
+  G.inbox.forEach((msg, idx) => {
+    inboxHtml += `
+      <div style="background:var(--sf2);padding:10px;border-radius:6px;border-left:3px solid ${msg.action?'var(--gg)':'var(--bg2)'};margin-bottom:8px">
+        <div style="font-weight:bold;font-size:.8rem">${msg.title}</div>
+        <div style="font-size:.7rem;color:var(--dim);margin:5px 0">${msg.body}</div>
+        ${msg.action ? `<button class="btn btn-sm btn-p" onclick="acceptJob(${msg.targetTeamIdx}, ${idx})">Accept Offer</button>` : ''}
+      </div>
+    `;
+  });
+
+  document.getElementById('main').innerHTML = `
+    <div class="sec">👔 Manager Profile</div>
+    <div class="card" style="text-align:center">
+      <div style="width:60px;height:60px;background:var(--bl);border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:1.5rem">👤</div>
+      <div style="font-weight:bold;font-size:1.1rem">${G.managerName}</div>
+      <div style="font-size:.8rem;color:var(--dim)">Current Club: <b style="color:var(--gold)">${TEAMS[G.playerTeamIdx]}</b></div>
+    </div>
+    
+    <div class="card">
+      <div class="sec">📧 Inbox</div>
+      ${inboxHtml}
+    </div>
+
+    <div class="card" style="margin-top:20px;border-color:var(--red)">
+      <div class="sec">Danger Zone</div>
+      <button class="btn btn-d btn-blk" onclick="hardReset()">🛑 Retire / New Save</button>
+    </div>
+  `;
+}
+
+function acceptJob(newTeamIdx, msgIdx){
+  if(confirm(`Are you sure you want to leave ${TEAMS[G.playerTeamIdx]} and join ${TEAMS[newTeamIdx]}?`)) {
+    G.playerTeamIdx = newTeamIdx;
+    G.budget = BASE_BUDGETS[newTeamIdx]; // Give them the base budget
+    G.inbox.splice(msgIdx, 1);
+    G.log.unshift({cls:'info', text:`👔 Manager joined ${TEAMS[newTeamIdx]}!`});
+    saveState(); renderAll(); showToast(`Welcome to ${TEAMS[newTeamIdx]}!`);
+  }
 }
 
 /* ----------------------------------------------------------------
@@ -930,20 +1037,20 @@ function showEndSeason(){
   mbox.innerHTML = `
     <div style="text-align:center">
       <h1 style="font-size:3rem;margin:0">🏆</h1>
-      <h2 style="color:var(--gold)">Musim ${G.season} Selesai!</h2>
-      <p style="font-size:.8rem;color:var(--txt)">Juara Liga: <b>${G.leagueTable[0].name}</b></p>
+      <h2 style="color:var(--gold)">Season ${G.season} Completed!</h2>
+      <p style="font-size:.8rem;color:var(--txt)">League Champions: <b>${G.leagueTable[0].name}</b></p>
       <div style="background:var(--sf2);padding:10px;border-radius:8px;margin:15px 0">
-        <div style="font-size:.75rem;color:var(--dim)">Tim Kamu (${TEAMS[G.playerTeamIdx]}):</div>
-        <div style="font-size:1.2rem;font-weight:bold;color:var(--wh)">Posisi Akhir: #${pos}</div>
-        <div style="font-size:.9rem;color:var(--gg);margin-top:5px">Uang Hadiah: + ${fmt(reward)}</div>
+        <div style="font-size:.75rem;color:var(--dim)">Your Team (${TEAMS[G.playerTeamIdx]}):</div>
+        <div style="font-size:1.2rem;font-weight:bold;color:var(--wh)">Final Position: #${pos}</div>
+        <div style="font-size:.9rem;color:var(--gg);margin-top:5px">Prize Money: + ${fmt(reward)}</div>
       </div>
     </div>
-    <button class="btn btn-p btn-blk" onclick="startNewSeason(${reward})">Lanjut Musim Depan ➔</button>
+    <button class="btn btn-p btn-blk" onclick="startNewSeason(${reward}, ${pos})">Proceed to Next Season ➔</button>
   `;
   document.getElementById('mov').classList.add('show');
 }
 
-function startNewSeason(reward){
+function startNewSeason(reward, finalPos){
   G.budget += reward;
   G.season++; G.week=0; G.phase='preseason'; G.preseasonWeeksLeft=2;
   
@@ -951,9 +1058,9 @@ function startNewSeason(reward){
   G.leagueResults=[]; G.schedule=buildSchedule();
   
   G.lcaTeamIndices = G.leagueTable.slice(0,4).map(x=>x.teamIdx);
-  G.lcaBracket = {}; G.lcaResults = {}; G.lcaRoundsPlayed = {}; G.lcaWinner = null;
+  G.lcaBracket = {}; G.lcaResults = {}; G.lcaRoundsPlayed = {}; G.lcaWinner = null; G.asianChampions = null;
   
-  G.cupBracket = {"16 Besar": [...Array(16).keys()].sort(()=>Math.random()-.5).reduce((res,k,i,arr)=>i%2===0?[...res,[arr[i],arr[i+1]==15?99:arr[i+1]]]:res, [])};
+  G.cupBracket = {"Round of 16": [...Array(16).keys()].sort(()=>Math.random()-.5).reduce((res,k,i,arr)=>i%2===0?[...res,[arr[i],arr[i+1]==15?99:arr[i+1]]]:res, [])};
   G.cupResults={}; G.cupRoundsPlayed={}; G.cupWinner=null;
   
   G.squads.forEach((sq,ti)=>{
@@ -961,19 +1068,30 @@ function startNewSeason(reward){
     const expired = sq.filter(p=>p.contract<=0);
     expired.forEach(p=>{
       const idx = sq.indexOf(p);
-      sq[idx] = genPlayer(POS_MAP[p.pos].c, ti); 
+      sq[idx] = genPlayer(POS_MAP[p.pos].c, ti, false); // Not initial, can get higher OVR
     });
     setDefaultXI(sq, G.tactics[ti]);
   });
   
   G.transferMarket = genMarket();
-  G.log = [{cls:'info',text:`🌟 Musim ${G.season} pramusim! Hadiah cair, siap transfer.`}];
+  G.log = [{cls:'info',text:`🌟 Season ${G.season} Pre-season! Rewards added.`}];
   
-  saveState(); document.getElementById('mov').classList.remove('show'); renderAll(); showToast("Musim Baru Dimulai!");
+  // Job Offer Logic (Req 8)
+  if(finalPos <= 5 || Math.random() > 0.6) {
+    let target = rnd(0, 14);
+    while(target === G.playerTeamIdx) target = rnd(0, 14);
+    G.inbox.unshift({
+      id: Math.random(), title: 'Job Offer', 
+      body: `The board of ${TEAMS[target]} was impressed by your performance. We want you to be our manager!`, 
+      action: true, targetTeamIdx: target
+    });
+  }
+  
+  saveState(); document.getElementById('mov').classList.remove('show'); renderAll(); showToast("New Season Started!");
 }
 
 /* ----------------------------------------------------------------
-   SYSTEM MODALS
+   SYSTEM MODALS (PLAYER & TEAM INFO)
 ---------------------------------------------------------------- */
 let toastTmr;
 function showToast(msg){
@@ -982,19 +1100,78 @@ function showToast(msg){
 }
 
 function hardReset(){
-  if(confirm("Yakin hapus save data dan mulai ulang dari awal?")){
-    localStorage.removeItem('mliv3');
+  if(confirm("Are you sure you want to delete this save and start a new career?")){
+    localStorage.removeItem('mliv4');
     G = freshState();
     selectTeamPrompt();
   }
 }
 
+function openPlayerModal(pid){
+  let p = null;
+  // Search in all squads
+  for(let i=0; i<G.squads.length; i++) {
+    p = G.squads[i].find(x=>x.id===pid);
+    if(p) break;
+  }
+  // Search in transfer market if not found
+  if(!p) p = G.transferMarket.find(x=>x.id===pid);
+  
+  if(p) {
+    document.getElementById('mtitle').innerHTML = `🔍 Player Info`;
+    document.getElementById('mbody').innerHTML = `
+      <div style="text-align:center;margin-bottom:15px">
+        <div style="font-size:2rem;font-weight:900">${p.name} ${p.isStar?'⭐':''}</div>
+        <div style="font-size:.8rem;color:var(--dim)">${p.teamIndex>=0?TEAMS[p.teamIndex]:'Free Agent'}</div>
+      </div>
+      <div class="g3">
+        <div class="card" style="text-align:center"><div style="font-weight:bold;color:var(--gold);font-size:1.2rem">${p.pos}</div><div style="font-size:.6rem;color:var(--dim)">Position</div></div>
+        <div class="card" style="text-align:center"><div style="font-weight:bold;color:var(--gg);font-size:1.2rem">${p.ovr}</div><div style="font-size:.6rem;color:var(--dim)">Overall</div></div>
+        <div class="card" style="text-align:center"><div style="font-weight:bold;color:var(--wh);font-size:1.2rem">${p.age}</div><div style="font-size:.6rem;color:var(--dim)">Age</div></div>
+      </div>
+      <div class="card">
+        <div class="row bt"><span>Matches Played</span><b>${p.appearances}</b></div>
+        <div class="row bt" style="margin-top:5px"><span>Goals Scored</span><b style="color:var(--gold)">${p.goals}</b></div>
+      </div>
+    `;
+    document.getElementById('mfoot').innerHTML = `<button class="btn btn-s btn-sm" onclick="closeModal()">Close</button>`;
+    document.getElementById('mov').classList.add('show');
+  }
+}
+
+function openTeamModal(tid){
+  const sq = G.squads[tid];
+  const xi = sq.filter(p=>p.inXI).sort((a,b)=> POS_ORDER[a.pos] - POS_ORDER[b.pos]);
+  
+  let html = `<div style="font-size:.75rem;color:var(--dim);margin-bottom:10px">Tactic: ${G.tactics[tid]}</div><div class="sec">Starting XI</div>`;
+  xi.forEach(p=>{
+    html += `<div class="row bt" style="font-size:.75rem;border-bottom:1px solid var(--sf2);padding:4px 0">
+      <span><b style="color:var(--gold);display:inline-block;width:30px">${p.slotPos}</b> ${p.name}</span>
+      <b class="${ovrCls(p.ovr)}">${p.ovr}</b>
+    </div>`;
+  });
+  html += `<div class="sec" style="margin-top:10px">Top Reserves</div>`;
+  const bench = sq.filter(p=>!p.inXI).sort((a,b)=>b.ovr-a.ovr).slice(0,5);
+  bench.forEach(p=>{
+    html += `<div class="row bt" style="font-size:.75rem;border-bottom:1px solid var(--sf2);padding:4px 0">
+      <span><b style="color:var(--dim);display:inline-block;width:30px">${p.pos}</b> ${p.name}</span>
+      <b class="${ovrCls(p.ovr)}">${p.ovr}</b>
+    </div>`;
+  });
+  
+  document.getElementById('mtitle').innerHTML = `🛡️ ${TEAMS[tid]}`;
+  document.getElementById('mbody').innerHTML = html;
+  document.getElementById('mfoot').innerHTML = `<button class="btn btn-s btn-sm" onclick="closeModal()">Close</button>`;
+  document.getElementById('mov').classList.add('show');
+}
+
 function selectTeamPrompt(){
-  let html = `<p style="font-size:.7rem;color:var(--dim);margin-bottom:10px">Pilih tim dengan teliti. Budget akan diacak sedikit sesuai kapasitas tim.</p>
+  let html = `<p style="font-size:.7rem;color:var(--dim);margin-bottom:10px">Select your starting club. Initial budget max 50M.</p>
     <div style="display:flex;flex-direction:column;gap:5px;max-height:60vh;overflow-y:auto;padding-right:5px">`;
   
   TEAMS.forEach((name, i) => {
-    const bgt = BASE_BUDGETS[i] + rnd(-5, 5); 
+    // Max 50M restriction applied here
+    const bgt = Math.min(50, BASE_BUDGETS[i] + rnd(-5, 5)); 
     const sq = G.squads[i];
     const effOvr = Math.round(sq.filter(p=>p.inXI).reduce((s,p)=>s+getEffOvr(p,p.slotPos),0)/11) || 0;
     const chem = Math.round(calcTeamChemistry(i, G.tactics[i]));
@@ -1005,14 +1182,14 @@ function selectTeamPrompt(){
         <div style="font-size:.65rem;color:var(--wh);margin-top:4px">OVR: <b style="color:var(--gg)">${effOvr}</b> | Chem: <b style="color:var(--gold)">${chem}%</b></div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:.65rem;color:var(--dim)">Modal Awal</div>
+        <div style="font-size:.65rem;color:var(--dim)">Transfer Budget</div>
         <div style="font-size:.9rem;font-weight:900;color:var(--gold)">${bgt} M</div>
       </div>
     </button>`;
   });
   html += `</div>`;
   const mbox = document.getElementById('mbox');
-  mbox.innerHTML = `<h2 style="color:var(--gold)">⚽ Pilih Tim Kamu</h2><div id="mbody">${html}</div>`;
+  mbox.innerHTML = `<h2 style="color:var(--gold)">⚽ Select Your Club</h2><div id="mbody">${html}</div><div id="mfoot"></div>`;
   document.getElementById('mov').classList.add('show');
 }
 
@@ -1021,24 +1198,28 @@ function applyTeam(idx, budget){
   G.tactics[idx] = '4-3-3';
   setDefaultXI(G.squads[idx], '4-3-3');
   saveState(); document.getElementById('mov').classList.remove('show');
-  
-  renderAll(); // <--- INI FIX BUDGET 0M
-  showToast(`Selamat memimpin ${TEAMS[idx]}!`);
+  renderAll(); 
+  showToast(`Welcome to ${TEAMS[idx]}!`);
+}
+
+function closeModal(){
+  document.getElementById('mov').classList.remove('show');
 }
 
 /* ----------------------------------------------------------------
    INIT & TAB ROUTER
 ---------------------------------------------------------------- */
 let activeTab='dash';
-const RENDERERS={dash:renderDash,squad:renderSquad,league:renderLeague,cup:renderCup,lca:renderLCA,transfer:renderTransfer};
+const RENDERERS={dash:renderDash, squad:renderSquad, league:renderLeague, cup:renderCup, lca:renderLCA, transfer:renderTransfer, manager:renderManager};
 
 function renderTab(tab){
-  activeTab=tab; 
+  if(document.getElementById('mov').classList.contains('show')) return; // Prevent tab switch if modal open
+  activeTab=tab; swapIdA=null;
   document.querySelectorAll('.tb').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   if(RENDERERS[tab]) RENDERERS[tab]();
 }
 function renderAll(){updateHeader(); renderTab(activeTab);}
-function switchTab(tab){swapIdA=null; renderTab(tab); document.getElementById('main').scrollTop=0;} // <--- INI FIX BUG SWAP
+function switchTab(tab){swapIdA=null; renderTab(tab); document.getElementById('main').scrollTop=0;}
 document.querySelectorAll('.tb').forEach(btn=>{ btn.addEventListener('click',()=>switchTab(btn.dataset.tab)); });
 
 function init(){
@@ -1046,8 +1227,12 @@ function init(){
     G = freshState();
     selectTeamPrompt();
   } else {
+    // Migration Patches
     if(!G.transferMarket) G.transferMarket = genMarket();
     if(G.lcaTeamIndices === undefined) G.lcaTeamIndices = [0,1,2,3];
+    if(!G.inbox) G.inbox = [];
+    if(!G.managerName) G.managerName = 'Manager ' + randName().split(' ')[0];
+    if(!G.lcaForeignMap) G.lcaForeignMap = {};
     updateHeader(); renderTab('dash');
   }
 }
