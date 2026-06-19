@@ -63,13 +63,14 @@
         .pln{font-weight:700;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .info-btn{background:var(--brd);color:var(--wh);border:none;border-radius:50%;width:22px;height:22px;font-size:.65rem;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center}
 
+        /* Chemistry Bar */
+        .chem-bar { height: 6px; border-radius: 3px; background: var(--sf); overflow: hidden; margin-top: 5px; border: 1px solid var(--brd); }
+        .chem-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--red), var(--gold), var(--gg)); transition: width 0.3s ease; }
+
         /* ====== HORIZONTAL PITCH ====== */
         .pitch-wrap{position:relative;width:100%;background:linear-gradient(90deg,#1a6b30 0%,#1e7a35 50%,#1a6b30 100%);border-radius:8px;overflow:hidden;border:2px solid #3a9a50}
-        /* Squad view: vertical */
         .pitch-wrap.vertical{aspect-ratio:9/12}
-        /* Live view: horizontal */
         .pitch-wrap.horizontal{aspect-ratio:16/9;min-height:180px}
-
         .pitch-lines{position:absolute;inset:0;pointer-events:none}
 
         /* Vertical lines */
@@ -95,7 +96,12 @@
         .pdot-name{font-size:.45rem;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);white-space:nowrap;max-width:40px;overflow:hidden;text-overflow:ellipsis}
         .pdot-ovr{font-size:.5rem;color:var(--gold);font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,.8);background:#0008;padding:1px 3px;border-radius:3px}
 
-        .match-ball{width:12px;height:12px;background:#fff;border-radius:50%;position:absolute;z-index:5;transition:left 0.5s ease,top 0.5s ease;box-shadow:0 2px 5px rgba(0,0,0,0.5);border:1px solid #ccc;transform:translate(-50%,-50%);}
+        /* DYNAMIC BALL CSS */
+        .match-ball{
+            width:12px;height:12px;background:#fff;border-radius:50%;position:absolute;z-index:5;
+            transition:left 0.35s cubic-bezier(0.2, 0.8, 0.4, 1), top 0.35s cubic-bezier(0.2, 0.8, 0.4, 1), transform 0.2s ease;
+            box-shadow:0 2px 5px rgba(0,0,0,0.6);border:1px solid #999;transform:translate(-50%,-50%);
+        }
 
         .goal-flash{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.8rem;font-weight:900;color:#ffd700;text-shadow:0 0 20px black;z-index:20;animation:goalPop 1s ease-out forwards;pointer-events:none;}
         @keyframes goalPop{0%{opacity:0;transform:translate(-50%,-50%) scale(0.3)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.4)}100%{opacity:0;transform:translate(-50%,-50%) scale(2)}}
@@ -112,7 +118,7 @@
         .lb-tgoals{font-size:2.2rem;font-weight:900;color:var(--wh)}
         .event-log{padding:6px 10px;font-size:0.68rem;max-height:80px;overflow-y:auto;background:var(--sf);border-radius:6px;margin:4px 10px;}
         .event-item{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--sf2);}
-        .yellow-card{color:#f0c040;font-weight:bold}.red-card{color:#e85555;font-weight:bold}
+        .yellow-card{color:#f0c040;font-weight:bold}.red-card{color:#e85555;font-weight:bold}.injury-event{color:#ff9090;}
 
         /* Match queue status bar */
         .match-queue-bar{display:flex;gap:6px;justify-content:center;padding:6px 10px;background:var(--sf2);flex-shrink:0}
@@ -127,10 +133,15 @@
         #toast{position:fixed;bottom:68px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card);border:1px solid var(--gl);border-radius:30px;padding:9px 18px;font-size:.78rem;font-weight:600;color:var(--wh);z-index:9999;transition:all .3s ease;opacity:0;visibility:hidden;box-shadow:var(--shd)}
         #toast.show{transform:translateX(-50%) translateY(0);opacity:1;visibility:visible}
 
-        /* Bench strip below live pitch */
+        /* Bench strip */
         .bench-strip{display:flex;flex-wrap:wrap;gap:3px;padding:5px 10px;background:var(--sf);border-top:1px solid var(--brd)}
         .bench-pill{padding:3px 7px;border-radius:12px;font-size:.6rem;font-weight:700;border:1px solid var(--brd);background:var(--sf2);cursor:pointer;display:flex;align-items:center;gap:3px;color:var(--txt)}
         .bench-pill.selected-swap{border-color:var(--gold);background:rgba(240,192,64,.15);color:var(--gold)}
+
+        /* Red Dot Notification */
+        .has-notif { position: relative; }
+        .has-notif::after { content: ''; position: absolute; top: 6px; right: 8px; width: 8px; height: 8px; background: var(--red); border-radius: 50%; border: 2px solid var(--sf); }
+        .injured-text { color: var(--red) !important; text-decoration: line-through; }
     </style>
 </head>
 <body>
@@ -151,6 +162,7 @@
         <button class="tb" data-tab="cup">🏆 Cup</button>
         <button class="tb" data-tab="lca">🌏 ACL</button>
         <button class="tb" data-tab="transfer">💰 Trans</button>
+        <button class="tb" data-tab="news">📰 News</button>
         <button class="tb" data-tab="manager">👔 Mgr</button>
     </nav>
     <main id="main"></main>
@@ -172,54 +184,31 @@ function getAudio() {
 }
 function playCrowdCheer() {
     try {
-        const ctx = getAudio();
-        // Multi-layered crowd cheer using noise + filtering
-        const duration = 2.5;
+        const ctx = getAudio(); const duration = 2.5;
         const buf = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
         const data = buf.getChannelData(0);
-        for (let i = 0; i < data.length; i++) {
-            data[i] = (Math.random() * 2 - 1) * Math.min(1, (i / (ctx.sampleRate * 0.3)));
-        }
-        // Fade out
-        for (let i = Math.floor(data.length * 0.6); i < data.length; i++) {
-            data[i] *= 1 - (i - data.length * 0.6) / (data.length * 0.4);
-        }
-        const src = ctx.createBufferSource();
-        src.buffer = buf;
-        // Bandpass to make it sound like crowd
-        const bp = ctx.createBiquadFilter();
-        bp.type = 'bandpass'; bp.frequency.value = 800; bp.Q.value = 0.5;
-        const gain = ctx.createGain();
-        gain.gain.value = 0.6;
-        src.connect(bp); bp.connect(gain); gain.connect(ctx.destination);
-        src.start();
-
-        // Add a "roar" tone
-        const osc = ctx.createOscillator();
-        const oGain = ctx.createGain();
-        osc.frequency.setValueAtTime(120, ctx.currentTime);
-        osc.frequency.linearRampToValueAtTime(200, ctx.currentTime + 0.3);
-        oGain.gain.setValueAtTime(0.18, ctx.currentTime);
-        oGain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
-        osc.connect(oGain); oGain.connect(ctx.destination);
-        osc.start(); osc.stop(ctx.currentTime + duration);
+        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.min(1, (i / (ctx.sampleRate * 0.3)));
+        for (let i = Math.floor(data.length * 0.6); i < data.length; i++) data[i] *= 1 - (i - data.length * 0.6) / (data.length * 0.4);
+        const src = ctx.createBufferSource(); src.buffer = buf;
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 800; bp.Q.value = 0.5;
+        const gain = ctx.createGain(); gain.gain.value = 0.6;
+        src.connect(bp); bp.connect(gain); gain.connect(ctx.destination); src.start();
+        const osc = ctx.createOscillator(); const oGain = ctx.createGain();
+        osc.frequency.setValueAtTime(120, ctx.currentTime); osc.frequency.linearRampToValueAtTime(200, ctx.currentTime + 0.3);
+        oGain.gain.setValueAtTime(0.18, ctx.currentTime); oGain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+        osc.connect(oGain); oGain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + duration);
     } catch(e) {}
 }
 function playWhistle() {
     try {
-        const ctx = getAudio();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.setValueAtTime(2800, ctx.currentTime);
-        osc.frequency.linearRampToValueAtTime(2600, ctx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.start(); osc.stop(ctx.currentTime + 0.25);
+        const ctx = getAudio(); const osc = ctx.createOscillator(); const gain = ctx.createGain();
+        osc.frequency.setValueAtTime(2800, ctx.currentTime); osc.frequency.linearRampToValueAtTime(2600, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
+        osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.25);
     } catch(e) {}
 }
 
-// ─── Data Constants ─────────────────────────────────────────────────
+// ─── Data Constants & Name Pools ─────────────────────────────────────────────────
 const TEAMS = ["Persija","Persib","Arema FC","Bali Utd","PSM","Borneo FC","Persebaya","Madura Utd",
     "PSIS","Dewa Utd","Barito Putera","PSS","Persik","RANS","Persita","Malut Utd"];
 const ASIAN_LEAGUES = {
@@ -228,15 +217,41 @@ const ASIAN_LEAGUES = {
     'Saudi Pro':["Al Hilal","Al Nassr","Al Ittihad","Al Ahli","Al Shabab","Al Taawoun","Al Ettifaq","Al Fateh","Damac","Al Feiha","Abha","Al Raed","Al Wehda","Al Riyadh","Al Khaleej","Al Hazem"]
 };
 const BASE_BUDGETS = [48,45,30,42,38,40,42,28,25,35,20,20,15,25,15,30];
-const CUP_WILDCARD = "Nusantara Amatir";
-const TACTICS = ["4-3-3","4-4-2","3-5-2","4-2-3-1","5-3-2"];
+const CUP_WILDCARD = "Amateur FC";
+
+// Name Generation Pools
+const N_ID = { f: ["Andi","Witan","Rizky","Dimas","Evan","Bagus","Asnawi","Yakob","Egy","Marselino","Saddil","Nadeo","Ricky","Stefano","Ilija"], l: ["Pratama","Sulaeman","Ridho","Drajad","Nugroho","Mangkualam","Sayuri","Maulana","Ferdinan","Ramdani","Argawinata","Kambuaya","Lilipaly","Spasojevic"] };
+const N_FR = { f: ["David","Ciro","Bruno","Carlos","Ezequiel","Matias","Kevin","Victor","Alex","Lucas","Thiago","Gabriel","Diego","Ramiro"], l: ["da Silva","Alves","Moreira","Fortes","Vidal","Mier","Gomes","Ramos","Costa","Fernandez","Silva","Motta","Maradona","Fergonzi"] };
+const N_JP = { f: ["Takumi","Kaoru","Takefusa","Wataru","Takehiro","Daichi","Maya","Ritsu","Yuto","Hiroki","Keisuke","Shinji","Hidetoshi"], l: ["Minamino","Mitoma","Kubo","Tomiyasu","Kamada","Yoshida","Doan","Nagatomo","Sakai","Ito","Honda","Kagawa","Nakata"] };
+const N_KR = { f: ["Heung-min","Kang-in","Min-jae","Hee-chan","Ui-jo","In-beom","Kyu-sung","Chang-hoon","Young-gwon","Ji-sung","Dong-gook"], l: ["Son","Lee","Kim","Hwang","Jo","Jung","Cho","Kwon","Park","Ahn","Seo"] };
+const N_AR = { f: ["Salem","Salman","Yasser","Fahad","Nawaf","Ali","Saud","Hattan","Mohamed","Abdullah","Omar","Saeed","Sami"], l: ["Al-Dawsari","Al-Faraj","Al-Shahrani","Al-Muwallad","Al-Abed","Al-Bulaihi","Abdulhamid","Bahebri","Kanno","Otayf","Soma","Al-Owais"] };
+
+const STAR_PLAYERS = {
+    0: [{name:"Maciej Gajos", pos:"CAM", ovr:84}, {name:"Rizky Ridho", pos:"CB", ovr:82}, {name:"Gustavo", pos:"ST", ovr:83}],
+    1: [{name:"David da Silva", pos:"ST", ovr:85}, {name:"Ciro Alves", pos:"RW", ovr:84}, {name:"Marc Klok", pos:"CM", ovr:82}],
+    2: [{name:"Charles Lokolingoy", pos:"ST", ovr:81}, {name:"Julian Guevara", pos:"LW", ovr:79}, {name:"Wiliam Marcilio", pos:"CM", ovr:80}],
+    3: [{name:"Privat Mbarga", pos:"LW", ovr:83}, {name:"Adilson Maringa", pos:"GK", ovr:82}, {name:"Ricky Fajrin", pos:"RB", ovr:79}],
+    4: [{name:"Yuran Fernandes", pos:"CB", ovr:84}, {name:"Akbar Tanjung", pos:"CM", ovr:78}, {name:"Adilson Silva", pos:"ST", ovr:80}],
+    5: [{name:"Stefano Lilipaly", pos:"CAM", ovr:84}, {name:"Nadeo Argawinata", pos:"GK", ovr:81}, {name:"Kei Hirose", pos:"CM", ovr:82}],
+    6: [{name:"Bruno Moreira", pos:"LW", ovr:85}, {name:"Ernando Ari", pos:"GK", ovr:80}, {name:"Francisco Rivera", pos:"CAM", ovr:83}],
+    7: [{name:"Lulinha", pos:"RW", ovr:83}, {name:"Fachruddin", pos:"CB", ovr:79}, {name:"Jaja", pos:"CAM", ovr:82}],
+    8: [{name:"Gali Freitas", pos:"RW", ovr:82}, {name:"Boubakary Diarra", pos:"CDM", ovr:80}, {name:"Septian David", pos:"CAM", ovr:78}],
+    9: [{name:"Egy Maulana", pos:"RW", ovr:81}, {name:"Ricky Kambuaya", pos:"CM", ovr:80}, {name:"Sonny Stevens", pos:"GK", ovr:83}],
+    10: [{name:"Tocantins", pos:"ST", ovr:82}, {name:"Murilo", pos:"LW", ovr:81}, {name:"Renan Alves", pos:"CB", ovr:83}],
+    11: [{name:"Kim Jeffrey", pos:"CM", ovr:78}, {name:"Hokky Caraka", pos:"ST", ovr:79}, {name:"Thales", pos:"CB", ovr:81}],
+    12: [{name:"Ze Valente", pos:"CAM", ovr:83}, {name:"Renan Silva", pos:"CM", ovr:81}, {name:"Flavio Silva", pos:"ST", ovr:82}],
+    13: [{name:"Mitsuru Maruoka", pos:"CM", ovr:81}, {name:"Evandro Brandao", pos:"ST", ovr:80}, {name:"Hilman Syah", pos:"GK", ovr:78}],
+    14: [{name:"Ramiro Fergonzi", pos:"ST", ovr:81}, {name:"Ezequiel Vidal", pos:"LW", ovr:82}, {name:"Bae Sin-yeong", pos:"CM", ovr:80}],
+    15: [{name:"Yakob Sayuri", pos:"RW", ovr:82}, {name:"Yance Sayuri", pos:"LW", ovr:81}, {name:"Wahyu Prasetyo", pos:"CB", ovr:80}]
+};
+
+const TACTICS = ["4-3-3", "4-3-3 Attack", "4-4-2", "3-5-2", "3-4-3", "4-2-3-1", "4-2-3-1 Wide", "5-3-2"];
 const SEASON_WEEKS = 30;
 const CUP_ROUND_WEEKS = {"Round of 16":7,"Quarter Final":14,"Semi Final":21,"Final":29};
 const LCA_GROUP_WEEKS = [3,6,9,12,15,18];
 const LCA_KNOCKOUT_WEEKS = {"Round of 16":20,"Quarter Final":23,"Semi Final":26,"Final":30};
-const FN = ["Andi","Budi","Candra","Deni","Eko","Fajar","Gilang","Hendra","Iwan","Joko","Kevin","Lukman","Novan","Rizki","Sandi","Taufik","Victor","Wahyu","Zaki","Putu"];
-const LN = ["Pratama","Hidayat","Santoso","Wibowo","Saputra","Kurniawan","Firmansyah","Ramadan","Setiawan","Nugroho","Prayoga","Budiman","Surya","Hakim","Maulana"];
 const POS_ORDER = {'GK':1,'RB':2,'CB':3,'LB':4,'CDM':5,'RM':6,'CM':7,'LM':8,'CAM':9,'RW':10,'LW':11,'ST':12};
+
 const POS_MAP = {
     GK:{c:'GK',s:[]},CB:{c:'DEF',s:['CDM','RB','LB']},LB:{c:'DEF',s:['LM','CB']},RB:{c:'DEF',s:['RM','CB']},
     CDM:{c:'MID',s:['CM','CB']},CM:{c:'MID',s:['CDM','CAM','RM','LM']},CAM:{c:'MID',s:['CM','LW','RW']},
@@ -245,48 +260,40 @@ const POS_MAP = {
 };
 const FORMATIONS = {
     '4-3-3':['GK','RB','CB','CB','LB','CM','CM','CM','RW','ST','LW'],
+    '4-3-3 Attack':['GK','RB','CB','CB','LB','CM','CAM','CM','RW','ST','LW'],
     '4-4-2':['GK','RB','CB','CB','LB','RM','CM','CM','LM','ST','ST'],
     '4-2-3-1':['GK','RB','CB','CB','LB','CDM','CDM','RM','CAM','LM','ST'],
+    '4-2-3-1 Wide':['GK','RB','CB','CB','LB','CDM','CDM','RW','CAM','LW','ST'],
     '3-5-2':['GK','CB','CB','CB','RM','CDM','CM','CM','LM','ST','ST'],
+    '3-4-3':['GK','CB','CB','CB','RM','CM','CM','LM','RW','ST','LW'],
     '5-3-2':['GK','RB','CB','CB','CB','LB','CM','CM','CM','ST','ST']
 };
 
-// ─── HORIZONTAL PITCH COORDINATES ──────────────────────────────────
-// For home team (attacks LEFT → RIGHT), positions as % of horizontal pitch
-// GK is on left side, strikers on right
-// x = left%, y = top%
 const H_POS = {
-    '4-3-3':{
-        x:[8,  20,20,20,20, 42,42,42, 72,80,72],
-        y:[50, 25,40,60,75, 25,50,75, 20,50,80]
-    },
-    '4-4-2':{
-        x:[8,  20,20,20,20, 45,45,45,45, 78,78],
-        y:[50, 20,38,62,80, 15,35,65,85, 35,65]
-    },
-    '4-2-3-1':{
-        x:[8,  20,20,20,20, 38,38, 55,55,55, 78],
-        y:[50, 20,38,62,80, 35,65, 15,50,85, 50]
-    },
-    '3-5-2':{
-        x:[8,  20,20,20, 42,42,42,42,42, 75,75],
-        y:[50, 30,50,70, 15,33,50,67,85, 35,65]
-    },
-    '5-3-2':{
-        x:[8,  18,18,18,18,18, 45,45,45, 75,75],
-        y:[50, 15,30,50,70,85, 25,50,75, 35,65]
-    }
+    '4-3-3':{ x:[8,  20,20,20,20, 42,42,42, 72,80,72], y:[50, 25,40,60,75, 25,50,75, 20,50,80] },
+    '4-3-3 Attack':{ x:[8, 20,20,20,20, 42,55,42, 72,80,72], y:[50, 25,40,60,75, 30,50,70, 20,50,80] },
+    '4-4-2':{ x:[8,  20,20,20,20, 45,45,45,45, 78,78], y:[50, 20,38,62,80, 15,35,65,85, 35,65] },
+    '4-2-3-1':{ x:[8,  20,20,20,20, 38,38, 55,55,55, 78], y:[50, 20,38,62,80, 35,65, 15,50,85, 50] },
+    '4-2-3-1 Wide':{ x:[8, 20,20,20,20, 38,38, 65,55,65, 78], y:[50, 20,38,62,80, 35,65, 15,50,85, 50] },
+    '3-5-2':{ x:[8,  20,20,20, 42,42,42,42,42, 75,75], y:[50, 30,50,70, 15,33,50,67,85, 35,65] },
+    '3-4-3':{ x:[8, 20,20,20, 45,45,45,45, 75,80,75], y:[50, 30,50,70, 15,35,65,85, 20,50,80] },
+    '5-3-2':{ x:[8,  18,18,18,18,18, 45,45,45, 75,75], y:[50, 15,30,50,70,85, 25,50,75, 35,65] }
 };
-// Away team: mirror horizontally (x = 100 - home_x, y flipped vertically: 100 - home_y)
-function mirrorCoords(fx, fy) {
-    return { x: 100 - fx, y: 100 - fy };
-}
+function mirrorCoords(fx, fy) { return { x: 100 - fx, y: 100 - fy }; }
 
 const rnd = (lo,hi) => Math.floor(Math.random()*(hi-lo+1))+lo;
 const clamp = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
 const pick = a => a[Math.floor(Math.random()*a.length)];
 const fmt = n => `€ ${n} M`;
-const randName = () => pick(FN)+' '+pick(LN);
+
+function randName(origin) {
+    let pool = N_ID;
+    if(origin === 'FR') pool = N_FR;
+    else if(origin === 'JP') pool = N_JP;
+    else if(origin === 'KR') pool = N_KR;
+    else if(origin === 'AR') pool = N_AR;
+    return pick(pool.f) + ' ' + pick(pool.l);
+}
 
 function weekToMonthIdx(week){return Math.floor(week/4);}
 function formatDate(dateStr){
@@ -297,6 +304,7 @@ function formatDate(dateStr){
 function addDays(dateStr,days){const d=new Date(dateStr);d.setDate(d.getDate()+days);return d.toISOString().split('T')[0];}
 function ovrCls(v){return v>=80?'ovr-h':v>=70?'ovr-m':'ovr-l'}
 function getEffOvr(p,slotPos){
+    if(p.injury > 0) return 0; 
     if(!slotPos||p.pos===slotPos)return p.ovr;
     if(POS_MAP[p.pos].s.includes(slotPos))return Math.floor(p.ovr*0.9);
     return Math.floor(p.ovr*0.7);
@@ -307,70 +315,113 @@ function updateTable(teamIdx,gf,ga){
     row.played++;row.gf+=gf;row.ga+=ga;row.gd=row.gf-row.ga;
     if(gf>ga){row.won++;row.pts+=3;}else if(gf===ga){row.drawn++;row.pts+=1;}else{row.lost++;}
 }
-function genPlayer(posReq,teamIndex,isInitial=false){
+
+function genPlayer(posReq,teamIndex,isInitial=false, origin='ID'){
     let pos=posReq;
     if(posReq=='DEF')pos=pick(['CB','CB','LB','RB']);
     if(posReq=='MID')pos=pick(['CDM','CM','CAM','RM','LM']);
     if(posReq=='FWD')pos=pick(['ST','ST','LW','RW']);
     const ovrBase=isInitial?rnd(50,70):rnd(50,75);
     const chemBase=isInitial?rnd(30,60):rnd(50,80);
-    return{id:Math.random().toString(36).slice(2,10),name:randName(),pos,mainCat:POS_MAP[pos].c,
+    return{id:Math.random().toString(36).slice(2,10),name:randName(origin),pos,mainCat:POS_MAP[pos].c,
         ovr:ovrBase,isStar:ovrBase>=80,age:rnd(17,33),energy:100,moral:80+rnd(0,20),
-        contract:rnd(1,3),goals:0,appearances:0,teamIndex,inXI:false,slotPos:null,chem:chemBase};
+        contract:rnd(1,3),goals:0,appearances:0,teamIndex,inXI:false,slotPos:null,chem:chemBase, injury: 0};
 }
+
 function genSquad(teamIndex,isInitial=false){
     const sq=[];
-    ['GK','GK','GK','DEF','DEF','DEF','DEF','DEF','DEF','DEF',
-     'MID','MID','MID','MID','MID','MID','MID','FWD','FWD','FWD','FWD','FWD'].forEach(c=>sq.push(genPlayer(c,teamIndex,isInitial)));
-    setDefaultXI(sq,'4-3-3');return sq;
+    // Add real star players if initial
+    if (isInitial && STAR_PLAYERS[teamIndex]) {
+        STAR_PLAYERS[teamIndex].forEach(star => {
+            sq.push({
+                id: Math.random().toString(36).slice(2,10), name: star.name, pos: star.pos, mainCat: POS_MAP[star.pos].c,
+                ovr: star.ovr, isStar: true, age: rnd(24,31), energy: 100, moral: 85, contract: rnd(1,3),
+                goals: 0, appearances: 0, teamIndex: teamIndex, inXI: false, slotPos: null, chem: rnd(50, 80), injury: 0
+            });
+        });
+    }
+    
+    // Requirements
+    const req = {GK: 3, DEF: 8, MID: 7, FWD: 6};
+    sq.forEach(p => { if(req[p.mainCat]) req[p.mainCat]--; });
+    
+    ['GK','DEF','MID','FWD'].forEach(cat => {
+        for(let i=0; i<req[cat]; i++) {
+            const origin = Math.random() < 0.8 ? 'ID' : 'FR';
+            sq.push(genPlayer(cat, teamIndex, isInitial, origin));
+        }
+    });
+    setDefaultXI(sq, '4-3-3');
+    return sq;
 }
+
 function setDefaultXI(squad,tactic){
     squad.forEach(p=>{p.inXI=false;p.slotPos=null;});
     const slots=[...FORMATIONS[tactic]];
     slots.forEach(slot=>{
-        let pool=squad.filter(p=>!p.inXI&&p.pos===slot).sort((a,b)=>b.ovr-a.ovr);
-        if(!pool.length)pool=squad.filter(p=>!p.inXI&&POS_MAP[p.pos].s.includes(slot)).sort((a,b)=>b.ovr-a.ovr);
-        if(!pool.length)pool=squad.filter(p=>!p.inXI&&p.mainCat===POS_MAP[slot].c).sort((a,b)=>b.ovr-a.ovr);
+        let pool=squad.filter(p=>!p.inXI&&p.pos===slot&&p.injury===0).sort((a,b)=>b.ovr-a.ovr);
+        if(!pool.length)pool=squad.filter(p=>!p.inXI&&POS_MAP[p.pos].s.includes(slot)&&p.injury===0).sort((a,b)=>b.ovr-a.ovr);
+        if(!pool.length)pool=squad.filter(p=>!p.inXI&&p.mainCat===POS_MAP[slot].c&&p.injury===0).sort((a,b)=>b.ovr-a.ovr);
+        if(!pool.length)pool=squad.filter(p=>!p.inXI&&p.injury===0).sort((a,b)=>b.ovr-a.ovr);
         if(!pool.length)pool=squad.filter(p=>!p.inXI).sort((a,b)=>b.ovr-a.ovr);
         if(pool.length){pool[0].inXI=true;pool[0].slotPos=slot;}
     });
 }
+
 function getPrice(ovr){
     if(ovr<60)return rnd(1,3);if(ovr<70)return rnd(4,9);if(ovr<80)return rnd(10,25);return rnd(26,48);
 }
 function genMarket(){
     const ps=[];
     for(let i=0;i<150;i++){
-        const cat=pick(['GK','DEF','MID','FWD']);const p=genPlayer(cat,-1,false);
+        const cat=pick(['GK','DEF','MID','FWD']);
+        const randRegion = Math.random();
+        let origin = 'ID';
+        if(randRegion < 0.6) origin = 'ID';
+        else if(randRegion < 0.8) origin = 'FR';
+        else if(randRegion < 0.86) origin = 'JP';
+        else if(randRegion < 0.93) origin = 'KR';
+        else origin = 'AR';
+        
+        const p=genPlayer(cat,-1,false, origin);
         const r=Math.random();
         if(r<0.7)p.ovr=rnd(45,65);else if(r<0.9)p.ovr=rnd(66,75);else p.ovr=rnd(76,85);
         p.isStar=p.ovr>=80;p.price=getPrice(p.ovr);ps.push(p);
     }
     return ps.sort((a,b)=>b.ovr-a.ovr);
 }
+
 let swapIdA=null;
 function handleSwapClick(pid,isLiveMatch=false){
     if(!swapIdA){
-        swapIdA=pid;showToast("Pilih pemain kedua untuk ditukar...");
+        swapIdA=pid;showToast("Select second player to swap...");
     }else if(swapIdA===pid){
         swapIdA=null;
     }else{
         const sq=G.squads[G.playerTeamIdx];
         const p1=sq.find(x=>x.id===swapIdA);const p2=sq.find(x=>x.id===pid);
         if(p1&&p2){
+            if((p1.injury > 0 && p2.inXI) || (p2.injury > 0 && p1.inXI) || (p1.injury > 0 && p1.inXI && !p2.inXI) || (p2.injury > 0 && p2.inXI && !p1.inXI)) {
+                if ( (p1.injury > 0 && !p1.inXI) || (p2.injury > 0 && !p2.inXI) ) {
+                    showToast("❌ Injured players cannot be placed in Starting XI!");
+                    swapIdA=null; return;
+                }
+            }
+
             if(isLiveMatch){
                 if((p1.inXI&&!p2.inXI)||(!p1.inXI&&p2.inXI)){
-                    if(liveMatchState.subsLeft<=0){showToast("❌ Jatah subs habis!");swapIdA=null;return;}
+                    if(liveMatchState.subsLeft<=0){showToast("❌ No subs left!");swapIdA=null;return;}
                     liveMatchState.subsLeft--;
                 }
             }
             const tX=p1.inXI,tS=p1.slotPos;p1.inXI=p2.inXI;p1.slotPos=p2.slotPos;p2.inXI=tX;p2.slotPos=tS;
-            showToast("🔄 Pemain ditukar!");swapIdA=null;
+            showToast("🔄 Players swapped!");swapIdA=null;
             if(isLiveMatch){closeSubModal();return;}
         }else{swapIdA=null;}
     }
     if(isLiveMatch)openSubModal(false);else renderTab(activeTab);
 }
+
 function calcTeamChemistry(teamIdx,tactic){
     const squad=G.squads[teamIdx];if(!squad)return 50;
     const xi=squad.filter(p=>p.inXI);if(xi.length<11)return 40;
@@ -421,6 +472,7 @@ function generateEvents(hIdx,aIdx,hGoals,aGoals){
         }
     };
     addGoals('home',hGoals,hIdx);addGoals('away',aGoals,aIdx);
+    
     const totalCards=rnd(1,4);
     for(let i=0;i<totalCards;i++){
         const team=Math.random()<0.5?'home':'away';
@@ -433,6 +485,24 @@ function generateEvents(hIdx,aIdx,hGoals,aGoals){
         const isRed=Math.random()<0.1;
         evs.push({type:'card',min:rnd(5,89),team,player:playerName,card:isRed?'red':'yellow'});
     }
+
+    const totalInjuries = Math.random() < 0.15 ? 1 : 0; 
+    for(let i=0; i<totalInjuries; i++){
+        const team = Math.random() < 0.5 ? 'home' : 'away';
+        const idx = team === 'home' ? hIdx : aIdx;
+        let playerName = '?'; let playerId = null;
+        if(typeof idx === 'number' && idx < 16 && G.squads[idx]){
+            const pool = G.squads[idx].filter(p => p.inXI);
+            if(pool.length) {
+                const p = pick(pool);
+                playerName = p.name; playerId = p.id;
+            }
+        }
+        if(playerId) {
+            evs.push({type:'injury', min:rnd(5,89), team, player:playerName, playerId, teamIdx: idx});
+        }
+    }
+
     return evs.sort((a,b)=>a.min-b.min);
 }
 function getTeamName(idx){
@@ -446,18 +516,18 @@ function getTeamSquad(idx){if(typeof idx==='number'&&idx<16)return G.squads[idx]
 function buildACL(){
     const acl={teams:{},groups:{},standings:{},schedule:[],knockout:{},played:{}};
     let tCounter=0;
-    const getFTeam=(name,baseOvr)=>{const id='F'+(tCounter++);acl.teams[id]={id,name,ovr:baseOvr+rnd(-2,4)};return id;};
+    const getFTeam=(name,baseOvr, origin)=>{const id='F'+(tCounter++);acl.teams[id]={id,name,ovr:baseOvr+rnd(-2,4), origin};return id;};
     const west=[...ASIAN_LEAGUES['Saudi Pro']].sort(()=>Math.random()-0.5);
     const east1=[...ASIAN_LEAGUES['J-League']].sort(()=>Math.random()-0.5);
     const east2=[...ASIAN_LEAGUES['K-League']].sort(()=>Math.random()-0.5);
     for(let g=0;g<4;g++){
         const grp=['A','B','C','D'][g];
-        acl.groups[grp]=[getFTeam(west.pop(),80),getFTeam(west.pop(),78),getFTeam(west.pop(),75),getFTeam(west.pop(),72)];
+        acl.groups[grp]=[getFTeam(west.pop(),80,'AR'),getFTeam(west.pop(),78,'AR'),getFTeam(west.pop(),75,'AR'),getFTeam(west.pop(),72,'AR')];
     }
     const indo=[...G.lcaTeamIndices];
     for(let g=0;g<4;g++){
         const grp=['E','F','G','H'][g];
-        acl.groups[grp]=[indo.pop(),getFTeam(east1.pop(),77),getFTeam(east2.pop(),76),getFTeam(east1.pop(),74)];
+        acl.groups[grp]=[indo.pop(),getFTeam(east1.pop(),77,'JP'),getFTeam(east2.pop(),76,'KR'),getFTeam(east1.pop(),74,'JP')];
     }
     Object.values(acl.groups).flat().forEach(tId=>{acl.standings[tId]={id:tId,p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0};});
     acl.schedule=[[[[0,1],[2,3]]],[[[0,2],[1,3]]],[[[0,3],[1,2]]],[[[1,0],[3,2]]],[[[2,0],[3,1]]],[[[3,0],[2,1]]]].map(x=>x[0]);
@@ -494,12 +564,8 @@ function updateACLTable(ti,gf,ga){
 
 let G;
 let liveInterval=null;
-// ─── Match Queue State ─────────────────────────────────────────────
-// Each item: { compType, label, dateStr, myMatch, allMatches }
-// Separate League / Cup / ACL per week click
-// weekPendingMatches: array of {compType,label,dateStr,matches} → user clicks each
-let weekPendingMatches = []; // queue for this week
-let weekPendingIndex = 0;    // current index being played
+let weekPendingMatches = []; 
+let weekPendingIndex = 0;    
 
 let liveMatchState={
     min:0,myMatch:null,isPaused:false,subsLeft:5,
@@ -508,21 +574,22 @@ let liveMatchState={
 };
 
 function freshState(){
-    const squads=TEAMS.map((_,i)=>genSquad(i,true));
     const tactics=TEAMS.map(()=>pick(TACTICS));
+    const squads=TEAMS.map((_,i)=>genSquad(i,true));
     return{
         season:1,week:0,phase:'preseason',preseasonWeeksLeft:2,
         startDate:"2026-07-01",currentDate:"2026-07-01",
-        playerTeamIdx:0,budget:0,squads,tactics,
+        playerTeamIdx:0,budget:0,budgetRequestsUsed:0,squads,tactics,
         leagueTable:TEAMS.map((name,i)=>({teamIdx:i,name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0})),
         schedule:buildSchedule(),leagueResults:[],
         cupBracket:{"Round of 16":[...Array(16).keys()].sort(()=>Math.random()-.5).reduce((res,k,i,arr)=>i%2===0?[...res,[arr[i],arr[i+1]==15?99:arr[i+1]]]:res,[])},
         cupResults:{},cupRoundsPlayed:{},cupWinner:null,
         lcaTeamIndices:[0,1,2,3],acl:null,
         transferMarket:genMarket(),
-        inbox:[{id:1,title:'Welcome Manager!',body:'Good luck in your new career.',action:null}],
+        inbox:[{id:1,title:'Welcome Manager!',body:'Good luck in your new career.',action:null, isRead: false}],
+        news: [{date: 'Pre-season', title: 'Transfer Window Opens!', body: 'Managers across the league are gearing up for the new season.'}],
         managerName:'Manager',
-        log:[{cls:'info',text:'🌟 Selamat datang! Kamu punya 2 minggu transfer sebelum liga dimulai.'}],
+        log:[{cls:'info',text:'🌟 Welcome! You have 2 weeks of transfer market before the league starts.'}],
     };
 }
 function buildSchedule(){
@@ -534,55 +601,90 @@ function buildSchedule(){
     }
     return[...rds,...rds.map(r=>r.map(([a,b])=>[b,a]))];
 }
-function saveState(){try{localStorage.setItem('mliv7',JSON.stringify(G));}catch(e){}}
-function loadState(){const s=localStorage.getItem('mliv7');if(s){G=JSON.parse(s);return true;}return false;}
+function saveState(){try{localStorage.setItem('mliv10',JSON.stringify(G));}catch(e){}}
+function loadState(){const s=localStorage.getItem('mliv10');if(s){G=JSON.parse(s);return true;}return false;}
 
 // ─── MAIN WEEK ADVANCE ────────────────────────────────────────────
-// Now builds weekPendingMatches but only simulates League immediately.
-// Cup & ACL are played separately when user clicks "Play Cup/ACL".
 function playLeagueWeek(){
     if(!G.acl)G.acl=buildACL();
     if(G.phase==='preseason'){
         G.preseasonWeeksLeft--;G.currentDate=addDays(G.currentDate,7);
-        if(G.preseasonWeeksLeft<=0){G.phase='league';G.log.unshift({cls:'info',text:'🏁 Liga dimulai!'});}
-        else G.log.unshift({cls:'info',text:`⏳ Pra-musim: ${G.preseasonWeeksLeft} minggu lagi!`});
-        saveState();renderAll();showToast('Lanjut 1 minggu!');return;
+        if(G.preseasonWeeksLeft<=0){G.phase='league';G.log.unshift({cls:'info',text:'🏁 League started!'});}
+        else G.log.unshift({cls:'info',text:`⏳ Pre-Season: ${G.preseasonWeeksLeft} weeks left!`});
+        
+        processInjuriesAndAutoSub();
+        saveState();renderAll();showToast('Advanced 1 week!');return;
     }
     if(G.week>=SEASON_WEEKS){showEndSeason();return;}
     G.week++;
     const baseDate=addDays(G.startDate,14+(G.week-1)*7);
     weekPendingMatches=[];weekPendingIndex=0;
 
-    // 1. LIGA (Sabtu - day 0 of week)
     const leagueMatches=G.schedule[G.week-1];
     const myLeagueMatch=_simulateLeagueWeek(leagueMatches,baseDate);
     if(myLeagueMatch){
-        weekPendingMatches.push({compType:'league',label:'⚽ Liga',dateStr:baseDate,myMatch:myLeagueMatch});
+        weekPendingMatches.push({compType:'league',label:'⚽ League',dateStr:baseDate,myMatch:myLeagueMatch});
     }
 
-    // 2. CUP (Rabu - day +4) — store pending, simulate later
     const cupRound=Object.keys(CUP_ROUND_WEEKS).find(k=>CUP_ROUND_WEEKS[k]===G.week);
     if(cupRound&&!G.cupRoundsPlayed[cupRound]){
         weekPendingMatches.push({compType:'cup',label:`🏆 Cup: ${cupRound}`,dateStr:addDays(baseDate,4),_cupRound:cupRound});
     }
 
-    // 3. ACL Group (Selasa - day +2)
     if(LCA_GROUP_WEEKS.includes(G.week)){
-        weekPendingMatches.push({compType:'acl',label:'🌏 ACL Grup',dateStr:addDays(baseDate,2),_aclGroup:true});
+        weekPendingMatches.push({compType:'acl',label:'🌏 ACL Group',dateStr:addDays(baseDate,2),_aclGroup:true});
     }
 
-    // 4. ACL Knockout (Kamis - day +5)
     const lcaKnock=Object.keys(LCA_KNOCKOUT_WEEKS).find(k=>LCA_KNOCKOUT_WEEKS[k]===G.week);
     if(lcaKnock){
         weekPendingMatches.push({compType:'acl',label:`🌏 ACL: ${lcaKnock}`,dateStr:addDays(baseDate,5),_aclKnock:lcaKnock});
     }
 
     G.currentDate=addDays(baseDate,6);
+    processInjuriesAndAutoSub();
     saveState();
 
-    if(weekPendingMatches.length===0){renderAll();showToast("Tidak ada pertandingan minggu ini.");return;}
-    // Start with first match
+    if(weekPendingMatches.length===0){renderAll();showToast("No matches this week.");return;}
     playNextPendingMatch();
+}
+
+function processInjuriesAndAutoSub() {
+    G.squads.forEach((sq, idx) => {
+        sq.forEach(p => { if(p.injury > 0) p.injury--; });
+        const injuredInXI = sq.filter(p => p.inXI && p.injury > 0);
+        injuredInXI.forEach(p => {
+            const bench = sq.filter(b => !b.inXI && b.injury === 0 && POS_MAP[b.pos].c === p.mainCat).sort((a,b)=>b.ovr-a.ovr);
+            if(bench.length > 0) {
+                const sub = bench[0];
+                sub.inXI = true; sub.slotPos = p.slotPos;
+                p.inXI = false; p.slotPos = null;
+            } else {
+                const anyBench = sq.filter(b => !b.inXI && b.injury === 0).sort((a,b)=>b.ovr-a.ovr);
+                if(anyBench.length > 0) {
+                    const sub = anyBench[0];
+                    sub.inXI = true; sub.slotPos = p.slotPos;
+                    p.inXI = false; p.slotPos = null;
+                }
+            }
+        });
+    });
+}
+
+function applyPostMatchEvents(events, baseDate) {
+    events.forEach(e => {
+        if (e.type === 'injury' && e.teamIdx !== undefined && e.teamIdx < 16) {
+            const teamSq = G.squads[e.teamIdx];
+            const p = teamSq.find(x => x.id === e.playerId);
+            if (p && p.injury === 0) {
+                p.injury = rnd(1, 4);
+                G.news.unshift({
+                    date: formatDate(baseDate),
+                    title: 'Injury Blow!',
+                    body: `Bad news for ${TEAMS[e.teamIdx]}! Key player ${p.name} suffered an injury and will be sidelined for ${p.injury} weeks.`
+                });
+            }
+        }
+    });
 }
 
 function _simulateLeagueWeek(leagueMatches,baseDate){
@@ -597,6 +699,9 @@ function _simulateLeagueWeek(leagueMatches,baseDate){
         aT.forEach(p=>{p.energy=clamp(p.energy-rnd(10,15),0,100);if(score.away>score.home)p.moral=clamp(p.moral+5,0,100);});
         hT.filter(p=>p.inXI).forEach(p=>p.appearances++);
         aT.filter(p=>p.inXI).forEach(p=>p.appearances++);
+        
+        applyPostMatchEvents(score.events, baseDate);
+
         if(h===G.playerTeamIdx||a===G.playerTeamIdx){
             const isH=h===G.playerTeamIdx;
             const my=isH?score.home:score.away,op=isH?score.away:score.home;
@@ -610,18 +715,16 @@ function _simulateLeagueWeek(leagueMatches,baseDate){
 
 function playNextPendingMatch(){
     if(weekPendingIndex>=weekPendingMatches.length){
-        // All done
-        renderAll();showToast("Semua pertandingan minggu ini selesai!");return;
+        renderAll();showToast("All matches for this week are finished!");return;
     }
     const item=weekPendingMatches[weekPendingIndex];
 
-    // Simulate the match data if not yet done
     if(item._cupRound){
-        // Simulate cup
         const cupRound=item._cupRound;
         const next={"Round of 16":"Quarter Final","Quarter Final":"Semi Final","Semi Final":"Final"}[cupRound];
         const res=playKnockout(G.cupBracket,G.cupResults,G.cupRoundsPlayed,cupRound,next);
         if(!next&&res.length)G.cupWinner=res[0].winner;
+        res.forEach(m => applyPostMatchEvents(m.events, item.dateStr));
         const myMatch=res.find(m=>m.homeIdx===G.playerTeamIdx||m.awayIdx===G.playerTeamIdx);
         item.myMatch=myMatch||null;
         delete item._cupRound;
@@ -629,6 +732,7 @@ function playNextPendingMatch(){
     }
     if(item._aclGroup){
         const aclRes=simulateACLGroups();
+        aclRes.forEach(m => applyPostMatchEvents(m.events, item.dateStr));
         item.myMatch=aclRes.length?aclRes[0]:null;
         delete item._aclGroup;
         saveState();
@@ -638,6 +742,7 @@ function playNextPendingMatch(){
         const nextR={"Round of 16":"Quarter Final","Quarter Final":"Semi Final","Semi Final":"Final"}[lcaKnock];
         const aclRes=playKnockout(G.acl.knockout,G.acl.knockout,G.acl.played,lcaKnock,nextR);
         if(!nextR&&aclRes.length)G.acl.winner=aclRes[0].winner;
+        aclRes.forEach(m => applyPostMatchEvents(m.events, item.dateStr));
         const myAcl=aclRes.find(r=>r.homeIdx===G.playerTeamIdx||r.awayIdx===G.playerTeamIdx);
         item.myMatch=myAcl||null;
         delete item._aclKnock;
@@ -645,14 +750,12 @@ function playNextPendingMatch(){
     }
 
     if(!item.myMatch){
-        // Skip – no match for player's team, continue
         weekPendingIndex++;
-        renderAll(); // Update dash with new action buttons
-        showToast(`${item.label} — Tidak ada pertandingan untuk timmu.`);
+        renderAll(); 
+        showToast(`${item.label} — No match for your team.`);
         return;
     }
 
-    // Start live board
     liveMatchState.min=0;liveMatchState.myMatch=item.myMatch;
     liveMatchState.compType=item.compType;liveMatchState.label=item.label;
     liveMatchState.dateStr=item.dateStr;liveMatchState.subsLeft=5;liveMatchState.isPaused=false;
@@ -712,7 +815,6 @@ function renderLiveBoardFull(){
     const my=st.myMatch;
     const isFT=st.min>=90;
 
-    // Queue status bar
     const queueBar=weekPendingMatches.map((item,i)=>{
         let cls='pending';
         if(i<weekPendingIndex)cls='done';
@@ -729,9 +831,7 @@ function renderLiveBoardFull(){
         const oppSq=getTeamSquad(oppIdx);
         const myTac=G.tactics[myIdx];
         const oppTac=getTeamTactic(oppIdx);
-        // Home team attacks left→right, away attacks right→left
-        // If player is home: player on left, opponent on right
-        // If player is away: player on right, opponent on left
+        
         const homeSq=isHome?mySq:oppSq;
         const awaySq=isHome?oppSq:mySq;
         const homeTac=isHome?myTac:oppTac;
@@ -744,6 +844,7 @@ function renderLiveBoardFull(){
     const eventLog=my?my.events.filter(e=>e.min<=st.min).sort((a,b)=>a.min-b.min).map(e=>{
         if(e.type==='goal')return`<div class="event-item"><span>⚽ ${e.min}' ${e.player}</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
         if(e.type==='card')return`<div class="event-item"><span class="${e.card==='red'?'red-card':'yellow-card'}">${e.card==='red'?'🟥':'🟨'} ${e.min}' ${e.player}</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
+        if(e.type==='injury')return`<div class="event-item"><span class="injury-event">🚑 ${e.min}' ${e.player} (Injured)</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
         return'';
     }).join(''):'';
 
@@ -751,7 +852,7 @@ function renderLiveBoardFull(){
     <div class="lb-header">${st.label} · ${st.dateStr?formatDate(st.dateStr):''}</div>
     ${weekPendingMatches.length>1?`<div class="match-queue-bar">${queueBar}</div>`:''}
     <div style="background:var(--card);padding:8px;text-align:center;font-weight:bold;color:var(--gold)" id="lb-min-display">
-      ${isFT?'FT — SELESAI':`LIVE — MENIT ${st.min}'`}
+      ${isFT?'FT — FULL TIME':`LIVE — MIN ${st.min}'`}
     </div>
     ${my?`
       <div class="lb-score">
@@ -767,10 +868,10 @@ function renderLiveBoardFull(){
       </div>
       ${pitchHtml}
       <div class="event-log" id="event-log">${eventLog}</div>
-    `:`<div style="padding:20px;text-align:center;color:var(--dim)">Tim kamu tidak bertanding.</div>`}
+    `:`<div style="padding:20px;text-align:center;color:var(--dim)">Your team is not playing.</div>`}
     <div style="padding:10px;display:flex;gap:8px" id="lb-actions">
       ${isFT
-        ?`<button class="btn btn-p btn-blk" onclick="continueToNext()">${weekPendingIndex+1<weekPendingMatches.length?'Lanjut ke Pertandingan Berikutnya ➔':'Selesai ✓'}</button>`
+        ?`<button class="btn btn-p btn-blk" onclick="continueToNext()">${weekPendingIndex+1<weekPendingMatches.length?'Continue to Next Match ➔':'Finish ✓'}</button>`
         :`<button class="btn btn-g btn-sm" onclick="openSubModal(true)">🔄 Subs (${st.subsLeft})</button>
           <button class="btn btn-s" style="flex:1" onclick="skipMatch()">⏩ Skip</button>`
       }
@@ -779,7 +880,6 @@ function renderLiveBoardFull(){
     updateLiveBoardDynamic();
 }
 
-// ─── HORIZONTAL PITCH RENDERER ──────────────────────────────────
 function renderHorizontalPitch(homeSq, homeTac, awaySq, awayTac, homeIsPlayer){
     const hSlots = FORMATIONS[homeTac || '4-3-3'];
     const aSlots = FORMATIONS[awayTac || '4-3-3'];
@@ -787,7 +887,6 @@ function renderHorizontalPitch(homeSq, homeTac, awaySq, awayTac, homeIsPlayer){
     const aCoords = H_POS[awayTac] || H_POS['4-3-3'];
 
     let dots = '';
-    // Home team dots (left side, attacking right)
     let placedH = new Set();
     hSlots.forEach((slot, i) => {
         const p = homeSq.find(x => x.inXI && x.slotPos === slot && !placedH.has(x.id));
@@ -798,36 +897,34 @@ function renderHorizontalPitch(homeSq, homeTac, awaySq, awayTac, homeIsPlayer){
             const isPlayerTeam=homeIsPlayer;
             dots+=`<div class="pdot pdot-live ${isSel?'selected-swap':''}" data-bx="${bx}" data-by="${by}" style="left:${bx}%;top:${by}%;" onclick="handleSwapClick('${p.id}',true)">
               <div class="pdot-circle home-dot${isSel?' selected-swap':''}">${eff}</div>
-              <div class="pdot-name">${p.name.split(' ')[0]}${p.isStar?'⭐':''}</div>
+              <div class="pdot-name">${p.name.split(' ')[0]}${p.isStar?'⭐':''}${p.injury>0?' 🚑':''}</div>
               <div class="pdot-ovr">${slot}</div>
             </div>`;
         }
     });
-    // Away team dots (right side, attacking left) — mirror coordinates
+    
     let placedA = new Set();
     aSlots.forEach((slot, i) => {
         const p = awaySq.find && awaySq.find(x => x.inXI && x.slotPos === slot && !placedA.has(x.id));
         const raw_bx = aCoords.x[i], raw_by = aCoords.y[i];
-        const bx = 100 - raw_bx, by = 100 - raw_by; // mirror
+        const bx = 100 - raw_bx, by = 100 - raw_by; 
         if(p){ placedA.add(p.id);
             const eff=getEffOvr(p,slot);
             dots+=`<div class="pdot pdot-live" data-bx="${bx}" data-by="${by}" style="left:${bx}%;top:${by}%;">
               <div class="pdot-circle away-dot">${eff}</div>
-              <div class="pdot-name">${p.name.split(' ')[0]}${p.isStar?'⭐':''}</div>
+              <div class="pdot-name">${p.name.split(' ')[0]}${p.isStar?'⭐':''}${p.injury>0?' 🚑':''}</div>
               <div class="pdot-ovr">${slot}</div>
             </div>`;
         } else if(!awaySq.find){
-            // External team (no squad data)
             dots+=`<div class="pdot" style="left:${bx}%;top:${by}%;"><div class="pdot-circle away-dot" style="font-size:.45rem">?</div><div class="pdot-ovr">${slot}</div></div>`;
         }
     });
 
-    // Bench strip (player's XI bench only)
     const bench = homeIsPlayer ? homeSq.filter(p=>!p.inXI) : awaySq.filter ? awaySq.filter(p=>!p.inXI) : [];
     const benchHtml = bench.length ? `<div class="bench-strip">
       <span style="font-size:.6rem;color:var(--dim);align-self:center;margin-right:4px">🪑</span>
       ${bench.map(p=>`<div class="bench-pill ${swapIdA===p.id?'selected-swap':''}" onclick="handleSwapClick('${p.id}',true)">
-        <span style="color:var(--gold)">${p.pos}</span>${p.name.split(' ')[0]}
+        <span style="color:var(--gold)">${p.pos}</span><span class="${p.injury>0?'injured-text':''}">${p.name.split(' ')[0]}</span>
         <span class="${ovrCls(p.ovr)}">${p.ovr}</span>
       </div>`).join('')}
     </div>` : '';
@@ -850,7 +947,7 @@ function renderHorizontalPitch(homeSq, homeTac, awaySq, awayTac, homeIsPlayer){
 function updateLiveBoardDynamic(){
     const st=liveMatchState;const my=st.myMatch;
     const minDisplay=document.getElementById('lb-min-display');
-    if(minDisplay)minDisplay.innerHTML=st.min>=90?'FT — SELESAI':`LIVE — MENIT ${st.min}'`;
+    if(minDisplay)minDisplay.innerHTML=st.min>=90?'FT — FULL TIME':`LIVE — MIN ${st.min}'`;
     if(my){
         const myEvs=my.events.filter(e=>e.min<=st.min);
         const hScore=st.min>=90?my.homeScore:myEvs.filter(e=>e.team==='home'&&e.type==='goal').length;
@@ -863,22 +960,33 @@ function updateLiveBoardDynamic(){
             logEl.innerHTML=myEvs.sort((a,b)=>a.min-b.min).map(e=>{
                 if(e.type==='goal')return`<div class="event-item"><span>⚽ ${e.min}' ${e.player}</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
                 if(e.type==='card')return`<div class="event-item"><span class="${e.card==='red'?'red-card':'yellow-card'}">${e.card==='red'?'🟥':'🟨'} ${e.min}' ${e.player}</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
+                if(e.type==='injury')return`<div class="event-item"><span class="injury-event">🚑 ${e.min}' ${e.player} (Injured)</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
                 return'';
             }).join('');
         }
 
         if(st.min<90&&!st.isPaused){
-            // Animate player dots
             document.querySelectorAll('.pdot-live').forEach(dot=>{
                 const bx=parseFloat(dot.dataset.bx),by=parseFloat(dot.dataset.by);
-                dot.style.left=`${bx+rnd(-3,3)}%`;dot.style.top=`${by+rnd(-3,3)}%`;
+                dot.style.left=`${clamp(bx+rnd(-4,4), 2, 98)}%`;dot.style.top=`${clamp(by+rnd(-4,4), 2, 98)}%`;
             });
-            // Ball moves toward current action area
             const ball=document.getElementById('live-ball');
-            if(ball){ball.style.left=`${rnd(20,80)}%`;ball.style.top=`${rnd(20,80)}%`;}
+            if(ball){
+                const allDots = document.querySelectorAll('.pdot-live');
+                if (allDots.length > 0 && Math.random() > 0.15) {
+                    const target = allDots[rnd(0, allDots.length - 1)];
+                    const tx = parseFloat(target.style.left);
+                    const ty = parseFloat(target.style.top);
+                    ball.style.left = `${clamp(tx + rnd(-3, 3), 2, 98)}%`;
+                    ball.style.top = `${clamp(ty + rnd(-3, 3), 2, 98)}%`;
+                } else {
+                    ball.style.left = `${rnd(10, 90)}%`;
+                    ball.style.top = `${rnd(10, 90)}%`;
+                }
+                ball.style.transform = `translate(-50%, -50%) rotate(${rnd(0,360)}deg) scale(${rnd(8,12)/10})`;
+            }
         }
 
-        // Goal flash + crowd sound
         const lastGoalEvent=myEvs.filter(e=>e.type==='goal').slice(-1)[0];
         if(lastGoalEvent&&lastGoalEvent.min===st.min&&st.min>0){
             const pitch=document.getElementById('live-pitch-wrap');
@@ -897,22 +1005,40 @@ function openSubModal(resetSwap=true){
     liveMatchState.isPaused=true;if(resetSwap)swapIdA=null;
     const sq=G.squads[G.playerTeamIdx];const tactic=G.tactics[G.playerTeamIdx];
     const isHome=liveMatchState.myMatch&&liveMatchState.myMatch.homeIdx===G.playerTeamIdx;
-    let html=`<p style="font-size:.7rem;color:var(--dim);text-align:center">Pilih pemain di lapangan, lalu pemain bangku. (Sisa subs: <b>${liveMatchState.subsLeft}</b>)</p>
+    let html=`<p style="font-size:.7rem;color:var(--dim);text-align:center">Select player on pitch, then bench. (Subs left: <b>${liveMatchState.subsLeft}</b>)</p>
     <div style="transform:scale(0.85);transform-origin:top center;margin-bottom:-30px;">
       ${renderSquadPitchVertical(sq,tactic,'sub')}
     </div>`;
-    document.getElementById('mtitle').innerHTML='🔄 Pergantian Pemain';
+    document.getElementById('mtitle').innerHTML='🔄 Substitutions';
     document.getElementById('mbody').innerHTML=html;
-    document.getElementById('mfoot').innerHTML=`<button class="btn btn-p btn-sm" onclick="closeSubModal()">Kembali ke Pertandingan</button>`;
+    document.getElementById('mfoot').innerHTML=`<button class="btn btn-p btn-sm" onclick="closeSubModal()">Back to Match</button>`;
     document.getElementById('mov').classList.add('show');
 }
 function closeSubModal(){swapIdA=null;document.getElementById('mov').classList.remove('show');liveMatchState.isPaused=false;}
 
-// ─── SQUAD TAB (VERTICAL PITCH, unchanged logic) ────────────────
+// ─── SQUAD TAB (VERTICAL PITCH) ────────────────
 function renderSquadPitchVertical(squad,tactic,mode){
     const slots=FORMATIONS[tactic];
-    const yMap={'4-3-3':[90,72,72,72,72,50,50,50,20,20,20],'4-4-2':[90,72,72,72,72,50,50,50,50,20,20],'4-2-3-1':[90,75,75,75,75,58,58,40,40,40,20],'3-5-2':[90,75,75,75,55,55,55,55,55,20,20],'5-3-2':[90,72,72,72,72,72,50,50,50,20,20]}[tactic];
-    const xMap={'4-3-3':[50,85,65,35,15,80,50,20,80,50,20],'4-4-2':[50,85,65,35,15,85,60,40,15,60,40],'4-2-3-1':[50,85,65,35,15,65,35,80,50,20,50],'3-5-2':[50,75,50,25,90,70,50,30,10,60,40],'5-3-2':[50,90,70,50,30,10,80,50,20,60,40]}[tactic];
+    const yMap={
+        '4-3-3':[90,72,72,72,72,50,50,50,20,20,20],
+        '4-3-3 Attack':[90, 72,72,72,72, 55,40,55, 20,20,20],
+        '4-4-2':[90,72,72,72,72,50,50,50,50,20,20],
+        '4-2-3-1':[90,75,75,75,75,58,58,40,40,40,20],
+        '4-2-3-1 Wide':[90, 75,75,75,75, 58,58, 35,40,35, 20],
+        '3-5-2':[90,75,75,75,55,55,55,55,55,20,20],
+        '3-4-3':[90, 75,75,75, 50,50,50,50, 20,20,20],
+        '5-3-2':[90,72,72,72,72,72,50,50,50,20,20]
+    }[tactic];
+    const xMap={
+        '4-3-3':[50,85,65,35,15,80,50,20,80,50,20],
+        '4-3-3 Attack':[50, 85,65,35,15, 65,50,35, 80,50,20],
+        '4-4-2':[50,85,65,35,15,85,60,40,15,60,40],
+        '4-2-3-1':[50,85,65,35,15,65,35,80,50,20,50],
+        '4-2-3-1 Wide':[50, 85,65,35,15, 65,35, 85,50,15, 50],
+        '3-5-2':[50,75,50,25,90,70,50,30,10,60,40],
+        '3-4-3':[50, 75,50,25, 85,65,35,15, 80,50,20],
+        '5-3-2':[50,90,70,50,30,10,80,50,20,60,40]
+    }[tactic];
     let placedIds=new Set();
     const isLiveSub=mode==='sub';
     let dots=slots.map((slotName,i)=>{
@@ -921,7 +1047,7 @@ function renderSquadPitchVertical(squad,tactic,mode){
             placedIds.add(p.id);const isSel=swapIdA===p.id;const eff=getEffOvr(p,slotName);
             return`<div class="pdot ${isSel?'selected-swap':''}" data-bx="${xMap[i]}" data-by="${yMap[i]}" style="left:${xMap[i]}%;top:${yMap[i]}%;" onclick="handleSwapClick('${p.id}',${isLiveSub})">
               <div class="pdot-circle home-dot ${isSel?'selected-swap':''}">${eff}</div>
-              <div class="pdot-name">${p.name.split(' ')[0]}${p.isStar?'⭐':''}</div>
+              <div class="pdot-name">${p.name.split(' ')[0]}${p.isStar?'⭐':''}${p.injury>0?' 🚑':''}</div>
               <div class="pdot-ovr" style="${eff<p.ovr?'color:var(--red)':''}">${slotName}</div>
             </div>`;
         }else{
@@ -935,89 +1061,125 @@ function renderSquadPitchVertical(squad,tactic,mode){
       ${dots}
     </div>
     <div style="margin-top:8px"><div style="font-size:.65rem;color:var(--dim);margin-bottom:5px">🪑 Bench (${bench.length})</div>
-    <div style="display:flex;flex-wrap:wrap;gap:4px">${bench.map(p=>`<div class="pill ${swapIdA===p.id?'selected-swap':''}" style="cursor:pointer;font-size:.65rem;border-color:var(--brd);padding:4px 8px;display:flex;align-items:center;gap:4px;" onclick="handleSwapClick('${p.id}',${isLiveSub})"><span style="color:var(--gold);font-weight:bold">${p.pos}</span><span>${p.name.split(' ')[0]}${p.isStar?'⭐':''}</span><span class="${ovrCls(p.ovr)}">${p.ovr}</span></div>`).join('')}</div></div>`;
+    <div style="display:flex;flex-wrap:wrap;gap:4px">${bench.map(p=>`<div class="pill ${swapIdA===p.id?'selected-swap':''}" style="cursor:pointer;font-size:.65rem;border-color:var(--brd);padding:4px 8px;display:flex;align-items:center;gap:4px;" onclick="handleSwapClick('${p.id}',${isLiveSub})"><span style="color:var(--gold);font-weight:bold">${p.pos}</span><span class="${p.injury>0?'injured-text':''}">${p.name.split(' ')[0]}${p.isStar?'⭐':''}</span><span class="${ovrCls(p.ovr)}">${p.ovr}</span></div>`).join('')}</div></div>`;
 }
 
 // ─── TAB RENDERERS ────────────────────────────────────────────────
 function updateHeader(){
-    document.getElementById('wk-badge').textContent=`📍 ${G.phase==='preseason'?`Pra-Musim (${G.preseasonWeeksLeft})`:`Minggu ${G.week}`}`;
+    document.getElementById('wk-badge').textContent=`📍 ${G.phase==='preseason'?`Pre-Season (${G.preseasonWeeksLeft})`:`Week ${G.week}`}`;
     document.getElementById('tm-badge').textContent=TEAMS[G.playerTeamIdx];
     document.getElementById('bgt').textContent=fmt(G.budget);
+
+    const mgrTab = document.querySelector('[data-tab="manager"]');
+    if(mgrTab) {
+        const hasUnread = G.inbox.some(m => !m.isRead);
+        if(hasUnread) mgrTab.classList.add('has-notif');
+        else mgrTab.classList.remove('has-notif');
+    }
 }
+
 function renderDash(){
     const row=G.leagueTable.find(x=>x.teamIdx===G.playerTeamIdx);
     const pos=G.leagueTable.indexOf(row)+1;
     const sq=G.squads[G.playerTeamIdx];
+    const tactic=G.tactics[G.playerTeamIdx];
     const effOvr=Math.round(sq.filter(p=>p.inXI).reduce((s,p)=>s+getEffOvr(p,p.slotPos),0)/11)||0;
-    const inTW=G.phase==='preseason'||weekToMonthIdx(G.week)===0;
+    const chem=Math.round(calcTeamChemistry(G.playerTeamIdx, tactic));
+    
+    const inTW = G.phase === 'preseason' || (G.week >= 14 && G.week <= 17);
 
-    // Show remaining matches this week
     let pendingHtml='';
     if(weekPendingMatches.length>0&&weekPendingIndex<weekPendingMatches.length){
         const remaining=weekPendingMatches.slice(weekPendingIndex);
         pendingHtml=`<div class="card" style="border-color:var(--gold)">
-          <div class="sec" style="color:var(--gold)">⚡ Pertandingan Minggu Ini</div>
+          <div class="sec" style="color:var(--gold)">⚡ Matches This Week</div>
           ${remaining.map((m,i)=>`
             <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--sf2)">
               <span style="font-size:.78rem">${m.label} · ${m.dateStr?formatDate(m.dateStr):''}</span>
-              ${i===0?`<button class="btn btn-g btn-sm" onclick="playNextPendingMatch()">Main ▶</button>`:'<span style="font-size:.65rem;color:var(--dim)">Menunggu</span>'}
+              ${i===0?`<button class="btn btn-g btn-sm" onclick="playNextPendingMatch()">Play ▶</button>`:'<span style="font-size:.65rem;color:var(--dim)">Waiting</span>'}
             </div>`).join('')}
         </div>`;
     }
 
     document.getElementById('main').innerHTML=`
-    <div class="sec">📋 Dashboard Musim ${G.season}</div>
+    <div class="sec">📋 Dashboard Season ${G.season}</div>
     <div class="g3" style="margin-bottom:10px">
-      <div class="card" style="text-align:center;padding:10px 5px"><div style="font-size:1.2rem;font-weight:900;color:var(--gold)">#${pos}</div><div style="font-size:.6rem;color:var(--dim)">Posisi</div></div>
-      <div class="card" style="text-align:center;padding:10px 5px"><div style="font-size:1.2rem;font-weight:900;color:var(--bg2)">${row?.pts||0}</div><div style="font-size:.6rem;color:var(--dim)">Poin</div></div>
+      <div class="card" style="text-align:center;padding:10px 5px"><div style="font-size:1.2rem;font-weight:900;color:var(--gold)">#${pos}</div><div style="font-size:.6rem;color:var(--dim)">Position</div></div>
+      <div class="card" style="text-align:center;padding:10px 5px"><div style="font-size:1.2rem;font-weight:900;color:var(--bg2)">${row?.pts||0}</div><div style="font-size:.6rem;color:var(--dim)">Points</div></div>
       <div class="card" style="text-align:center;padding:10px 5px"><div style="font-size:1.2rem;font-weight:900;color:var(--gg)">${effOvr}</div><div style="font-size:.6rem;color:var(--dim)">OVR XI</div></div>
     </div>
+    
+    <div class="card" style="margin-bottom:10px">
+        <div class="row bt">
+            <span style="font-size:.7rem; color:var(--dim); font-weight:bold;">TEAM CHEMISTRY</span>
+            <span style="font-weight:bold; color:var(--gg)">${chem}%</span>
+        </div>
+        <div class="chem-bar"><div class="chem-fill" style="width:${chem}%"></div></div>
+    </div>
+
     ${pendingHtml}
+    
     <div class="card">
-      <div class="sec">⚡ Aksi Cepat</div>
+      <div class="sec">⚡ Quick Actions</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         ${weekPendingMatches.length===0||weekPendingIndex>=weekPendingMatches.length
-          ?`<button class="btn btn-p btn-blk" onclick="playLeagueWeek()">${G.phase==='preseason'?'⏭️ Lewati Pra-Musim':'⚽ Main Pertandingan (Lanjut Minggu)'}</button>`
-          :`<button class="btn btn-g btn-blk" onclick="playNextPendingMatch()">▶ Lanjut Pertandingan Berikutnya</button>`
+          ?`<button class="btn btn-p btn-blk" onclick="playLeagueWeek()">${G.phase==='preseason'?'⏭️ Skip Pre-Season':'⚽ Play Match (Advance Week)'}</button>`
+          :`<button class="btn btn-g btn-blk" onclick="playNextPendingMatch()">▶ Play Next Match</button>`
         }
-        ${inTW?`<button class="btn btn-s btn-blk" onclick="switchTab('transfer')">💰 Buka Bursa Transfer</button>`:''}
+        ${inTW?`<button class="btn btn-s btn-blk" onclick="switchTab('transfer')">💰 Open Transfer Market</button>`:''}
       </div>
     </div>
     <div class="card">
-      <div class="sec">📰 Berita Terbaru</div>
-      <ul class="mlog">${G.log.slice(0,5).map(l=>`<li class="${l.cls}">${l.text}</li>`).join('')}</ul>
+      <div class="sec">📰 Latest Team News</div>
+      <ul class="mlog">${G.log.slice(0,4).map(l=>`<li class="${l.cls}">${l.text}</li>`).join('')}</ul>
     </div>`;
 }
+
 function renderSquad(){
     const sq=G.squads[G.playerTeamIdx];const tactic=G.tactics[G.playerTeamIdx];const xiCount=sq.filter(p=>p.inXI).length;
+    const chem=Math.round(calcTeamChemistry(G.playerTeamIdx, tactic));
+
     document.getElementById('main').innerHTML=`
-    <div class="sec">👥 Skuad (${xiCount}/11 XI)</div>
+    <div class="sec">👥 Squad (${xiCount}/11 XI)</div>
     <div class="card">
       <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:5px;margin-bottom:5px">
         ${TACTICS.map(t=>`<button class="btn btn-sm ${t===tactic?'btn-p':'btn-s'}" onclick="setTactic('${t}')">${t}</button>`).join('')}
       </div>
+      
+      <div style="margin-bottom:10px; margin-top:10px;">
+          <div class="row bt">
+              <span style="font-size:.65rem; color:var(--dim); font-weight:bold;">CHEMISTRY</span>
+              <span style="font-weight:bold; color:var(--gg); font-size: .8rem;">${chem}%</span>
+          </div>
+          <div class="chem-bar" style="margin-top:3px;"><div class="chem-fill" style="width:${chem}%"></div></div>
+      </div>
+
       ${renderSquadPitchVertical(sq,tactic,'squad')}
-      <p style="font-size:.65rem;color:var(--gold);text-align:center;margin-top:8px">💡 Klik pemain di lapangan, lalu klik pemain lain untuk <b>tukar posisi</b>.</p>
+      <p style="font-size:.65rem;color:var(--gold);text-align:center;margin-top:8px">💡 Click a player on the pitch, then another to <b>swap positions</b>.</p>
     </div>
-    <div class="sec" style="margin-top:15px">Daftar Lengkap</div>
+    <div class="sec" style="margin-top:15px">Full Roster</div>
     ${['GK','DEF','MID','FWD'].map(cat=>{
         const players=sq.filter(p=>p.mainCat===cat).sort((a,b)=>POS_ORDER[a.pos]-POS_ORDER[b.pos]||b.ovr-a.ovr);
         if(!players.length)return'';
         return`<div style="margin-bottom:10px"><div style="font-size:.7rem;font-weight:bold;color:var(--dim);margin-bottom:5px">${cat}</div>${players.map(p=>playerCardHTML(p)).join('')}</div>`;
     }).join('')}`;
 }
+
 function playerCardHTML(p){
     const isSel=swapIdA===p.id;
     const effStr=p.inXI?`Eff OVR: <b style="color:${getEffOvr(p,p.slotPos)<p.ovr?'var(--red)':'var(--gg)'}">${getEffOvr(p,p.slotPos)}</b>`:`Main: ${p.pos}`;
+    const injStr = p.injury > 0 ? `<b style="color:var(--red);">🚑 Injured (${p.injury}w)</b>` : `En: ${p.energy}%`;
     return`<div class="plc ${isSel?'selected-swap':''}" onclick="handleSwapClick('${p.id}')">
       <div style="width:30px;text-align:center;font-weight:900;color:var(--gold)">${p.pos}</div>
-      <div style="flex:1;min-width:0"><div class="pln">${p.name} ${p.isStar?'⭐':''} ${p.inXI?`<span style="font-size:.55rem;color:var(--gg);border:1px solid var(--gg);padding:0 3px;border-radius:3px">XI:${p.slotPos}</span>`:''}</div>
-      <div style="font-size:.6rem;color:var(--dim);margin-top:2px">${effStr} | Kont: ${p.contract}th | En: ${p.energy}%</div></div>
+      <div style="flex:1;min-width:0"><div class="pln"><span class="${p.injury>0?'injured-text':''}">${p.name}</span> ${p.isStar?'⭐':''} ${p.inXI?`<span style="font-size:.55rem;color:var(--gg);border:1px solid var(--gg);padding:0 3px;border-radius:3px">XI:${p.slotPos}</span>`:''}</div>
+      <div style="font-size:.6rem;color:var(--dim);margin-top:2px">${effStr} | Con: ${p.contract}y | ${injStr}</div></div>
       <div class="ovr ${ovrCls(p.ovr)}">${p.ovr}</div>
       <button class="info-btn" onclick="event.stopPropagation();openPlayerModal('${p.id}')">i</button>
     </div>`;
 }
-function setTactic(t){G.tactics[G.playerTeamIdx]=t;setDefaultXI(G.squads[G.playerTeamIdx],t);swapIdA=null;saveState();renderTab(activeTab);showToast("Taktik diterapkan!");}
+
+function setTactic(t){G.tactics[G.playerTeamIdx]=t;setDefaultXI(G.squads[G.playerTeamIdx],t);swapIdA=null;saveState();renderTab(activeTab);showToast("Tactic applied!");}
+
 function renderLeague(){
     const th=G.leagueTable.map((r,i)=>`
     <tr class="${r.teamIdx===G.playerTeamIdx?'me':''}">
@@ -1026,18 +1188,19 @@ function renderLeague(){
       <td class="n">${r.gd>0?'+':''}${r.gd}</td><td class="n" style="font-weight:800">${r.pts}</td>
     </tr>`).join('');
     document.getElementById('main').innerHTML=`
-    <div class="sec">📊 Klasemen Liga</div>
+    <div class="sec">📊 League Table</div>
     <table class="tbl" style="margin-bottom:15px">
-      <thead><tr><th>#</th><th>Tim</th><th class="n">M</th><th class="n">M</th><th class="n">S</th><th class="n">K</th><th class="n">SG</th><th class="n">Poin</th></tr></thead>
+      <thead><tr><th>#</th><th>Team</th><th class="n">P</th><th class="n">W</th><th class="n">D</th><th class="n">L</th><th class="n">GD</th><th class="n">Pts</th></tr></thead>
       <tbody>${th}</tbody>
     </table>
     <div class="card">
-      <div class="sec">Hasil Terakhir</div>
-      ${G.leagueResults.filter(r=>r.homeIdx===G.playerTeamIdx||r.awayIdx===G.playerTeamIdx).slice(-5).reverse().map(r=>`<div class="row bt" style="font-size:.75rem;padding:5px 0;border-bottom:1px solid var(--sf2)"><span>vs ${TEAMS[r.homeIdx===G.playerTeamIdx?r.awayIdx:r.homeIdx]}</span><b style="color:var(--gold)">${r.homeScore} - ${r.awayScore}</b></div>`).join('')||'<div style="font-size:.7rem;color:var(--dim)">Belum ada pertandingan.</div>'}
+      <div class="sec">Latest Results</div>
+      ${G.leagueResults.filter(r=>r.homeIdx===G.playerTeamIdx||r.awayIdx===G.playerTeamIdx).slice(-5).reverse().map(r=>`<div class="row bt" style="font-size:.75rem;padding:5px 0;border-bottom:1px solid var(--sf2)"><span>vs ${TEAMS[r.homeIdx===G.playerTeamIdx?r.awayIdx:r.homeIdx]}</span><b style="color:var(--gold)">${r.homeScore} - ${r.awayScore}</b></div>`).join('')||'<div style="font-size:.7rem;color:var(--dim)">No matches played yet.</div>'}
     </div>`;
 }
+
 function renderSchedule(){
-    let html=`<div class="sec">🗓️ Jadwal Musim</div>`;
+    let html=`<div class="sec">🗓️ Season Schedule</div>`;
     const lgStarts=new Date(G.startDate);lgStarts.setDate(lgStarts.getDate()+14);
     for(let w=1;w<=30;w++){
         const d=new Date(lgStarts);d.setDate(d.getDate()+w*7);
@@ -1047,7 +1210,7 @@ function renderSchedule(){
         if(!myLgMatch){const sch=G.schedule[w-1]?.find(m=>m[0]===G.playerTeamIdx||m[1]===G.playerTeamIdx);if(sch)opName=TEAMS[sch[0]==G.playerTeamIdx?sch[1]:sch[0]];}
         else{scStr=`${myLgMatch.homeScore} - ${myLgMatch.awayScore}`;opName=TEAMS[myLgMatch.homeIdx===G.playerTeamIdx?myLgMatch.awayIdx:myLgMatch.homeIdx];}
         html+=`<div class="card" style="${isCurr?'border-color:var(--gg)':''}">
-          <div class="row bt" style="font-size:.65rem;color:var(--dim);margin-bottom:4px"><span>Minggu ${w} &bull; ${dateStr}</span>${isCurr?'<span style="color:var(--gg);font-weight:bold">MINGGU INI</span>':''}</div>
+          <div class="row bt" style="font-size:.65rem;color:var(--dim);margin-bottom:4px"><span>Week ${w} &bull; ${dateStr}</span>${isCurr?'<span style="color:var(--gg);font-weight:bold">THIS WEEK</span>':''}</div>
           <div class="row bt" style="font-weight:bold;font-size:.8rem"><span><span style="color:var(--gold);margin-right:5px">LIG</span> ${opName}</span><span style="background:var(--sf);padding:2px 6px;border-radius:4px">${scStr}</span></div>`;
         const cupR=Object.keys(CUP_ROUND_WEEKS).find(k=>CUP_ROUND_WEEKS[k]===w);
         if(cupR){
@@ -1060,8 +1223,9 @@ function renderSchedule(){
     }
     document.getElementById('main').innerHTML=html;
 }
+
 function renderCup(){
-    let html=`<div class="sec">🏆 Piala Domestik</div>`;
+    let html=`<div class="sec">🏆 Domestic Cup</div>`;
     ['Round of 16','Quarter Final','Semi Final','Final'].forEach(rn=>{
         const p=G.cupBracket[rn];const r=G.cupResults[rn];
         if(p){
@@ -1074,18 +1238,19 @@ function renderCup(){
             html+=`</div>`;
         }
     });
-    if(G.cupWinner!==null)html+=`<div class="card" style="text-align:center"><div style="font-size:2rem">🏆</div><b>Juara: ${getTeamName(G.cupWinner)}</b></div>`;
+    if(G.cupWinner!==null)html+=`<div class="card" style="text-align:center"><div style="font-size:2rem">🏆</div><b>Champions: ${getTeamName(G.cupWinner)}</b></div>`;
     document.getElementById('main').innerHTML=html;
 }
+
 function renderLCA(){
-    let html=`<div class="sec">🌏 Liga Champions Asia (Grup)</div>`;
-    if(!G.acl){html+=`<div class="card"><div style="font-size:.75rem;color:var(--dim);text-align:center">Turnamen dimulai Minggu 3.</div></div>`;}
+    let html=`<div class="sec">🌏 Asian Champions League (Group)</div>`;
+    if(!G.acl){html+=`<div class="card"><div style="font-size:.75rem;color:var(--dim);text-align:center">Tournament starts at Week 3.</div></div>`;}
     else{
         ['A','B','C','D','E','F','G','H'].forEach(g=>{
             const stands=G.acl.groups[g].map(id=>G.acl.standings[id]).sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga));
-            html+=`<div class="card"><div class="sec">Grup ${g}</div><table class="tbl"><thead><tr><th>Tim</th><th class="n">M</th><th class="n">SG</th><th class="n">Poin</th></tr></thead><tbody>${stands.map((s,i)=>`<tr class="${s.id===G.playerTeamIdx?'me':''}${i<2?' lca-q':''}"><td>${getTeamName(s.id)}</td><td class="n">${s.p}</td><td class="n">${s.gf-s.ga}</td><td class="n" style="font-weight:bold">${s.pts}</td></tr>`).join('')}</tbody></table></div>`;
+            html+=`<div class="card"><div class="sec">Group ${g}</div><table class="tbl"><thead><tr><th>Team</th><th class="n">P</th><th class="n">GD</th><th class="n">Pts</th></tr></thead><tbody>${stands.map((s,i)=>`<tr class="${s.id===G.playerTeamIdx?'me':''}${i<2?' lca-q':''}"><td>${getTeamName(s.id)}</td><td class="n">${s.p}</td><td class="n">${s.gf-s.ga}</td><td class="n" style="font-weight:bold">${s.pts}</td></tr>`).join('')}</tbody></table></div>`;
         });
-        html+=`<div class="sec">Babak Gugur</div>`;
+        html+=`<div class="sec">Knockout Stage</div>`;
         ['Round of 16','Quarter Final','Semi Final','Final'].forEach(rn=>{
             const p=G.acl.knockout[rn];
             if(p&&p.length&&Array.isArray(p[0])){
@@ -1098,153 +1263,398 @@ function renderLCA(){
                 html+=`</div>`;
             }
         });
-        if(G.acl.winner)html+=`<div class="card" style="text-align:center"><div style="font-size:2rem">🥇</div><b>Juara Asia: ${getTeamName(G.acl.winner)}</b></div>`;
+        if(G.acl.winner)html+=`<div class="card" style="text-align:center"><div style="font-size:2rem">🥇</div><b>Champions of Asia: ${getTeamName(G.acl.winner)}</b></div>`;
     }
     document.getElementById('main').innerHTML=html;
 }
+
 function renderTransfer(){
-    const inTW=G.phase==='preseason'||weekToMonthIdx(G.week)===0;
-    let html=`<div class="sec">💰 Bursa Transfer</div>
+    const inTW = G.phase === 'preseason' || (G.week >= 14 && G.week <= 17);
+    let html=`<div class="sec">💰 Transfer Market</div>
     <div class="card" style="display:flex;justify-content:space-between;align-items:center">
-      <span style="font-weight:bold;color:var(--dim)">Anggaran Tersisa:</span>
+      <span style="font-weight:bold;color:var(--dim)">Remaining Budget:</span>
       <span style="font-size:1.2rem;font-weight:900;color:var(--gold)">${fmt(G.budget)}</span>
     </div>`;
-    if(!inTW){html+=`<div class="card" style="text-align:center;color:var(--red);font-weight:bold">🔴 Jendela Transfer Ditutup!</div>`;}
-    else{
-        html+=`<div class="card"><div class="sec">Pemain Tersedia (Beli)</div>`;
+    
+    if(!inTW){
+        html+=`<div class="card" style="text-align:center;color:var(--red);font-weight:bold">🔴 Transfer Window Closed! (Opens: Pre-Season & Week 14-17)</div>`;
+    } else {
+        html+=`<div class="card"><div class="sec">Available Players (Buy)</div>`;
         G.transferMarket.forEach(p=>{
             const canBuy=G.budget>=p.price;
-            html+=`<div class="row bt" style="background:var(--sf2);padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--brd)"><div><div style="font-weight:bold;font-size:.8rem;cursor:pointer" onclick="openPlayerModal('${p.id}')"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> ${p.name}${p.isStar?'⭐':''}</div><div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | Usia: ${p.age} | Kont: ${p.contract}th</div></div><div style="text-align:right"><div style="font-weight:bold;color:var(--gold);margin-bottom:4px">${fmt(p.price)}</div><button class="btn btn-sm ${canBuy?'btn-p':'btn-s'}" ${!canBuy?'disabled':''} onclick="buyPlayer('${p.id}')">BELI</button></div></div>`;
+            html+=`<div class="row bt" style="background:var(--sf2);padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--brd)"><div><div style="font-weight:bold;font-size:.8rem;cursor:pointer" onclick="openPlayerModal('${p.id}')"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> ${p.name}${p.isStar?'⭐':''}</div><div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | Age: ${p.age} | Con: ${p.contract}y</div></div><div style="text-align:right"><div style="font-weight:bold;color:var(--gold);margin-bottom:4px">${fmt(p.price)}</div><button class="btn btn-sm ${canBuy?'btn-p':'btn-s'}" ${!canBuy?'disabled':''} onclick="buyPlayer('${p.id}')">BUY</button></div></div>`;
         });
-        html+=`</div><div class="card"><div class="sec">Jual Pemainmu</div>`;
+        html+=`</div><div class="card"><div class="sec">Sell Your Players</div>`;
         G.squads[G.playerTeamIdx].forEach(p=>{
             const sp=Math.max(1,getPrice(p.ovr)-rnd(0,1));
-            html+=`<div class="row bt" style="background:var(--sf2);padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--brd)"><div><div style="font-weight:bold;font-size:.8rem"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> ${p.name}${p.isStar?'⭐':''}</div><div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | ${p.inXI?'<span style="color:var(--gg)">Di XI</span>':'<span style="color:var(--dim)">Bangku</span>'}</div></div><div style="text-align:right"><div style="font-weight:bold;color:var(--gold);margin-bottom:4px">+ ${fmt(sp)}</div><button class="btn btn-sm btn-d" onclick="sellPlayer('${p.id}')">JUAL</button></div></div>`;
+            html+=`<div class="row bt" style="background:var(--sf2);padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--brd)"><div><div style="font-weight:bold;font-size:.8rem"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> <span class="${p.injury>0?'injured-text':''}">${p.name}</span>${p.isStar?'⭐':''}</div><div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | ${p.inXI?'<span style="color:var(--gg)">In XI</span>':'<span style="color:var(--dim)">Bench</span>'}</div></div><div style="text-align:right"><div style="font-weight:bold;color:var(--gold);margin-bottom:4px">+ ${fmt(sp)}</div><button class="btn btn-sm btn-d" onclick="sellPlayer('${p.id}')">SELL</button></div></div>`;
         });
         html+=`</div>`;
     }
     document.getElementById('main').innerHTML=html;
 }
+
 function buyPlayer(id){
     const idx=G.transferMarket.findIndex(p=>p.id===id);if(idx<0)return;
-    const p=G.transferMarket[idx];if(G.budget<p.price){showToast('❌ Budget kurang!');return;}
+    const p=G.transferMarket[idx];if(G.budget<p.price){showToast('❌ Not enough budget!');return;}
     G.budget-=p.price;p.teamIndex=G.playerTeamIdx;G.squads[G.playerTeamIdx].push(p);G.transferMarket.splice(idx,1);
-    saveState();showToast(`✅ ${p.name} berhasil direkrut!`);renderAll();
+    
+    G.news.unshift({
+        date: formatDate(G.currentDate),
+        title: 'New Signing!',
+        body: `${TEAMS[G.playerTeamIdx]} has officially signed ${p.name} for ${fmt(p.price)}.`
+    });
+
+    saveState();showToast(`✅ ${p.name} successfully signed!`);renderAll();
 }
+
 function sellPlayer(id){
     const sq=G.squads[G.playerTeamIdx];const idx=sq.findIndex(p=>p.id===id);if(idx<0)return;
     const p=sq[idx];
-    if(p.inXI){showToast('❌ Keluarkan dari XI dulu!');return;}
-    if(sq.length<=16){showToast('❌ Minimum skuad 16 pemain!');return;}
+    if(p.inXI){showToast('❌ Remove from XI first!');return;}
+    if(sq.length<=16){showToast('❌ Minimum squad size is 16!');return;}
     const sp=Math.max(1,getPrice(p.ovr)-rnd(0,1));G.budget+=sp;sq.splice(idx,1);
-    saveState();showToast(`✅ ${p.name} dijual ${fmt(sp)}!`);renderAll();
+    saveState();showToast(`✅ ${p.name} sold for ${fmt(sp)}!`);renderAll();
 }
+
+function renderNews() {
+    let html = '<div class="sec">📰 World Football News</div>';
+    if (!G.news || G.news.length === 0) {
+        html += '<p style="color:var(--dim); font-size:0.75rem;">No news available at the moment.</p>';
+    } else {
+        G.news.slice(0, 20).forEach(n => {
+            html += `
+            <div class="card" style="border-left: 3px solid var(--bg2);">
+                <div style="font-size:0.65rem; color:var(--dim); margin-bottom:4px;">${n.date}</div>
+                <div style="font-weight:bold; font-size:0.85rem; color:var(--gold); margin-bottom:6px;">${n.title}</div>
+                <div style="font-size:0.75rem; line-height:1.4;">${n.body}</div>
+            </div>`;
+        });
+    }
+    document.getElementById('main').innerHTML = html;
+}
+
 function renderManager(){
-    let inboxHtml=G.inbox.length===0?`<p style="font-size:.7rem;color:var(--dim)">Tidak ada pesan.</p>`:'';
-    G.inbox.forEach((msg,idx)=>{
-        inboxHtml+=`<div style="background:var(--sf2);padding:10px;border-radius:6px;border-left:3px solid ${msg.action?'var(--gg)':'var(--bg2)'};margin-bottom:8px"><div style="font-weight:bold;font-size:.8rem">${msg.title}</div><div style="font-size:.7rem;color:var(--dim);margin:5px 0">${msg.body}</div>${msg.action?`<button class="btn btn-sm btn-p" onclick="acceptJob(${msg.targetTeamIdx},${idx})">Terima Tawaran</button>`:''}</div>`;
+    let changed = false;
+    G.inbox.forEach(m => {
+        if (!m.isRead) { m.isRead = true; changed = true; }
     });
-    document.getElementById('main').innerHTML=`
-    <div class="sec">👔 Profil Manajer</div>
-    <div class="card" style="text-align:center"><div style="width:60px;height:60px;background:var(--bl);border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:1.5rem">👤</div><div style="font-weight:bold;font-size:1.1rem">${G.managerName}</div><div style="font-size:.8rem;color:var(--dim)">Klub Saat Ini: <b style="color:var(--gold)">${TEAMS[G.playerTeamIdx]}</b></div></div>
-    <div class="card"><div class="sec">📧 Kotak Masuk</div>${inboxHtml}</div>
-    <div class="card" style="margin-top:20px;border-color:var(--red)"><div class="sec">Zona Berbahaya</div><button class="btn btn-d btn-blk" onclick="hardReset()">🛑 Pensiun / Mulai Baru</button></div>`;
+    if (changed) { saveState(); updateHeader(); }
+
+    let inboxHtml = G.inbox.length === 0 ? `<p style="font-size:.7rem;color:var(--dim)">No messages.</p>` : '';
+    G.inbox.forEach((msg, idx) => {
+        const targetId = msg.targetTeamIdx !== undefined ? msg.targetTeamIdx : rnd(0, 15);
+        inboxHtml += `<div style="background:var(--sf2);padding:10px;border-radius:6px;border-left:3px solid ${msg.action?'var(--gg)':'var(--bg2)'};margin-bottom:8px">
+            <div style="font-weight:bold;font-size:.8rem">${msg.title}</div>
+            <div style="font-size:.7rem;color:var(--dim);margin:5px 0">${msg.body}</div>
+            ${msg.action ? `<button class="btn btn-sm btn-p" onclick="acceptJob(${targetId}, ${idx})">Accept Offer</button>` : ''}
+        </div>`;
+    });
+
+    const reqUsed = G.budgetRequestsUsed || 0;
+
+    document.getElementById('main').innerHTML = `
+    <div class="sec">👔 Manager Profile</div>
+    <div class="card" style="text-align:center">
+        <div style="width:60px;height:60px;background:var(--bl);border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:1.5rem">👤</div>
+        <div style="font-weight:bold;font-size:1.1rem">${G.managerName}</div>
+        <div style="font-size:.8rem;color:var(--dim)">Current Club: <b style="color:var(--gold)">${TEAMS[G.playerTeamIdx]}</b></div>
+    </div>
+    
+    <div class="card" style="border-color:var(--gold)">
+        <div class="sec" style="color:var(--gold)">💼 Finance & Board Negotiation</div>
+        <div class="row bt" style="margin-bottom:10px">
+            <span style="font-size:.75rem;color:var(--dim)">Remaining Budget:</span>
+            <span style="font-weight:900;color:var(--gold);font-size:1rem">${fmt(G.budget)}</span>
+        </div>
+        <button class="btn btn-p btn-blk" ${reqUsed >= 2 ? 'disabled' : ''} onclick="requestBudget()">📝 Request Additional Funds (${2 - reqUsed} Left)</button>
+        ${reqUsed >= 2 ? `<div style="font-size:.65rem;color:var(--red);text-align:center;margin-top:5px">Budget requests are limited to 2 per season.</div>` : ''}
+    </div>
+
+    <div class="card"><div class="sec">📧 Inbox</div>${inboxHtml}</div>
+    <div class="card" style="margin-top:20px;border-color:var(--red)"><div class="sec">Danger Zone</div><button class="btn btn-d btn-blk" onclick="hardReset()">🛑 Retire / New Career</button></div>`;
 }
-function acceptJob(newTeamIdx,msgIdx){
-    if(confirm(`Yakin meninggalkan ${TEAMS[G.playerTeamIdx]} untuk ${TEAMS[newTeamIdx]}?`)){
-        G.playerTeamIdx=newTeamIdx;G.budget=Math.min(50,BASE_BUDGETS[newTeamIdx]);G.inbox.splice(msgIdx,1);
-        G.log.unshift({cls:'info',text:`👔 Manajer bergabung dengan ${TEAMS[newTeamIdx]}!`});
-        saveState();renderAll();showToast(`Selamat datang di ${TEAMS[newTeamIdx]}!`);
+
+function requestBudget() {
+    if ((G.budgetRequestsUsed || 0) >= 2) return;
+    
+    const row = G.leagueTable.find(x => x.teamIdx === G.playerTeamIdx);
+    const pos = G.leagueTable.indexOf(row) + 1;
+    
+    let chance = 40; 
+    if (pos <= 3) chance += 30;         
+    else if (pos <= 8) chance += 10;
+    else if (pos >= 13) chance -= 30;   
+    
+    if (G.budget > 30) chance -= 20;    
+    if (G.budget < 10) chance += 20;    
+
+    G.budgetRequestsUsed = (G.budgetRequestsUsed || 0) + 1;
+    
+    if (Math.random() * 100 < chance) {
+        const granted = rnd(5, 15); 
+        G.budget += granted;
+        G.inbox.unshift({
+            id: Math.random(), title: 'Budget Request Approved ✅',
+            body: `The board is very pleased with your performance. We agree to allocate an additional ${fmt(granted)} to your transfer budget.`,
+            action: null,
+            isRead: false
+        });
+        showToast(`✅ Approved! +${fmt(granted)}`);
+    } else {
+        let reason = "The club's financial situation doesn't allow it right now.";
+        if (pos > 10) reason = "Improve league performance first before asking for more money.";
+        else if (G.budget >= 25) reason = "The current budget is considered more than sufficient.";
+        
+        G.inbox.unshift({
+            id: Math.random(), title: 'Budget Request Rejected ❌',
+            body: `The board decided to reject your request. ${reason}`,
+            action: null,
+            isRead: false
+        });
+        showToast('❌ Request rejected by the board.');
+    }
+    saveState(); renderAll();
+}
+
+function acceptJob(newTeamIdx, msgIdx){
+    if(newTeamIdx === undefined || newTeamIdx === null) newTeamIdx = rnd(0, 15);
+    if(confirm(`Are you sure you want to leave ${TEAMS[G.playerTeamIdx]} for ${TEAMS[newTeamIdx]}?`)){
+        G.playerTeamIdx = newTeamIdx;
+        G.budget = Math.min(50, BASE_BUDGETS[newTeamIdx]);
+        G.inbox.splice(msgIdx, 1);
+        
+        weekPendingMatches = []; 
+        weekPendingIndex = 0;
+        
+        G.log.unshift({cls:'info', text:`👔 Manager officially joined ${TEAMS[newTeamIdx]}!`});
+        
+        G.news.unshift({
+            date: formatDate(G.currentDate),
+            title: 'Managerial Shake-up!',
+            body: `${TEAMS[newTeamIdx]} has officially unveiled ${G.managerName} as their new head coach.`
+        });
+
+        saveState(); renderAll(); showToast(`Welcome to ${TEAMS[newTeamIdx]}!`);
     }
 }
+
+function forceRetire(pid) {
+    const sq = G.squads[G.playerTeamIdx];
+    const idx = sq.findIndex(p => p.id === pid);
+    if(idx < 0) return;
+    const oldP = sq[idx];
+    if(oldP.inXI) { showToast("❌ Remove from Starting XI before retiring."); return; }
+    
+    // Gacha Regen
+    const isForeign = Math.random() < 0.2;
+    const origin = isForeign ? 'FR' : 'ID';
+    const regen = genPlayer(oldP.pos, G.playerTeamIdx, false, origin);
+    regen.age = rnd(17, 21);
+    regen.ovr = rnd(50, 85); 
+    regen.isStar = regen.ovr >= 80;
+    regen.price = getPrice(regen.ovr);
+    
+    sq.splice(idx, 1);
+    sq.push(regen);
+    
+    G.news.unshift({
+        date: formatDate(G.currentDate),
+        title: 'Player Retires',
+        body: `${oldP.name} has announced his retirement. The club has promoted youth academy prospect ${regen.name} to the first team.`
+    });
+    
+    saveState(); closeModal(); renderAll();
+    showToast(`🎲 Gacha! ${regen.name} (OVR ${regen.ovr}) joins the squad!`);
+}
+
 function showEndSeason(){
     const row=G.leagueTable.find(x=>x.teamIdx===G.playerTeamIdx);const pos=G.leagueTable.indexOf(row)+1;
     let reward=5;
     if(pos===1)reward=40;else if(pos===2)reward=30;else if(pos===3)reward=20;else if(pos<=5)reward=10;
     if(G.cupWinner===G.playerTeamIdx)reward+=15;if(G.acl&&G.acl.winner===G.playerTeamIdx)reward+=50;
     document.getElementById('mtitle').innerHTML=``;
-    document.getElementById('mbody').innerHTML=`<div style="text-align:center"><h1 style="font-size:3rem;margin:0">🏆</h1><h2 style="color:var(--gold)">Musim ${G.season} Selesai!</h2><p style="font-size:.8rem;color:var(--txt)">Juara Liga: <b>${G.leagueTable[0].name}</b></p><div style="background:var(--sf2);padding:10px;border-radius:8px;margin:15px 0"><div style="font-size:.75rem;color:var(--dim)">Timmu (${TEAMS[G.playerTeamIdx]}):</div><div style="font-size:1.2rem;font-weight:bold;color:var(--wh)">Posisi Akhir: #${pos}</div><div style="font-size:.9rem;color:var(--gg);margin-top:5px">Hadiah: + ${fmt(reward)}</div></div></div>`;
-    document.getElementById('mfoot').innerHTML=`<button class="btn btn-p btn-blk" onclick="startNewSeason(${reward},${pos})">Mulai Musim Berikutnya ➔</button>`;
+    document.getElementById('mbody').innerHTML=`<div style="text-align:center"><h1 style="font-size:3rem;margin:0">🏆</h1><h2 style="color:var(--gold)">Season ${G.season} Finished!</h2><p style="font-size:.8rem;color:var(--txt)">League Champions: <b>${G.leagueTable[0].name}</b></p><div style="background:var(--sf2);padding:10px;border-radius:8px;margin:15px 0"><div style="font-size:.75rem;color:var(--dim)">Your Team (${TEAMS[G.playerTeamIdx]}):</div><div style="font-size:1.2rem;font-weight:bold;color:var(--wh)">Final Position: #${pos}</div><div style="font-size:.9rem;color:var(--gg);margin-top:5px">Prize Money: + ${fmt(reward)}</div></div></div>`;
+    document.getElementById('mfoot').innerHTML=`<button class="btn btn-p btn-blk" onclick="startNewSeason(${reward},${pos})">Start Next Season ➔</button>`;
     document.getElementById('mov').classList.add('show');
 }
+
 function startNewSeason(reward,finalPos){
-    G.budget=Math.min(50,G.budget+reward);G.season++;G.week=0;G.phase='preseason';G.preseasonWeeksLeft=2;
+    G.budget=Math.min(50,G.budget+reward);
+    G.budgetRequestsUsed = 0;
+    G.season++;G.week=0;G.phase='preseason';G.preseasonWeeksLeft=2;
     weekPendingMatches=[];weekPendingIndex=0;
     G.leagueTable=TEAMS.map((name,i)=>({teamIdx:i,name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0}));
     G.leagueResults=[];G.schedule=buildSchedule();G.lcaTeamIndices=G.leagueTable.slice(0,4).map(x=>x.teamIdx);
     G.acl=null;
     G.cupBracket={"Round of 16":[...Array(16).keys()].sort(()=>Math.random()-.5).reduce((res,k,i,arr)=>i%2===0?[...res,[arr[i],arr[i+1]==15?99:arr[i+1]]]:res,[])};
     G.cupResults={};G.cupRoundsPlayed={};G.cupWinner=null;
+    
+    // Auto Retirement Process
     G.squads.forEach((sq,ti)=>{
-        sq.forEach(p=>{p.energy=100;p.moral=85;p.contract--;p.age++;
+        sq.forEach(p=>{p.energy=100;p.moral=85;p.contract--;p.age++; p.injury=0;
             let gro=0;if(p.age<24)gro=rnd(0,2);else if(p.age>30)gro=rnd(-3,-1);else gro=rnd(-1,1);
             if(p.appearances>15)gro+=1;if(p.goals>10)gro+=1;
             p.ovr=clamp(p.ovr+gro,40,95);p.isStar=p.ovr>=80;p.goals=0;p.appearances=0;
         });
+
+        // Regen Logic > 34 years old
+        for(let i=sq.length-1; i>=0; i--){
+            const p = sq[i];
+            if(p.age >= 34) {
+                let chance = p.age === 34 ? 0.3 : (p.age === 35 ? 0.5 : (p.age === 36 ? 0.75 : 1.0));
+                if(Math.random() < chance) {
+                    if(p.isStar && ti === G.playerTeamIdx) {
+                        G.news.unshift({ date: 'Pre-season', title: 'Legend Retires', body: `${p.name} (OVR ${p.ovr}) has officially hung up his boots at age ${p.age}.`});
+                    }
+                    const origin = ti < 16 ? (Math.random() < 0.8 ? 'ID' : 'FR') : 'ID';
+                    const regen = genPlayer(POS_MAP[p.pos].c, ti, false, origin);
+                    regen.age = rnd(17, 21); regen.ovr = rnd(50, 85);
+                    regen.isStar = regen.ovr >= 80; regen.price = getPrice(regen.ovr);
+                    sq.splice(i, 1, regen);
+                }
+            }
+        }
+
         const expired=sq.filter(p=>p.contract<=0);
-        expired.forEach(p=>{const idx=sq.indexOf(p);sq[idx]=genPlayer(POS_MAP[p.pos].c,ti,false);});
+        expired.forEach(p=>{
+            const idx=sq.indexOf(p);
+            const origin = ti < 16 ? (Math.random() < 0.8 ? 'ID' : 'FR') : 'ID';
+            sq[idx]=genPlayer(POS_MAP[p.pos].c,ti,false, origin);
+        });
         setDefaultXI(sq,G.tactics[ti]);
     });
-    G.transferMarket=genMarket();
-    G.log=[{cls:'info',text:`🌟 Musim ${G.season} dimulai! Hadiah telah ditambahkan.`}];
+
+    // Auto retire market
+    for(let i=G.transferMarket.length-1; i>=0; i--){
+         const p = G.transferMarket[i]; p.age++;
+         if(p.age >= 34) {
+             let chance = p.age === 34 ? 0.3 : (p.age === 35 ? 0.5 : (p.age === 36 ? 0.75 : 1.0));
+             if(Math.random() < chance) {
+                 const origin = Math.random() < 0.6 ? 'ID' : (Math.random() < 0.8 ? 'FR' : 'JP'); 
+                 const regen = genPlayer(POS_MAP[p.pos].c, -1, false, origin);
+                 regen.age = rnd(17, 21); regen.ovr = rnd(50, 85);
+                 regen.isStar = regen.ovr >= 80; regen.price = getPrice(regen.ovr);
+                 G.transferMarket.splice(i, 1, regen);
+             }
+         }
+    }
+
+    // Refresh Market
+    for(let i=0; i<30; i++) {
+        G.transferMarket.shift(); // Remove 30 oldest
+        const cat=pick(['GK','DEF','MID','FWD']);
+        const rR = Math.random(); let origin = 'ID';
+        if(rR < 0.6) origin = 'ID'; else if(rR < 0.8) origin = 'FR'; else if(rR < 0.86) origin = 'JP'; else if(rR < 0.93) origin = 'KR'; else origin = 'AR';
+        const np=genPlayer(cat,-1,false, origin);
+        const r=Math.random(); if(r<0.7)np.ovr=rnd(45,65);else if(r<0.9)np.ovr=rnd(66,75);else np.ovr=rnd(76,85);
+        np.isStar=np.ovr>=80;np.price=getPrice(np.ovr);
+        G.transferMarket.push(np);
+    }
+    G.transferMarket.sort((a,b)=>b.ovr-a.ovr);
+
+    G.log=[{cls:'info',text:`🌟 Season ${G.season} started! Rewards added.`}];
+    
+    G.news.unshift({
+        date: formatDate(G.currentDate),
+        title: `Welcome to Season ${G.season}!`,
+        body: `The new season is here. Clubs are preparing their tactics and finalizing transfers for what promises to be an exciting campaign.`
+    });
+
     if(finalPos<=5||Math.random()>0.6){
         let target=rnd(0,15);while(target===G.playerTeamIdx)target=rnd(0,15);
-        G.inbox.unshift({id:Math.random(),title:'Tawaran Kerja',body:`Dewan ${TEAMS[target]} terkesan dengan penampilanmu. Mereka ingin kamu jadi manajer!`,action:true,targetTeamIdx:target});
+        G.inbox.unshift({id:Math.random(),title:'Job Offer',body:`The board of ${TEAMS[target]} is impressed with your performance. They want you as their new manager!`,action:true,targetTeamIdx:target, isRead: false});
     }
-    saveState();closeModal();renderAll();showToast("Musim Baru Dimulai!");
+    saveState();closeModal();renderAll();showToast("New Season Started!");
 }
+
 let toastTmr;
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTmr);toastTmr=setTimeout(()=>t.classList.remove('show'),2500);}
-function hardReset(){if(confirm("Hapus save ini dan mulai karier baru?")){localStorage.removeItem('mliv7');G=freshState();selectTeamPrompt();}}
+function hardReset(){if(confirm("Delete this save and start a new career?")){localStorage.removeItem('mliv10');G=freshState();selectTeamPrompt();}}
+
 function openPlayerModal(pid){
     let p=null;
     for(let i=0;i<G.squads.length;i++){p=G.squads[i].find(x=>x.id===pid);if(p)break;}
     if(!p)p=G.transferMarket.find(x=>x.id===pid);
     if(p){
-        document.getElementById('mtitle').innerHTML=`🔍 Info Pemain`;
-        document.getElementById('mbody').innerHTML=`<div style="text-align:center;margin-bottom:15px"><div style="font-size:2rem;font-weight:900">${p.name} ${p.isStar?'⭐':''}</div><div style="font-size:.8rem;color:var(--dim)">${p.teamIndex>=0?TEAMS[p.teamIndex]:'Bebas'}</div></div><div class="g3"><div class="card" style="text-align:center"><div style="font-weight:bold;color:var(--gold);font-size:1.2rem">${p.pos}</div><div style="font-size:.6rem;color:var(--dim)">Posisi</div></div><div class="card" style="text-align:center"><div style="font-weight:bold;color:var(--gg);font-size:1.2rem">${p.ovr}</div><div style="font-size:.6rem;color:var(--dim)">Overall</div></div><div class="card" style="text-align:center"><div style="font-weight:bold;color:var(--wh);font-size:1.2rem">${p.age}</div><div style="font-size:.6rem;color:var(--dim)">Usia</div></div></div><div class="card"><div class="row bt"><span>Penampilan</span><b>${p.appearances}</b></div><div class="row bt" style="margin-top:5px"><span>Gol</span><b style="color:var(--gold)">${p.goals}</b></div></div>`;
-        document.getElementById('mfoot').innerHTML=`<button class="btn btn-s btn-sm" onclick="closeModal()">Tutup</button>`;
+        const mainRole = p.pos;
+        const secondaryRoles = POS_MAP[p.pos].s.length > 0 ? POS_MAP[p.pos].s.join(', ') : 'None';
+        const injInfo = p.injury > 0 ? `<div style="color:var(--red); font-weight:bold; margin-top:5px; font-size:.8rem;">🚑 Injured for ${p.injury} week(s)</div>` : '';
+
+        document.getElementById('mtitle').innerHTML=`🔍 Player Info`;
+        document.getElementById('mbody').innerHTML=`
+        <div style="text-align:center;margin-bottom:15px">
+            <div style="font-size:2rem;font-weight:900"><span class="${p.injury>0?'injured-text':''}">${p.name}</span> ${p.isStar?'⭐':''}</div>
+            <div style="font-size:.8rem;color:var(--dim)">${p.teamIndex>=0?TEAMS[p.teamIndex]:'Free Agent'}</div>
+            ${injInfo}
+        </div>
+        <div class="g3">
+            <div class="card" style="text-align:center"><div style="font-weight:bold;color:var(--gold);font-size:1.2rem">${p.pos}</div><div style="font-size:.6rem;color:var(--dim)">Position</div></div>
+            <div class="card" style="text-align:center"><div style="font-weight:bold;color:var(--gg);font-size:1.2rem">${p.ovr}</div><div style="font-size:.6rem;color:var(--dim)">Overall</div></div>
+            <div class="card" style="text-align:center"><div style="font-weight:bold;color:var(--wh);font-size:1.2rem">${p.age}</div><div style="font-size:.6rem;color:var(--dim)">Age</div></div>
+        </div>
+        <div class="card" style="margin-top:10px">
+            <div class="sec">Player Roles</div>
+            <div class="row bt"><span>Dominant Role:</span><b style="color:var(--gold)">${mainRole}</b></div>
+            <div class="row bt" style="margin-top:5px; font-size:.65rem; color:var(--dim)">
+                <span>Capable of playing:</span><span>${secondaryRoles}</span>
+            </div>
+        </div>
+        <div class="card" style="margin-top:10px">
+            <div class="row bt"><span>Appearances</span><b>${p.appearances}</b></div>
+            <div class="row bt" style="margin-top:5px"><span>Goals</span><b style="color:var(--gold)">${p.goals}</b></div>
+        </div>`;
+        
+        let retireBtn = '';
+        if(p.teamIndex === G.playerTeamIdx && p.age >= 32) {
+            retireBtn = `<button class="btn btn-d btn-sm" style="margin-right:auto;" onclick="forceRetire('${p.id}')">🎲 Retire & Regen</button>`;
+        }
+        
+        document.getElementById('mfoot').innerHTML=`${retireBtn} <button class="btn btn-s btn-sm" onclick="closeModal()">Close</button>`;
         document.getElementById('mov').classList.add('show');
     }
 }
+
 function openTeamModal(tid){
     const sq=G.squads[tid];const xi=sq.filter(p=>p.inXI).sort((a,b)=>POS_ORDER[a.pos]-POS_ORDER[b.pos]);
-    let html=`<div style="font-size:.75rem;color:var(--dim);margin-bottom:10px">Taktik: ${G.tactics[tid]}</div><div class="sec">Starting XI</div>`;
-    xi.forEach(p=>{html+=`<div class="row bt" style="font-size:.75rem;border-bottom:1px solid var(--sf2);padding:4px 0;cursor:pointer" onclick="openPlayerModal('${p.id}')"><span><b style="color:var(--gold);display:inline-block;width:30px">${p.slotPos}</b> ${p.name}</span><b class="${ovrCls(p.ovr)}">${p.ovr}</b></div>`;});
-    html+=`<div class="sec" style="margin-top:10px">Cadangan Terbaik</div>`;
-    sq.filter(p=>!p.inXI).sort((a,b)=>b.ovr-a.ovr).slice(0,5).forEach(p=>{html+=`<div class="row bt" style="font-size:.75rem;border-bottom:1px solid var(--sf2);padding:4px 0;cursor:pointer" onclick="openPlayerModal('${p.id}')"><span><b style="color:var(--dim);display:inline-block;width:30px">${p.pos}</b> ${p.name}</span><b class="${ovrCls(p.ovr)}">${p.ovr}</b></div>`;});
+    let html=`<div style="font-size:.75rem;color:var(--dim);margin-bottom:10px">Tactic: ${G.tactics[tid]}</div><div class="sec">Starting XI</div>`;
+    xi.forEach(p=>{html+=`<div class="row bt" style="font-size:.75rem;border-bottom:1px solid var(--sf2);padding:4px 0;cursor:pointer" onclick="openPlayerModal('${p.id}')"><span><b style="color:var(--gold);display:inline-block;width:30px">${p.slotPos}</b> <span class="${p.injury>0?'injured-text':''}">${p.name}</span></span><b class="${ovrCls(p.ovr)}">${p.ovr}</b></div>`;});
+    html+=`<div class="sec" style="margin-top:10px">Top Reserves</div>`;
+    sq.filter(p=>!p.inXI).sort((a,b)=>b.ovr-a.ovr).slice(0,5).forEach(p=>{html+=`<div class="row bt" style="font-size:.75rem;border-bottom:1px solid var(--sf2);padding:4px 0;cursor:pointer" onclick="openPlayerModal('${p.id}')"><span><b style="color:var(--dim);display:inline-block;width:30px">${p.pos}</b> <span class="${p.injury>0?'injured-text':''}">${p.name}</span></span><b class="${ovrCls(p.ovr)}">${p.ovr}</b></div>`;});
     document.getElementById('mtitle').innerHTML=`🛡️ ${TEAMS[tid]}`;
     document.getElementById('mbody').innerHTML=html;
-    document.getElementById('mfoot').innerHTML=`<button class="btn btn-s btn-sm" onclick="closeModal()">Tutup</button>`;
+    document.getElementById('mfoot').innerHTML=`<button class="btn btn-s btn-sm" onclick="closeModal()">Close</button>`;
     document.getElementById('mov').classList.add('show');
 }
+
 function selectTeamPrompt(){
-    let html=`<div style="margin-bottom:15px"><div class="sec">1. Nama Manajer</div><input type="text" id="mgrNameInp" class="input-text" placeholder="Masukkan Nama..." value="Manager"></div><div class="sec">2. Pilih Klubmu</div><div style="display:flex;flex-direction:column;gap:5px;max-height:45vh;overflow-y:auto;padding-right:5px">`;
+    let html=`<div style="margin-bottom:15px"><div class="sec">1. Manager Name</div><input type="text" id="mgrNameInp" class="input-text" placeholder="Enter Name..." value="Manager"></div><div class="sec">2. Select Your Club</div><div style="display:flex;flex-direction:column;gap:5px;max-height:45vh;overflow-y:auto;padding-right:5px">`;
     TEAMS.forEach((name,i)=>{
         const bgt=Math.min(50,BASE_BUDGETS[i]+rnd(-5,5));const sq=G.squads[i];
         const effOvr=Math.round(sq.filter(p=>p.inXI).reduce((s,p)=>s+getEffOvr(p,p.slotPos),0)/11)||0;
-        html+=`<button class="btn btn-s" style="justify-content:space-between;padding:10px 12px;display:flex;align-items:center;" onclick="applyTeam(${i},${bgt})"><div style="text-align:left;flex:1"><div style="font-weight:700;font-size:.9rem">${i+1}. ${name}</div><div style="font-size:.65rem;color:var(--wh);margin-top:4px">OVR: <b style="color:var(--gg)">${effOvr}</b></div></div><div style="text-align:right"><div style="font-size:.65rem;color:var(--dim)">Anggaran</div><div style="font-size:.9rem;font-weight:900;color:var(--gold)">${bgt} M</div></div></button>`;
+        html+=`<button class="btn btn-s" style="justify-content:space-between;padding:10px 12px;display:flex;align-items:center;" onclick="applyTeam(${i},${bgt})"><div style="text-align:left;flex:1"><div style="font-weight:700;font-size:.9rem">${i+1}. ${name}</div><div style="font-size:.65rem;color:var(--wh);margin-top:4px">OVR: <b style="color:var(--gg)">${effOvr}</b></div></div><div style="text-align:right"><div style="font-size:.65rem;color:var(--dim)">Budget</div><div style="font-size:.9rem;font-weight:900;color:var(--gold)">${bgt} M</div></div></button>`;
     });
     html+=`</div>`;
-    document.getElementById('mtitle').innerHTML=`<h2 style="color:var(--gold);margin:0">⚽ Mulai Karier</h2>`;
+    document.getElementById('mtitle').innerHTML=`<h2 style="color:var(--gold);margin:0">⚽ Start Career</h2>`;
     document.getElementById('mbody').innerHTML=html;document.getElementById('mfoot').innerHTML='';
     document.getElementById('mov').classList.add('show');
 }
+
 function applyTeam(idx,budget){
     const mName=document.getElementById('mgrNameInp').value.trim()||'Manager';
     G.managerName=mName;G.playerTeamIdx=idx;G.budget=budget;
     G.tactics[idx]='4-3-3';setDefaultXI(G.squads[idx],'4-3-3');
-    saveState();closeModal();renderAll();showToast(`Selamat datang di ${TEAMS[idx]}, ${mName}!`);
+    saveState();closeModal();renderAll();showToast(`Welcome to ${TEAMS[idx]}, ${mName}!`);
 }
 function closeModal(){document.getElementById('mov').classList.remove('show');}
 
 let activeTab='dash';
-const RENDERERS={dash:renderDash,squad:renderSquad,league:renderLeague,schedule:renderSchedule,cup:renderCup,lca:renderLCA,transfer:renderTransfer,manager:renderManager};
+const RENDERERS={dash:renderDash,squad:renderSquad,league:renderLeague,schedule:renderSchedule,cup:renderCup,lca:renderLCA,transfer:renderTransfer,news:renderNews,manager:renderManager};
 function renderTab(tab){
     try{
         const movEl=document.getElementById('mov');
-        if(movEl.classList.contains('show')&&document.getElementById('mtitle').innerHTML.includes('Mulai Karier'))return;
-        if(movEl.classList.contains('show')&&document.getElementById('mbody').innerHTML.includes('Musim')&&document.getElementById('mbody').innerHTML.includes('Selesai'))return;
+        if(movEl.classList.contains('show')&&document.getElementById('mtitle').innerHTML.includes('Start Career'))return;
+        if(movEl.classList.contains('show')&&document.getElementById('mbody').innerHTML.includes('Season')&&document.getElementById('mbody').innerHTML.includes('Finished'))return;
         activeTab=tab;
         document.querySelectorAll('.tb').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
         if(RENDERERS[tab])RENDERERS[tab]();
@@ -1256,7 +1666,11 @@ document.querySelectorAll('.tb').forEach(btn=>{btn.addEventListener('click',()=>
 
 function init(){
     if(!loadState()){G=freshState();selectTeamPrompt();}
-    else{weekPendingMatches=[];weekPendingIndex=0;updateHeader();renderTab('dash');}
+    else{
+        if(!G.news) G.news = [];
+        weekPendingMatches=[];weekPendingIndex=0;
+        updateHeader();renderTab('dash');
+    }
 }
 init();
 </script>
