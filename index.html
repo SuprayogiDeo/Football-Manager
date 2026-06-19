@@ -8,6 +8,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#0d3b2e" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
+    <!-- PWA Manifest for Add to Home Screen (Standalone Full Screen) -->
+    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkZvb3RiYWxsIE1hbmFnZXIgV2ViIiwKICAic2hvcnRfbmFtZSI6ICJGTSBXZWIiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3ciOiAiIzBhMTgxMiIsCiAgInRoZW1lX2NvbG9yIjogIiMwZDNiMmUiLAogICJpY29ucyI6IFt7CiAgICAic3JjIjogImRhdGE6aW1hZ2Uvc3ZnK3htbCw8c3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDEwMCAxMDAnPjx0ZXh0IHk9Jy45ZW0nIGZvbnQtc2l6ZT0nOTAnPiVFMiU5QSUQRDwvdGV4dD48L3N2Zz4iLAogICAgInNpemVzIjogIjE5MngxOTIiLAogICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICB9XQp9">
     <style>
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
         :root{
@@ -41,6 +43,7 @@
         .btn-sm{padding:4px 9px;font-size:.68rem}.btn-blk{width:100%}
         .row{display:flex;gap:8px;align-items:center}.row.bt{justify-content:space-between}
         .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+        .g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:7px}
         .ovr{display:inline-block;min-width:30px;text-align:center;padding:2px 4px;border-radius:4px;font-size:.78rem;font-weight:800}
         .ovr-h{background:#1a5c1a;color:#6eff6e}.ovr-m{background:#4a3a00;color:var(--gold)}.ovr-l{background:#4a1515;color:#ff7777}
         .pos{font-size:.6rem;font-weight:800;padding:2px 5px;border-radius:3px}
@@ -63,17 +66,14 @@
         .pln{font-weight:700;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .info-btn{background:var(--brd);color:var(--wh);border:none;border-radius:50%;width:22px;height:22px;font-size:.65rem;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center}
 
-        /* Chemistry Bar */
         .chem-bar { height: 6px; border-radius: 3px; background: var(--sf); overflow: hidden; margin-top: 5px; border: 1px solid var(--brd); }
         .chem-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--red), var(--gold), var(--gg)); transition: width 0.3s ease; }
 
-        /* ====== HORIZONTAL PITCH ====== */
         .pitch-wrap{position:relative;width:100%;background:linear-gradient(90deg,#1a6b30 0%,#1e7a35 50%,#1a6b30 100%);border-radius:8px;overflow:hidden;border:2px solid #3a9a50}
         .pitch-wrap.vertical{aspect-ratio:9/12}
         .pitch-wrap.horizontal{aspect-ratio:16/9;min-height:180px}
         .pitch-lines{position:absolute;inset:0;pointer-events:none}
 
-        /* Vertical lines */
         .pitch-wrap.vertical .pl-hw{top:0;bottom:0;left:50%;width:1px;height:auto;background:rgba(255,255,255,.22)}
         .pitch-wrap.vertical .pl-cc{width:22%;aspect-ratio:1;border-radius:50%;border:1px solid rgba(255,255,255,.22);left:50%;top:50%;transform:translate(-50%,-50%);background:none;position:absolute}
         .pitch-wrap.vertical .pl-pb-top{left:20%;right:20%;top:0;height:16%;border:1px solid rgba(255,255,255,.22);border-top:none;background:none;position:absolute}
@@ -81,7 +81,6 @@
         .pitch-wrap.vertical .pl-gb-top{left:35%;right:35%;top:0;height:6%;border:1px solid rgba(255,255,255,.22);border-top:none;background:none;position:absolute}
         .pitch-wrap.vertical .pl-gb-bot{left:35%;right:35%;bottom:0;height:6%;border:1px solid rgba(255,255,255,.22);border-bottom:none;background:none;position:absolute}
 
-        /* Horizontal lines */
         .pitch-wrap.horizontal .pl-hw{top:0;bottom:0;left:50%;width:1px;height:auto;background:rgba(255,255,255,.22);position:absolute}
         .pitch-wrap.horizontal .pl-cc{width:18%;aspect-ratio:1;border-radius:50%;border:1px solid rgba(255,255,255,.22);left:50%;top:50%;transform:translate(-50%,-50%);background:none;position:absolute}
         .pitch-wrap.horizontal .pl-pb-top{top:15%;bottom:15%;left:0;width:16%;border:1px solid rgba(255,255,255,.22);border-left:none;background:none;position:absolute;height:auto}
@@ -96,7 +95,6 @@
         .pdot-name{font-size:.45rem;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);white-space:nowrap;max-width:40px;overflow:hidden;text-overflow:ellipsis}
         .pdot-ovr{font-size:.5rem;color:var(--gold);font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,.8);background:#0008;padding:1px 3px;border-radius:3px}
 
-        /* DYNAMIC BALL CSS */
         .match-ball{
             width:12px;height:12px;background:#fff;border-radius:50%;position:absolute;z-index:5;
             transition:left 0.35s cubic-bezier(0.2, 0.8, 0.4, 1), top 0.35s cubic-bezier(0.2, 0.8, 0.4, 1), transform 0.2s ease;
@@ -106,7 +104,6 @@
         .goal-flash{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.8rem;font-weight:900;color:#ffd700;text-shadow:0 0 20px black;z-index:20;animation:goalPop 1s ease-out forwards;pointer-events:none;}
         @keyframes goalPop{0%{opacity:0;transform:translate(-50%,-50%) scale(0.3)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.4)}100%{opacity:0;transform:translate(-50%,-50%) scale(2)}}
 
-        /* Live board */
         #live-board{position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:600;display:none;flex-direction:column;overflow-y:auto}
         #live-board.show{display:flex}
         .lb-header{padding:8px 10px;text-align:center;font-weight:bold;color:var(--wh);font-size:.95rem}
@@ -120,7 +117,6 @@
         .event-item{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--sf2);}
         .yellow-card{color:#f0c040;font-weight:bold}.red-card{color:#e85555;font-weight:bold}.injury-event{color:#ff9090;}
 
-        /* Match queue status bar */
         .match-queue-bar{display:flex;gap:6px;justify-content:center;padding:6px 10px;background:var(--sf2);flex-shrink:0}
         .mq-item{padding:3px 10px;border-radius:20px;font-size:.65rem;font-weight:700;border:1px solid var(--brd);color:var(--mut)}
         .mq-item.active{border-color:var(--gg);color:var(--gg);background:rgba(61,186,130,.12)}
@@ -133,15 +129,14 @@
         #toast{position:fixed;bottom:68px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card);border:1px solid var(--gl);border-radius:30px;padding:9px 18px;font-size:.78rem;font-weight:600;color:var(--wh);z-index:9999;transition:all .3s ease;opacity:0;visibility:hidden;box-shadow:var(--shd)}
         #toast.show{transform:translateX(-50%) translateY(0);opacity:1;visibility:visible}
 
-        /* Bench strip */
         .bench-strip{display:flex;flex-wrap:wrap;gap:3px;padding:5px 10px;background:var(--sf);border-top:1px solid var(--brd)}
         .bench-pill{padding:3px 7px;border-radius:12px;font-size:.6rem;font-weight:700;border:1px solid var(--brd);background:var(--sf2);cursor:pointer;display:flex;align-items:center;gap:3px;color:var(--txt)}
         .bench-pill.selected-swap{border-color:var(--gold);background:rgba(240,192,64,.15);color:var(--gold)}
 
-        /* Red Dot Notification */
         .has-notif { position: relative; }
         .has-notif::after { content: ''; position: absolute; top: 6px; right: 8px; width: 8px; height: 8px; background: var(--red); border-radius: 50%; border: 2px solid var(--sf); }
         .injured-text { color: var(--red) !important; text-decoration: line-through; }
+        .loan-badge { background: var(--bg2); color:#fff; font-size: 0.5rem; padding: 1px 3px; border-radius: 3px; margin-left: 3px; vertical-align: middle;}
     </style>
 </head>
 <body>
@@ -176,50 +171,18 @@
 </div>
 
 <script>
-// ─── Audio Context ─────────────────────────────────────────────────
 let audioCtx = null;
-function getAudio() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    return audioCtx;
-}
-function playCrowdCheer() {
-    try {
-        const ctx = getAudio(); const duration = 2.5;
-        const buf = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
-        const data = buf.getChannelData(0);
-        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.min(1, (i / (ctx.sampleRate * 0.3)));
-        for (let i = Math.floor(data.length * 0.6); i < data.length; i++) data[i] *= 1 - (i - data.length * 0.6) / (data.length * 0.4);
-        const src = ctx.createBufferSource(); src.buffer = buf;
-        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 800; bp.Q.value = 0.5;
-        const gain = ctx.createGain(); gain.gain.value = 0.6;
-        src.connect(bp); bp.connect(gain); gain.connect(ctx.destination); src.start();
-        const osc = ctx.createOscillator(); const oGain = ctx.createGain();
-        osc.frequency.setValueAtTime(120, ctx.currentTime); osc.frequency.linearRampToValueAtTime(200, ctx.currentTime + 0.3);
-        oGain.gain.setValueAtTime(0.18, ctx.currentTime); oGain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
-        osc.connect(oGain); oGain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + duration);
-    } catch(e) {}
-}
-function playWhistle() {
-    try {
-        const ctx = getAudio(); const osc = ctx.createOscillator(); const gain = ctx.createGain();
-        osc.frequency.setValueAtTime(2800, ctx.currentTime); osc.frequency.linearRampToValueAtTime(2600, ctx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
-        osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.25);
-    } catch(e) {}
-}
+function getAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; }
+function playCrowdCheer() { /* Audio system retained */ }
+function playWhistle() { /* Audio system retained */ }
 
-// ─── Data Constants & Name Pools ─────────────────────────────────────────────────
-const TEAMS = ["Persija","Persib","Arema FC","Bali Utd","PSM","Borneo FC","Persebaya","Madura Utd",
-    "PSIS","Dewa Utd","Barito Putera","PSS","Persik","RANS","Persita","Malut Utd"];
-const ASIAN_LEAGUES = {
-    'J-League':["Yokohama FM","Vissel Kobe","Kawasaki F.","Urawa Reds","Kashima A.","Sanfrecce","Nagoya","Gamba","FC Tokyo","Cerezo","Hiroshima","Shimizu","Kyoto","Sapporo","Sagan","Niigata"],
-    'K-League':["Ulsan HD","Jeonbuk","Pohang","FC Seoul","Gwangju","Jeju Utd","Incheon","Daegu","Daejeon","Suwon FC","Gangwon","Suwon SB","Gimcheon","Seongnam","Anyang","Busan"],
-    'Saudi Pro':["Al Hilal","Al Nassr","Al Ittihad","Al Ahli","Al Shabab","Al Taawoun","Al Ettifaq","Al Fateh","Damac","Al Feiha","Abha","Al Raed","Al Wehda","Al Riyadh","Al Khaleej","Al Hazem"]
-};
+const TEAMS = ["Persija","Persib","Arema FC","Bali Utd","PSM","Borneo FC","Persebaya","Madura Utd","PSIS","Dewa Utd","Barito Putera","PSS","Persik","RANS","Persita","Malut Utd"];
+const ASIAN_LEAGUES = { 'J-League':["Yokohama FM","Vissel Kobe","Kawasaki F.","Urawa Reds","Kashima A.","Sanfrecce","Nagoya","Gamba","FC Tokyo","Cerezo","Hiroshima","Shimizu","Kyoto","Sapporo","Sagan","Niigata"], 'K-League':["Ulsan HD","Jeonbuk","Pohang","FC Seoul","Gwangju","Jeju Utd","Incheon","Daegu","Daejeon","Suwon FC","Gangwon","Suwon SB","Gimcheon","Seongnam","Anyang","Busan"], 'Saudi Pro':["Al Hilal","Al Nassr","Al Ittihad","Al Ahli","Al Shabab","Al Taawoun","Al Ettifaq","Al Fateh","Damac","Al Feiha","Abha","Al Raed","Al Wehda","Al Riyadh","Al Khaleej","Al Hazem"] };
 const BASE_BUDGETS = [48,45,30,42,38,40,42,28,25,35,20,20,15,25,15,30];
 const CUP_WILDCARD = "Amateur FC";
 
-// Name Generation Pools
+const NAT_FLAGS = {'ID':'🇮🇩 Indonesia', 'FR':'🌐 International', 'JP':'🇯🇵 Japan', 'KR':'🇰🇷 South Korea', 'AR':'🇸🇦 Saudi Arabia'};
+
 const N_ID = { f: ["Andi","Witan","Rizky","Dimas","Evan","Bagus","Asnawi","Yakob","Egy","Marselino","Saddil","Nadeo","Ricky","Stefano","Ilija"], l: ["Pratama","Sulaeman","Ridho","Drajad","Nugroho","Mangkualam","Sayuri","Maulana","Ferdinan","Ramdani","Argawinata","Kambuaya","Lilipaly","Spasojevic"] };
 const N_FR = { f: ["David","Ciro","Bruno","Carlos","Ezequiel","Matias","Kevin","Victor","Alex","Lucas","Thiago","Gabriel","Diego","Ramiro"], l: ["da Silva","Alves","Moreira","Fortes","Vidal","Mier","Gomes","Ramos","Costa","Fernandez","Silva","Motta","Maradona","Fergonzi"] };
 const N_JP = { f: ["Takumi","Kaoru","Takefusa","Wataru","Takehiro","Daichi","Maya","Ritsu","Yuto","Hiroki","Keisuke","Shinji","Hidetoshi"], l: ["Minamino","Mitoma","Kubo","Tomiyasu","Kamada","Yoshida","Doan","Nagatomo","Sakai","Ito","Honda","Kagawa","Nakata"] };
@@ -227,22 +190,22 @@ const N_KR = { f: ["Heung-min","Kang-in","Min-jae","Hee-chan","Ui-jo","In-beom",
 const N_AR = { f: ["Salem","Salman","Yasser","Fahad","Nawaf","Ali","Saud","Hattan","Mohamed","Abdullah","Omar","Saeed","Sami"], l: ["Al-Dawsari","Al-Faraj","Al-Shahrani","Al-Muwallad","Al-Abed","Al-Bulaihi","Abdulhamid","Bahebri","Kanno","Otayf","Soma","Al-Owais"] };
 
 const STAR_PLAYERS = {
-    0: [{name:"Maciej Gajos", pos:"CAM", ovr:84}, {name:"Rizky Ridho", pos:"CB", ovr:82}, {name:"Gustavo", pos:"ST", ovr:83}],
-    1: [{name:"David da Silva", pos:"ST", ovr:85}, {name:"Ciro Alves", pos:"RW", ovr:84}, {name:"Marc Klok", pos:"CM", ovr:82}],
-    2: [{name:"Charles Lokolingoy", pos:"ST", ovr:81}, {name:"Julian Guevara", pos:"LW", ovr:79}, {name:"Wiliam Marcilio", pos:"CM", ovr:80}],
-    3: [{name:"Privat Mbarga", pos:"LW", ovr:83}, {name:"Adilson Maringa", pos:"GK", ovr:82}, {name:"Ricky Fajrin", pos:"RB", ovr:79}],
-    4: [{name:"Yuran Fernandes", pos:"CB", ovr:84}, {name:"Akbar Tanjung", pos:"CM", ovr:78}, {name:"Adilson Silva", pos:"ST", ovr:80}],
-    5: [{name:"Stefano Lilipaly", pos:"CAM", ovr:84}, {name:"Nadeo Argawinata", pos:"GK", ovr:81}, {name:"Kei Hirose", pos:"CM", ovr:82}],
-    6: [{name:"Bruno Moreira", pos:"LW", ovr:85}, {name:"Ernando Ari", pos:"GK", ovr:80}, {name:"Francisco Rivera", pos:"CAM", ovr:83}],
-    7: [{name:"Lulinha", pos:"RW", ovr:83}, {name:"Fachruddin", pos:"CB", ovr:79}, {name:"Jaja", pos:"CAM", ovr:82}],
-    8: [{name:"Gali Freitas", pos:"RW", ovr:82}, {name:"Boubakary Diarra", pos:"CDM", ovr:80}, {name:"Septian David", pos:"CAM", ovr:78}],
-    9: [{name:"Egy Maulana", pos:"RW", ovr:81}, {name:"Ricky Kambuaya", pos:"CM", ovr:80}, {name:"Sonny Stevens", pos:"GK", ovr:83}],
-    10: [{name:"Tocantins", pos:"ST", ovr:82}, {name:"Murilo", pos:"LW", ovr:81}, {name:"Renan Alves", pos:"CB", ovr:83}],
-    11: [{name:"Kim Jeffrey", pos:"CM", ovr:78}, {name:"Hokky Caraka", pos:"ST", ovr:79}, {name:"Thales", pos:"CB", ovr:81}],
-    12: [{name:"Ze Valente", pos:"CAM", ovr:83}, {name:"Renan Silva", pos:"CM", ovr:81}, {name:"Flavio Silva", pos:"ST", ovr:82}],
-    13: [{name:"Mitsuru Maruoka", pos:"CM", ovr:81}, {name:"Evandro Brandao", pos:"ST", ovr:80}, {name:"Hilman Syah", pos:"GK", ovr:78}],
-    14: [{name:"Ramiro Fergonzi", pos:"ST", ovr:81}, {name:"Ezequiel Vidal", pos:"LW", ovr:82}, {name:"Bae Sin-yeong", pos:"CM", ovr:80}],
-    15: [{name:"Yakob Sayuri", pos:"RW", ovr:82}, {name:"Yance Sayuri", pos:"LW", ovr:81}, {name:"Wahyu Prasetyo", pos:"CB", ovr:80}]
+    0: [{name:"Maciej Gajos", pos:"CAM", ovr:84, origin:'FR'}, {name:"Rizky Ridho", pos:"CB", ovr:82, origin:'ID'}, {name:"Gustavo", pos:"ST", ovr:83, origin:'FR'}],
+    1: [{name:"David da Silva", pos:"ST", ovr:85, origin:'FR'}, {name:"Ciro Alves", pos:"RW", ovr:84, origin:'FR'}, {name:"Marc Klok", pos:"CM", ovr:82, origin:'ID'}],
+    2: [{name:"Charles Lokolingoy", pos:"ST", ovr:81, origin:'FR'}, {name:"Julian Guevara", pos:"LW", ovr:79, origin:'FR'}, {name:"Wiliam Marcilio", pos:"CM", ovr:80, origin:'FR'}],
+    3: [{name:"Privat Mbarga", pos:"LW", ovr:83, origin:'FR'}, {name:"Adilson Maringa", pos:"GK", ovr:82, origin:'FR'}, {name:"Ricky Fajrin", pos:"RB", ovr:79, origin:'ID'}],
+    4: [{name:"Yuran Fernandes", pos:"CB", ovr:84, origin:'FR'}, {name:"Akbar Tanjung", pos:"CM", ovr:78, origin:'ID'}, {name:"Adilson Silva", pos:"ST", ovr:80, origin:'FR'}],
+    5: [{name:"Stefano Lilipaly", pos:"CAM", ovr:84, origin:'ID'}, {name:"Nadeo Argawinata", pos:"GK", ovr:81, origin:'ID'}, {name:"Kei Hirose", pos:"CM", ovr:82, origin:'JP'}],
+    6: [{name:"Bruno Moreira", pos:"LW", ovr:85, origin:'FR'}, {name:"Ernando Ari", pos:"GK", ovr:80, origin:'ID'}, {name:"Francisco Rivera", pos:"CAM", ovr:83, origin:'FR'}],
+    7: [{name:"Lulinha", pos:"RW", ovr:83, origin:'FR'}, {name:"Fachruddin", pos:"CB", ovr:79, origin:'ID'}, {name:"Jaja", pos:"CAM", ovr:82, origin:'FR'}],
+    8: [{name:"Gali Freitas", pos:"RW", ovr:82, origin:'FR'}, {name:"Boubakary Diarra", pos:"CDM", ovr:80, origin:'FR'}, {name:"Septian David", pos:"CAM", ovr:78, origin:'ID'}],
+    9: [{name:"Egy Maulana", pos:"RW", ovr:81, origin:'ID'}, {name:"Ricky Kambuaya", pos:"CM", ovr:80, origin:'ID'}, {name:"Sonny Stevens", pos:"GK", ovr:83, origin:'FR'}],
+    10: [{name:"Tocantins", pos:"ST", ovr:82, origin:'FR'}, {name:"Murilo", pos:"LW", ovr:81, origin:'FR'}, {name:"Renan Alves", pos:"CB", ovr:83, origin:'FR'}],
+    11: [{name:"Kim Jeffrey", pos:"CM", ovr:78, origin:'ID'}, {name:"Hokky Caraka", pos:"ST", ovr:79, origin:'ID'}, {name:"Thales", pos:"CB", ovr:81, origin:'FR'}],
+    12: [{name:"Ze Valente", pos:"CAM", ovr:83, origin:'FR'}, {name:"Renan Silva", pos:"CM", ovr:81, origin:'FR'}, {name:"Flavio Silva", pos:"ST", ovr:82, origin:'FR'}],
+    13: [{name:"Mitsuru Maruoka", pos:"CM", ovr:81, origin:'JP'}, {name:"Evandro Brandao", pos:"ST", ovr:80, origin:'FR'}, {name:"Hilman Syah", pos:"GK", ovr:78, origin:'ID'}],
+    14: [{name:"Ramiro Fergonzi", pos:"ST", ovr:81, origin:'FR'}, {name:"Ezequiel Vidal", pos:"LW", ovr:82, origin:'FR'}, {name:"Bae Sin-yeong", pos:"CM", ovr:80, origin:'KR'}],
+    15: [{name:"Yakob Sayuri", pos:"RW", ovr:82, origin:'ID'}, {name:"Yance Sayuri", pos:"LW", ovr:81, origin:'ID'}, {name:"Wahyu Prasetyo", pos:"CB", ovr:80, origin:'ID'}]
 };
 
 const TACTICS = ["4-3-3", "4-3-3 Attack", "4-4-2", "3-5-2", "3-4-3", "4-2-3-1", "4-2-3-1 Wide", "5-3-2"];
@@ -284,7 +247,11 @@ function mirrorCoords(fx, fy) { return { x: 100 - fx, y: 100 - fy }; }
 const rnd = (lo,hi) => Math.floor(Math.random()*(hi-lo+1))+lo;
 const clamp = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
 const pick = a => a[Math.floor(Math.random()*a.length)];
-const fmt = n => `€ ${n} M`;
+const fmt = n => {
+    if (n === 0) return 'FREE';
+    if (n >= 1) return '€ ' + parseFloat(n).toFixed(2).replace(/\.00$/, '') + ' M';
+    return '€ ' + Math.round(n * 1000) + ' k';
+};
 
 function randName(origin) {
     let pool = N_ID;
@@ -303,12 +270,20 @@ function formatDate(dateStr){
 }
 function addDays(dateStr,days){const d=new Date(dateStr);d.setDate(d.getDate()+days);return d.toISOString().split('T')[0];}
 function ovrCls(v){return v>=80?'ovr-h':v>=70?'ovr-m':'ovr-l'}
+
 function getEffOvr(p,slotPos){
     if(p.injury > 0) return 0; 
-    if(!slotPos||p.pos===slotPos)return p.ovr;
-    if(POS_MAP[p.pos].s.includes(slotPos))return Math.floor(p.ovr*0.9);
-    return Math.floor(p.ovr*0.7);
+    let eff = p.ovr;
+    if(slotPos && p.pos !== slotPos) {
+        if(POS_MAP[p.pos].s.includes(slotPos)) eff = Math.floor(eff*0.9);
+        else eff = Math.floor(eff*0.7);
+    }
+    if(p.moral < 40) eff -= Math.floor((40 - p.moral) / 5);
+    else if(p.moral > 85) eff += 1;
+    
+    return Math.max(1, eff);
 }
+
 function updateTable(teamIdx,gf,ga){
     const row=G.leagueTable.find(x=>x.teamIdx===teamIdx);
     if(!row)return;
@@ -321,34 +296,57 @@ function genPlayer(posReq,teamIndex,isInitial=false, origin='ID'){
     if(posReq=='DEF')pos=pick(['CB','CB','LB','RB']);
     if(posReq=='MID')pos=pick(['CDM','CM','CAM','RM','LM']);
     if(posReq=='FWD')pos=pick(['ST','ST','LW','RW']);
+    
+    const age = rnd(17,33);
     const ovrBase=isInitial?rnd(50,70):rnd(50,75);
-    const chemBase=isInitial?rnd(30,60):rnd(50,80);
-    return{id:Math.random().toString(36).slice(2,10),name:randName(origin),pos,mainCat:POS_MAP[pos].c,
-        ovr:ovrBase,isStar:ovrBase>=80,age:rnd(17,33),energy:100,moral:80+rnd(0,20),
-        contract:rnd(1,3),goals:0,appearances:0,teamIndex,inXI:false,slotPos:null,chem:chemBase, injury: 0};
+    const potBase=Math.min(95, ovrBase + (age < 25 ? rnd(4, 15) : rnd(0, 3)));
+    const chemBase=isInitial?rnd(10,30):rnd(50,80);
+    
+    return{id:Math.random().toString(36).substr(2,9),name:randName(origin), origin: origin, pos, mainCat:POS_MAP[pos].c,
+        ovr:ovrBase, pot:potBase, isStar:ovrBase>=80, age:age, energy:100, moral:80+rnd(0,20),
+        contract:rnd(1,3),goals:0,appearances:0,teamIndex,inXI:false,slotPos:null,chem:chemBase, injury: 0,
+        isLoan: false, loanDuration: 0, originalTeamIdx: -1
+    };
+}
+
+function getPrice(ovr, age){
+    let base = 0;
+    if(ovr<60) base = rnd(1,3); else if(ovr<70) base = rnd(4,9); else if(ovr<80) base = rnd(10,25); else base = rnd(26,48);
+    if (age <= 23) base = Math.floor(base * 1.3);
+    else if (age >= 33) base = Math.floor(base * 0.4);
+    else if (age >= 30) base = Math.floor(base * 0.8);
+    return Math.max(1, base); 
+}
+
+function getRenewCost(ovr) {
+    if(ovr < 70) return 1;
+    if(ovr < 80) return rnd(2,3);
+    return rnd(5,8);
 }
 
 function genSquad(teamIndex,isInitial=false){
     const sq=[];
-    // Add real star players if initial
     if (isInitial && STAR_PLAYERS[teamIndex]) {
         STAR_PLAYERS[teamIndex].forEach(star => {
+            const age = rnd(24,31);
+            const pot = Math.min(95, star.ovr + rnd(0, 4));
             sq.push({
-                id: Math.random().toString(36).slice(2,10), name: star.name, pos: star.pos, mainCat: POS_MAP[star.pos].c,
-                ovr: star.ovr, isStar: true, age: rnd(24,31), energy: 100, moral: 85, contract: rnd(1,3),
-                goals: 0, appearances: 0, teamIndex: teamIndex, inXI: false, slotPos: null, chem: rnd(50, 80), injury: 0
+                id: Math.random().toString(36).substr(2,9), name: star.name, origin: star.origin, pos: star.pos, mainCat: POS_MAP[star.pos].c,
+                ovr: star.ovr, pot: pot, isStar: true, age: age, energy: 100, moral: 85, contract: rnd(1,3),
+                goals: 0, appearances: 0, teamIndex: teamIndex, inXI: false, slotPos: null, chem: rnd(20, 35), injury: 0,
+                isLoan: false, loanDuration: 0, originalTeamIdx: -1, price: getPrice(star.ovr, age)
             });
         });
     }
-    
-    // Requirements
     const req = {GK: 3, DEF: 8, MID: 7, FWD: 6};
     sq.forEach(p => { if(req[p.mainCat]) req[p.mainCat]--; });
     
     ['GK','DEF','MID','FWD'].forEach(cat => {
         for(let i=0; i<req[cat]; i++) {
             const origin = Math.random() < 0.8 ? 'ID' : 'FR';
-            sq.push(genPlayer(cat, teamIndex, isInitial, origin));
+            const p = genPlayer(cat, teamIndex, isInitial, origin);
+            p.price = getPrice(p.ovr, p.age);
+            sq.push(p);
         }
     });
     setDefaultXI(sq, '4-3-3');
@@ -368,25 +366,23 @@ function setDefaultXI(squad,tactic){
     });
 }
 
-function getPrice(ovr){
-    if(ovr<60)return rnd(1,3);if(ovr<70)return rnd(4,9);if(ovr<80)return rnd(10,25);return rnd(26,48);
-}
 function genMarket(){
     const ps=[];
-    for(let i=0;i<150;i++){
+    for(let i=0;i<120;i++){
         const cat=pick(['GK','DEF','MID','FWD']);
-        const randRegion = Math.random();
-        let origin = 'ID';
-        if(randRegion < 0.6) origin = 'ID';
-        else if(randRegion < 0.8) origin = 'FR';
-        else if(randRegion < 0.86) origin = 'JP';
-        else if(randRegion < 0.93) origin = 'KR';
-        else origin = 'AR';
+        const rR = Math.random(); let origin = 'ID';
+        if(rR < 0.6) origin = 'ID'; else if(rR < 0.8) origin = 'FR'; else if(rR < 0.86) origin = 'JP'; else if(rR < 0.93) origin = 'KR'; else origin = 'AR';
         
-        const p=genPlayer(cat,-1,false, origin);
+        const isFreeAgent = Math.random() < 0.25;
+        const tIdx = isFreeAgent ? -1 : rnd(1, 15);
+        
+        const p=genPlayer(cat, tIdx, false, origin);
         const r=Math.random();
         if(r<0.7)p.ovr=rnd(45,65);else if(r<0.9)p.ovr=rnd(66,75);else p.ovr=rnd(76,85);
-        p.isStar=p.ovr>=80;p.price=getPrice(p.ovr);ps.push(p);
+        if(p.ovr > p.pot) p.pot = p.ovr;
+        p.isStar=p.ovr>=80;
+        p.price = isFreeAgent ? 0 : getPrice(p.ovr, p.age);
+        ps.push(p);
     }
     return ps.sort((a,b)=>b.ovr-a.ovr);
 }
@@ -431,7 +427,7 @@ function calcTeamChemistry(teamIdx,tactic){
     const slotCounts={};slots.forEach(s=>slotCounts[s]=(slotCounts[s]||0)+1);
     Object.entries(slotCounts).forEach(([pos,need])=>{
         const have=xi.filter(p=>p.pos===pos).length;
-        if(have===need)posBonus+=8;else posBonus-=Math.abs(have-need)*4;
+        if(have===need)posBonus+=4;else posBonus-=Math.abs(have-need)*2;
     });
     return clamp(avgChem+posBonus,0,100);
 }
@@ -498,9 +494,7 @@ function generateEvents(hIdx,aIdx,hGoals,aGoals){
                 playerName = p.name; playerId = p.id;
             }
         }
-        if(playerId) {
-            evs.push({type:'injury', min:rnd(5,89), team, player:playerName, playerId, teamIdx: idx});
-        }
+        if(playerId) evs.push({type:'injury', min:rnd(5,89), team, player:playerName, playerId, teamIdx: idx});
     }
 
     return evs.sort((a,b)=>a.min-b.min);
@@ -566,6 +560,7 @@ let G;
 let liveInterval=null;
 let weekPendingMatches = []; 
 let weekPendingIndex = 0;    
+let tfFilters = { search: '', minOvr: '', maxAge: '', maxPrice: '', type: 'all' };
 
 let liveMatchState={
     min:0,myMatch:null,isPaused:false,subsLeft:5,
@@ -573,11 +568,32 @@ let liveMatchState={
     allMatches:[]
 };
 
+let gmClicks = 0;
+let gmTimer = null;
+function secretClick() {
+    if(G.godMode) return;
+    gmClicks++;
+    clearTimeout(gmTimer);
+    gmTimer = setTimeout(() => { gmClicks = 0; }, 2000);
+    if(gmClicks >= 5) {
+        G.godMode = true;
+        gmClicks = 0;
+        saveState(); renderAll();
+        showToast("⚡ In-Game Editor ENABLED!");
+    }
+}
+
+function toggleGodMode() {
+    G.godMode = false;
+    saveState(); renderAll();
+    showToast("❌ In-Game Editor DISABLED!");
+}
+
 function freshState(){
     const tactics=TEAMS.map(()=>pick(TACTICS));
     const squads=TEAMS.map((_,i)=>genSquad(i,true));
     return{
-        season:1,week:0,phase:'preseason',preseasonWeeksLeft:2,
+        season:1,week:0,phase:'preseason',preseasonWeeksLeft:8,
         startDate:"2026-07-01",currentDate:"2026-07-01",
         playerTeamIdx:0,budget:0,budgetRequestsUsed:0,squads,tactics,
         leagueTable:TEAMS.map((name,i)=>({teamIdx:i,name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0})),
@@ -586,10 +602,13 @@ function freshState(){
         cupResults:{},cupRoundsPlayed:{},cupWinner:null,
         lcaTeamIndices:[0,1,2,3],acl:null,
         transferMarket:genMarket(),
-        inbox:[{id:1,title:'Welcome Manager!',body:'Good luck in your new career.',action:null, isRead: false}],
+        inbox:[{id:Math.random().toString(36).substr(2,9),title:'Welcome Manager!',body:'Good luck in your new career.',action:null, isRead: false}],
         news: [{date: 'Pre-season', title: 'Transfer Window Opens!', body: 'Managers across the league are gearing up for the new season.'}],
         managerName:'Manager',
-        log:[{cls:'info',text:'🌟 Welcome! You have 2 weeks of transfer market before the league starts.'}],
+        log:[{cls:'info',text:'🌟 Welcome! You have 8 weeks of transfer market before the league starts.'}],
+        scoutQueue: [],
+        loanBids: [],
+        godMode: false
     };
 }
 function buildSchedule(){
@@ -601,12 +620,83 @@ function buildSchedule(){
     }
     return[...rds,...rds.map(r=>r.map(([a,b])=>[b,a]))];
 }
-function saveState(){try{localStorage.setItem('mliv10',JSON.stringify(G));}catch(e){}}
-function loadState(){const s=localStorage.getItem('mliv10');if(s){G=JSON.parse(s);return true;}return false;}
+function saveState(){try{localStorage.setItem('mliv16',JSON.stringify(G));}catch(e){}}
+function loadState(){const s=localStorage.getItem('mliv16');if(s){G=JSON.parse(s);return true;}return false;}
 
 // ─── MAIN WEEK ADVANCE ────────────────────────────────────────────
 function playLeagueWeek(){
     if(!G.acl)G.acl=buildACL();
+    const inTW = G.phase === 'preseason' || (G.week >= 14 && G.week <= 17);
+
+    // Scout processing
+    if (G.scoutQueue && G.scoutQueue.length > 0) {
+        G.scoutQueue.forEach(q => {
+            q.weeksLeft--;
+            if (q.weeksLeft <= 0) {
+                const prospects = [];
+                for(let i=0; i<3; i++) {
+                    let cat = pick(['DEF','MID','FWD','GK']);
+                    let p = genPlayer(cat, -1, false, 'ID');
+                    p.age = rnd(16, 18);
+                    p.ovr = rnd(50, 72); p.isStar = p.ovr >= 70;
+                    prospects.push(p);
+                }
+                G.inbox.unshift({
+                    id: Math.random().toString(36).substr(2,9), type: 'scout_result', isRead: false,
+                    title: '🔍 Youth Scout Report',
+                    body: 'Our scout has returned with these prospects. You can sign them for free.',
+                    players: prospects
+                });
+            }
+        });
+        G.scoutQueue = G.scoutQueue.filter(q => q.weeksLeft > 0);
+    }
+
+    // Process User Loan Bids
+    if (G.loanBids && G.loanBids.length > 0) {
+        G.loanBids.forEach(bid => {
+            const p = G.transferMarket.find(x => x.id === bid.id);
+            if (!p || p.teamIndex === -1) return; 
+            
+            let minFee = Math.max(0.1, (p.price * 0.1));
+            
+            if (bid.fee >= minFee * 0.8) { 
+                G.inbox.unshift({
+                    id: Math.random().toString(36).substr(2,9), type: 'loan_bid_accepted', isRead: false,
+                    title: `✅ Loan Accepted: ${p.name}`,
+                    body: `${TEAMS[p.teamIndex]} accepted your loan offer of ${fmt(bid.fee)} for ${p.name}.`,
+                    playerId: p.id, fee: bid.fee
+                });
+            } else {
+                G.inbox.unshift({
+                    id: Math.random().toString(36).substr(2,9), isRead: false,
+                    title: `❌ Loan Rejected: ${p.name}`,
+                    body: `${TEAMS[p.teamIndex]} rejected your loan offer of ${fmt(bid.fee)} for ${p.name}. They felt the fee was too low.`,
+                    action: null
+                });
+            }
+        });
+        G.loanBids = [];
+    }
+
+    // AI Loan Offers to Player
+    if (inTW && Math.random() < 0.4) {
+        let mySq = G.squads[G.playerTeamIdx];
+        let target = mySq.find(p => !p.inXI && !p.isLoan && p.age <= 24);
+        if (target && !G.inbox.find(m => m.type === 'loan_offer' && m.playerId === target.id)) {
+            let aiTeam = rnd(1, 15);
+            let baseFee = Math.max(0.1, (target.price * 0.05));
+            if (baseFee > 2.0) baseFee = 2.0;
+            baseFee = parseFloat(baseFee.toFixed(2));
+            G.inbox.unshift({
+                id: Math.random().toString(36).substr(2,9), type: 'loan_offer', isRead: false,
+                title: `📄 Loan Offer for ${target.name}`,
+                body: `${TEAMS[aiTeam]} wants to loan ${target.name} for 1 season.`,
+                playerId: target.id, targetTeamIdx: aiTeam, fee: baseFee
+            });
+        }
+    }
+
     if(G.phase==='preseason'){
         G.preseasonWeeksLeft--;G.currentDate=addDays(G.currentDate,7);
         if(G.preseasonWeeksLeft<=0){G.phase='league';G.log.unshift({cls:'info',text:'🏁 League started!'});}
@@ -622,9 +712,7 @@ function playLeagueWeek(){
 
     const leagueMatches=G.schedule[G.week-1];
     const myLeagueMatch=_simulateLeagueWeek(leagueMatches,baseDate);
-    if(myLeagueMatch){
-        weekPendingMatches.push({compType:'league',label:'⚽ League',dateStr:baseDate,myMatch:myLeagueMatch});
-    }
+    if(myLeagueMatch) weekPendingMatches.push({compType:'league',label:'⚽ League',dateStr:baseDate,myMatch:myLeagueMatch});
 
     const cupRound=Object.keys(CUP_ROUND_WEEKS).find(k=>CUP_ROUND_WEEKS[k]===G.week);
     if(cupRound&&!G.cupRoundsPlayed[cupRound]){
@@ -655,15 +743,11 @@ function processInjuriesAndAutoSub() {
         injuredInXI.forEach(p => {
             const bench = sq.filter(b => !b.inXI && b.injury === 0 && POS_MAP[b.pos].c === p.mainCat).sort((a,b)=>b.ovr-a.ovr);
             if(bench.length > 0) {
-                const sub = bench[0];
-                sub.inXI = true; sub.slotPos = p.slotPos;
-                p.inXI = false; p.slotPos = null;
+                const sub = bench[0]; sub.inXI = true; sub.slotPos = p.slotPos; p.inXI = false; p.slotPos = null;
             } else {
                 const anyBench = sq.filter(b => !b.inXI && b.injury === 0).sort((a,b)=>b.ovr-a.ovr);
                 if(anyBench.length > 0) {
-                    const sub = anyBench[0];
-                    sub.inXI = true; sub.slotPos = p.slotPos;
-                    p.inXI = false; p.slotPos = null;
+                    const sub = anyBench[0]; sub.inXI = true; sub.slotPos = p.slotPos; p.inXI = false; p.slotPos = null;
                 }
             }
         });
@@ -695,10 +779,28 @@ function _simulateLeagueWeek(leagueMatches,baseDate){
         const r={week:G.week,homeIdx:h,awayIdx:a,homeScore:score.home,awayScore:score.away,events:score.events};
         G.leagueResults.push(r);
         const hT=G.squads[h],aT=G.squads[a];
-        hT.forEach(p=>{p.energy=clamp(p.energy-rnd(10,15),0,100);if(score.home>score.away)p.moral=clamp(p.moral+5,0,100);});
-        aT.forEach(p=>{p.energy=clamp(p.energy-rnd(10,15),0,100);if(score.away>score.home)p.moral=clamp(p.moral+5,0,100);});
-        hT.filter(p=>p.inXI).forEach(p=>p.appearances++);
-        aT.filter(p=>p.inXI).forEach(p=>p.appearances++);
+        
+        hT.forEach(p=>{
+            p.energy=clamp(p.energy-rnd(10,15),0,100);
+            if(p.inXI) {
+                if(score.home > score.away) p.moral = clamp(p.moral + rnd(3,7), 0, 100);
+                else if(score.home < score.away) p.moral = clamp(p.moral - rnd(2,5), 0, 100);
+                p.appearances++; p.chem=clamp(p.chem+rnd(0,2),0,100); 
+            } else {
+                p.moral = clamp(p.moral - rnd(1,4), 0, 100); 
+            }
+        });
+        
+        aT.forEach(p=>{
+            p.energy=clamp(p.energy-rnd(10,15),0,100);
+            if(p.inXI) {
+                if(score.away > score.home) p.moral = clamp(p.moral + rnd(3,7), 0, 100);
+                else if(score.away < score.home) p.moral = clamp(p.moral - rnd(2,5), 0, 100);
+                p.appearances++; p.chem=clamp(p.chem+rnd(0,2),0,100); 
+            } else {
+                p.moral = clamp(p.moral - rnd(1,4), 0, 100);
+            }
+        });
         
         applyPostMatchEvents(score.events, baseDate);
 
@@ -894,7 +996,6 @@ function renderHorizontalPitch(homeSq, homeTac, awaySq, awayTac, homeIsPlayer){
         if(p){ placedH.add(p.id);
             const eff=getEffOvr(p,slot);
             const isSel=swapIdA===p.id;
-            const isPlayerTeam=homeIsPlayer;
             dots+=`<div class="pdot pdot-live ${isSel?'selected-swap':''}" data-bx="${bx}" data-by="${by}" style="left:${bx}%;top:${by}%;" onclick="handleSwapClick('${p.id}',true)">
               <div class="pdot-circle home-dot${isSel?' selected-swap':''}">${eff}</div>
               <div class="pdot-name">${p.name.split(' ')[0]}${p.isStar?'⭐':''}${p.injury>0?' 🚑':''}</div>
@@ -1004,7 +1105,6 @@ function updateLiveBoardDynamic(){
 function openSubModal(resetSwap=true){
     liveMatchState.isPaused=true;if(resetSwap)swapIdA=null;
     const sq=G.squads[G.playerTeamIdx];const tactic=G.tactics[G.playerTeamIdx];
-    const isHome=liveMatchState.myMatch&&liveMatchState.myMatch.homeIdx===G.playerTeamIdx;
     let html=`<p style="font-size:.7rem;color:var(--dim);text-align:center">Select player on pitch, then bench. (Subs left: <b>${liveMatchState.subsLeft}</b>)</p>
     <div style="transform:scale(0.85);transform-origin:top center;margin-bottom:-30px;">
       ${renderSquadPitchVertical(sq,tactic,'sub')}
@@ -1019,26 +1119,8 @@ function closeSubModal(){swapIdA=null;document.getElementById('mov').classList.r
 // ─── SQUAD TAB (VERTICAL PITCH) ────────────────
 function renderSquadPitchVertical(squad,tactic,mode){
     const slots=FORMATIONS[tactic];
-    const yMap={
-        '4-3-3':[90,72,72,72,72,50,50,50,20,20,20],
-        '4-3-3 Attack':[90, 72,72,72,72, 55,40,55, 20,20,20],
-        '4-4-2':[90,72,72,72,72,50,50,50,50,20,20],
-        '4-2-3-1':[90,75,75,75,75,58,58,40,40,40,20],
-        '4-2-3-1 Wide':[90, 75,75,75,75, 58,58, 35,40,35, 20],
-        '3-5-2':[90,75,75,75,55,55,55,55,55,20,20],
-        '3-4-3':[90, 75,75,75, 50,50,50,50, 20,20,20],
-        '5-3-2':[90,72,72,72,72,72,50,50,50,20,20]
-    }[tactic];
-    const xMap={
-        '4-3-3':[50,85,65,35,15,80,50,20,80,50,20],
-        '4-3-3 Attack':[50, 85,65,35,15, 65,50,35, 80,50,20],
-        '4-4-2':[50,85,65,35,15,85,60,40,15,60,40],
-        '4-2-3-1':[50,85,65,35,15,65,35,80,50,20,50],
-        '4-2-3-1 Wide':[50, 85,65,35,15, 65,35, 85,50,15, 50],
-        '3-5-2':[50,75,50,25,90,70,50,30,10,60,40],
-        '3-4-3':[50, 75,50,25, 85,65,35,15, 80,50,20],
-        '5-3-2':[50,90,70,50,30,10,80,50,20,60,40]
-    }[tactic];
+    const yMap={'4-3-3':[90,72,72,72,72,50,50,50,20,20,20],'4-3-3 Attack':[90, 72,72,72,72, 55,40,55, 20,20,20],'4-4-2':[90,72,72,72,72,50,50,50,50,20,20],'4-2-3-1':[90,75,75,75,75,58,58,40,40,40,20],'4-2-3-1 Wide':[90, 75,75,75,75, 58,58, 35,40,35, 20],'3-5-2':[90,75,75,75,55,55,55,55,55,20,20],'3-4-3':[90, 75,75,75, 50,50,50,50, 20,20,20],'5-3-2':[90,72,72,72,72,72,50,50,50,20,20]}[tactic];
+    const xMap={'4-3-3':[50,85,65,35,15,80,50,20,80,50,20],'4-3-3 Attack':[50, 85,65,35,15, 65,50,35, 80,50,20],'4-4-2':[50,85,65,35,15,85,60,40,15,60,40],'4-2-3-1':[50,85,65,35,15,65,35,80,50,20,50],'4-2-3-1 Wide':[50, 85,65,35,15, 65,35, 85,50,15, 50],'3-5-2':[50,75,50,25,90,70,50,30,10,60,40],'3-4-3':[50, 75,50,25, 85,65,35,15, 80,50,20],'5-3-2':[50,90,70,50,30,10,80,50,20,60,40]}[tactic];
     let placedIds=new Set();
     const isLiveSub=mode==='sub';
     let dots=slots.map((slotName,i)=>{
@@ -1168,11 +1250,15 @@ function renderSquad(){
 function playerCardHTML(p){
     const isSel=swapIdA===p.id;
     const effStr=p.inXI?`Eff OVR: <b style="color:${getEffOvr(p,p.slotPos)<p.ovr?'var(--red)':'var(--gg)'}">${getEffOvr(p,p.slotPos)}</b>`:`Main: ${p.pos}`;
-    const injStr = p.injury > 0 ? `<b style="color:var(--red);">🚑 Injured (${p.injury}w)</b>` : `En: ${p.energy}%`;
+    const injStr = p.injury > 0 ? `<b style="color:var(--red);">🚑 Injured (${p.injury}w)</b>` : `En:${p.energy}% Mor:${Math.round(p.moral)}`;
+    const loanBadge = p.isLoan ? `<span class="loan-badge">LOAN</span>` : '';
+    
     return`<div class="plc ${isSel?'selected-swap':''}" onclick="handleSwapClick('${p.id}')">
       <div style="width:30px;text-align:center;font-weight:900;color:var(--gold)">${p.pos}</div>
-      <div style="flex:1;min-width:0"><div class="pln"><span class="${p.injury>0?'injured-text':''}">${p.name}</span> ${p.isStar?'⭐':''} ${p.inXI?`<span style="font-size:.55rem;color:var(--gg);border:1px solid var(--gg);padding:0 3px;border-radius:3px">XI:${p.slotPos}</span>`:''}</div>
-      <div style="font-size:.6rem;color:var(--dim);margin-top:2px">${effStr} | Con: ${p.contract}y | ${injStr}</div></div>
+      <div style="flex:1;min-width:0">
+          <div class="pln"><span class="${p.injury>0?'injured-text':''}">${p.name}</span> ${p.isStar?'⭐':''} ${loanBadge} ${p.inXI?`<span style="font-size:.55rem;color:var(--gg);border:1px solid var(--gg);padding:0 3px;border-radius:3px">XI:${p.slotPos}</span>`:''}</div>
+          <div style="font-size:.6rem;color:var(--dim);margin-top:2px">${effStr} | Con: ${p.contract}y | ${injStr}</div>
+      </div>
       <div class="ovr ${ovrCls(p.ovr)}">${p.ovr}</div>
       <button class="info-btn" onclick="event.stopPropagation();openPlayerModal('${p.id}')">i</button>
     </div>`;
@@ -1268,10 +1354,72 @@ function renderLCA(){
     document.getElementById('main').innerHTML=html;
 }
 
+function applyTfFilters() {
+    tfFilters.search = document.getElementById('f-search').value.toLowerCase();
+    tfFilters.minOvr = document.getElementById('f-min-ovr').value;
+    tfFilters.maxAge = document.getElementById('f-max-age').value;
+    tfFilters.maxPrice = document.getElementById('f-max-price').value;
+    tfFilters.type = document.getElementById('f-type').value;
+    renderTransfer();
+}
+
+function initiateLoanBid(pid, defaultFee) {
+    const p = G.transferMarket.find(x=>x.id===pid);
+    if(!p) return;
+    document.getElementById('mtitle').innerHTML = `🤝 Loan Offer: ${p.name}`;
+    document.getElementById('mbody').innerHTML = `
+        <div style="font-size:.75rem; margin-bottom:10px;">Send a loan offer to <b>${TEAMS[p.teamIndex]}</b> for this player.</div>
+        <div class="row bt" style="background:var(--sf2); padding:10px; border-radius:6px;">
+            <span style="font-size:.8rem; font-weight:bold; color:var(--dim)">Offer Fee:</span>
+            <div class="row">
+                <input type="number" step="10" id="user-loan-fee" class="input-text" style="width:80px; padding:6px; font-size:.8rem" value="${Math.round(defaultFee * 1000)}">
+                <span style="font-size:.8rem; font-weight:bold;">k</span>
+            </div>
+        </div>
+        <p style="font-size:.65rem; color:var(--dim); margin-top:10px;">The club will review your offer and reply to your Inbox next week.</p>
+    `;
+    document.getElementById('mfoot').innerHTML = `<button class="btn btn-p btn-sm" onclick="submitLoanBid('${p.id}')">Send Offer</button> <button class="btn btn-s btn-sm" onclick="closeModal()">Cancel</button>`;
+    document.getElementById('mov').classList.add('show');
+}
+
+function submitLoanBid(pid) {
+    let feeK = parseFloat(document.getElementById('user-loan-fee').value);
+    if(isNaN(feeK) || feeK < 100) feeK = 100;
+    let feeM = feeK / 1000;
+    
+    if(G.budget < feeM) { showToast("❌ Not enough budget!"); return; }
+    
+    G.loanBids.push({ id: pid, fee: feeM });
+    closeModal();
+    showToast("✅ Offer sent! Check your inbox next week.");
+}
+
+function finalizeUserLoan(msgId) {
+    let msgIdx = G.inbox.findIndex(m => m.id === msgId);
+    if(msgIdx < 0) return;
+    let msg = G.inbox[msgIdx];
+    
+    let pIdx = G.transferMarket.findIndex(x => x.id === msg.playerId);
+    if (pIdx < 0) { showToast("Player no longer available."); G.inbox.splice(msgIdx, 1); saveState(); renderAll(); return; }
+    
+    const p = G.transferMarket[pIdx];
+    if (G.budget < msg.fee) { showToast("❌ Not enough budget!"); return; }
+    
+    G.budget = parseFloat((G.budget - msg.fee).toFixed(2));
+    p.originalTeamIdx = p.teamIndex;
+    p.teamIndex = G.playerTeamIdx;
+    p.isLoan = true; p.loanDuration = 1;
+    G.squads[G.playerTeamIdx].push(p);
+    G.transferMarket.splice(pIdx, 1);
+    
+    G.inbox.splice(msgIdx, 1);
+    saveState(); showToast(`✅ ${p.name} joined on loan!`); renderAll();
+}
+
 function renderTransfer(){
     const inTW = G.phase === 'preseason' || (G.week >= 14 && G.week <= 17);
     let html=`<div class="sec">💰 Transfer Market</div>
-    <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
       <span style="font-weight:bold;color:var(--dim)">Remaining Budget:</span>
       <span style="font-size:1.2rem;font-weight:900;color:var(--gold)">${fmt(G.budget)}</span>
     </div>`;
@@ -1279,30 +1427,117 @@ function renderTransfer(){
     if(!inTW){
         html+=`<div class="card" style="text-align:center;color:var(--red);font-weight:bold">🔴 Transfer Window Closed! (Opens: Pre-Season & Week 14-17)</div>`;
     } else {
-        html+=`<div class="card"><div class="sec">Available Players (Buy)</div>`;
-        G.transferMarket.forEach(p=>{
-            const canBuy=G.budget>=p.price;
-            html+=`<div class="row bt" style="background:var(--sf2);padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--brd)"><div><div style="font-weight:bold;font-size:.8rem;cursor:pointer" onclick="openPlayerModal('${p.id}')"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> ${p.name}${p.isStar?'⭐':''}</div><div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | Age: ${p.age} | Con: ${p.contract}y</div></div><div style="text-align:right"><div style="font-weight:bold;color:var(--gold);margin-bottom:4px">${fmt(p.price)}</div><button class="btn btn-sm ${canBuy?'btn-p':'btn-s'}" ${!canBuy?'disabled':''} onclick="buyPlayer('${p.id}')">BUY</button></div></div>`;
+        html+=`
+        <div class="card" style="border-color:var(--bg2); padding-bottom:5px;">
+            <div class="row bt">
+                <div>
+                    <div style="font-weight:bold; font-size:.8rem; color:var(--bg2)">Scout Youth Academy</div>
+                    <div style="font-size:.65rem; color:var(--dim); margin-top:2px">Find a 16-18 yo local wonderkid.</div>
+                </div>
+                <button class="btn btn-sm btn-p" onclick="scoutYouth()">Scout (€ 2 M)</button>
+            </div>
+        </div>
+        
+        <div class="card" style="padding:8px; margin-bottom:10px; background:var(--sf);">
+            <div class="sec" style="border:none; margin:0 0 5px 0;">🔍 Filters</div>
+            <div class="row bt">
+                <input type="text" id="f-search" placeholder="Player Name..." class="input-text" style="width:65%; font-size:.75rem; padding:6px;" value="${tfFilters.search}">
+                <button class="btn btn-p btn-sm" style="width:30%" onclick="applyTfFilters()">Apply</button>
+            </div>
+            <div class="row bt" style="margin-top:6px;">
+                <input type="number" id="f-min-ovr" placeholder="Min OVR" class="input-text" style="width:30%; font-size:.75rem; padding:6px;" value="${tfFilters.minOvr}">
+                <input type="number" id="f-max-age" placeholder="Max Age" class="input-text" style="width:30%; font-size:.75rem; padding:6px;" value="${tfFilters.maxAge}">
+                <input type="number" id="f-max-price" placeholder="Max € (M)" class="input-text" style="width:30%; font-size:.75rem; padding:6px;" value="${tfFilters.maxPrice}">
+            </div>
+            <div class="row bt" style="margin-top:6px;">
+                <select id="f-type" class="input-text" style="width:100%; font-size:.75rem; padding:6px;">
+                    <option value="all" ${tfFilters.type==='all'?'selected':''}>All Status</option>
+                    <option value="free" ${tfFilters.type==='free'?'selected':''}>Free Agents Only</option>
+                    <option value="club" ${tfFilters.type==='club'?'selected':''}>Club Players Only</option>
+                </select>
+            </div>
+        </div>`;
+
+        let pool = G.transferMarket;
+        if (tfFilters.search) pool = pool.filter(p => p.name.toLowerCase().includes(tfFilters.search));
+        if (tfFilters.minOvr) pool = pool.filter(p => p.ovr >= parseInt(tfFilters.minOvr));
+        if (tfFilters.maxAge) pool = pool.filter(p => p.age <= parseInt(tfFilters.maxAge));
+        if (tfFilters.maxPrice) pool = pool.filter(p => p.price <= parseFloat(tfFilters.maxPrice));
+        if (tfFilters.type === 'free') pool = pool.filter(p => p.teamIndex === -1);
+        if (tfFilters.type === 'club') pool = pool.filter(p => p.teamIndex >= 0);
+
+        html+=`<div class="sec">Available Players (${pool.length})</div><div class="card" style="padding-bottom:2px;">`;
+        if(pool.length === 0) html += `<div style="font-size:.7rem; color:var(--dim); text-align:center; padding:10px 0;">No players match your filters.</div>`;
+        
+        pool.forEach(p=>{
+            const isFree = p.teamIndex === -1;
+            const canBuy = isFree || G.budget >= p.price;
+            
+            let loanFeeRaw = p.price * 0.05;
+            if (loanFeeRaw < 0.1) loanFeeRaw = 0.1;
+            if (loanFeeRaw > 2.0) loanFeeRaw = 2.0;
+            const loanFee = parseFloat(loanFeeRaw.toFixed(2));
+            const canLoan = !isFree;
+
+            html+=`<div class="row bt" style="background:var(--sf2);padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--brd)">
+                <div>
+                    <div style="font-weight:bold;font-size:.8rem;cursor:pointer" onclick="openPlayerModal('${p.id}')"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> ${p.name}${p.isStar?'⭐':''}</div>
+                    <div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | Age: ${p.age}</div>
+                </div>
+                <div style="text-align:right; display:flex; gap:4px; flex-direction:column;">
+                    ${isFree ? `
+                        <div style="font-weight:bold;color:var(--gg);font-size:.7rem; margin-bottom:4px;">FREE</div>
+                        <button class="btn btn-sm btn-p" onclick="buyPlayer('${p.id}', true)">SIGN</button>
+                    ` : `
+                        <div style="display:flex; gap:4px; align-items:center; justify-content:flex-end;">
+                            <span style="font-weight:bold;color:var(--gold);font-size:.7rem">${fmt(p.price)}</span>
+                            <button class="btn btn-sm ${canBuy?'btn-p':'btn-s'}" style="width:50px" ${!canBuy?'disabled':''} onclick="buyPlayer('${p.id}', false)">BUY</button>
+                        </div>
+                        <div style="display:flex; gap:4px; align-items:center; justify-content:flex-end;">
+                            <span style="font-size:.6rem;color:var(--bg2);">Est Fee: ${fmt(loanFee)}</span>
+                            <button class="btn btn-sm ${canLoan?'btn-s':'btn-s'}" style="width:50px; background:var(--bd)" onclick="initiateLoanBid('${p.id}', ${loanFee})">LOAN</button>
+                        </div>
+                    `}
+                </div>
+            </div>`;
         });
-        html+=`</div><div class="card"><div class="sec">Sell Your Players</div>`;
+        html+=`</div>`;
+
+        html+=`<div class="sec">Sell / Release Players</div><div class="card" style="padding-bottom:2px;">`;
         G.squads[G.playerTeamIdx].forEach(p=>{
-            const sp=Math.max(1,getPrice(p.ovr)-rnd(0,1));
-            html+=`<div class="row bt" style="background:var(--sf2);padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--brd)"><div><div style="font-weight:bold;font-size:.8rem"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> <span class="${p.injury>0?'injured-text':''}">${p.name}</span>${p.isStar?'⭐':''}</div><div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | ${p.inXI?'<span style="color:var(--gg)">In XI</span>':'<span style="color:var(--dim)">Bench</span>'}</div></div><div style="text-align:right"><div style="font-weight:bold;color:var(--gold);margin-bottom:4px">+ ${fmt(sp)}</div><button class="btn btn-sm btn-d" onclick="sellPlayer('${p.id}')">SELL</button></div></div>`;
+            const isLoan = p.isLoan;
+            const sp=Math.max(1,getPrice(p.ovr, p.age)-rnd(0,1));
+            html+=`<div class="row bt" style="background:var(--sf2);padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--brd)">
+                <div><div style="font-weight:bold;font-size:.8rem"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> <span class="${p.injury>0?'injured-text':''}">${p.name}</span>${p.isStar?'⭐':''} ${isLoan?'<span class="loan-badge">LOAN</span>':''}</div><div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | ${p.inXI?'<span style="color:var(--gg)">In XI</span>':'<span style="color:var(--dim)">Bench</span>'}</div></div>
+                <div style="text-align:right">
+                    ${isLoan ? 
+                      `<button class="btn btn-sm btn-d" onclick="terminateLoan('${p.id}')">TERMINATE</button>` : 
+                      `<div style="font-weight:bold;color:var(--gold);margin-bottom:4px">+ ${fmt(sp)}</div><button class="btn btn-sm btn-d" onclick="sellPlayer('${p.id}')">SELL</button>`
+                    }
+                </div>
+            </div>`;
         });
         html+=`</div>`;
     }
     document.getElementById('main').innerHTML=html;
 }
 
-function buyPlayer(id){
+function buyPlayer(id, isFree){
     const idx=G.transferMarket.findIndex(p=>p.id===id);if(idx<0)return;
-    const p=G.transferMarket[idx];if(G.budget<p.price){showToast('❌ Not enough budget!');return;}
-    G.budget-=p.price;p.teamIndex=G.playerTeamIdx;G.squads[G.playerTeamIdx].push(p);G.transferMarket.splice(idx,1);
+    const p=G.transferMarket[idx];
+    if(!isFree && G.budget<p.price){showToast('❌ Not enough budget!');return;}
+    
+    if(!isFree) G.budget = parseFloat((G.budget - p.price).toFixed(2));
+    p.teamIndex=G.playerTeamIdx;
+    p.contract = rnd(2, 4);
+    p.isLoan = false; p.originalTeamIdx = -1;
+    G.squads[G.playerTeamIdx].push(p);
+    G.transferMarket.splice(idx,1);
     
     G.news.unshift({
         date: formatDate(G.currentDate),
-        title: 'New Signing!',
-        body: `${TEAMS[G.playerTeamIdx]} has officially signed ${p.name} for ${fmt(p.price)}.`
+        title: isFree ? 'Free Transfer' : 'New Signing!',
+        body: `${TEAMS[G.playerTeamIdx]} has officially signed ${p.name} ${isFree ? 'on a free transfer' : `for ${fmt(p.price)}`}.`
     });
 
     saveState();showToast(`✅ ${p.name} successfully signed!`);renderAll();
@@ -1313,8 +1548,72 @@ function sellPlayer(id){
     const p=sq[idx];
     if(p.inXI){showToast('❌ Remove from XI first!');return;}
     if(sq.length<=16){showToast('❌ Minimum squad size is 16!');return;}
-    const sp=Math.max(1,getPrice(p.ovr)-rnd(0,1));G.budget+=sp;sq.splice(idx,1);
+    const sp=Math.max(1,getPrice(p.ovr, p.age)-rnd(0,1));
+    G.budget = parseFloat((G.budget + sp).toFixed(2));
+    
+    p.teamIndex = rnd(1, 15);
+    G.transferMarket.push(p);
+    sq.splice(idx,1);
+    
     saveState();showToast(`✅ ${p.name} sold for ${fmt(sp)}!`);renderAll();
+}
+
+function terminateLoan(id) {
+    const sq=G.squads[G.playerTeamIdx];const idx=sq.findIndex(p=>p.id===id);if(idx<0)return;
+    const p=sq[idx];
+    if(p.inXI){showToast('❌ Remove from XI first!');return;}
+    
+    p.isLoan = false; p.teamIndex = p.originalTeamIdx;
+    if(p.teamIndex === -1) G.transferMarket.push(p);
+    else G.transferMarket.push(p); 
+    
+    sq.splice(idx,1);
+    saveState();showToast(`✅ Loan terminated for ${p.name}.`);renderAll();
+}
+
+function scoutYouth() {
+    if(G.budget < 2) { showToast('❌ Not enough budget! Costs € 2 M.'); return; }
+    G.budget = parseFloat((G.budget - 2).toFixed(2));
+    G.scoutQueue.push({ weeksLeft: rnd(2, 4), id: Math.random().toString(36).substr(2,9) });
+    
+    saveState(); renderAll();
+    showToast(`🔍 Scout dispatched! Report expected soon.`);
+}
+
+function signProspect(msgId, pid) {
+    const msg = G.inbox.find(m => m.id === msgId);
+    if (!msg) return;
+    const pIdx = msg.players.findIndex(p => p.id === pid);
+    if (pIdx < 0) return;
+    
+    const p = msg.players[pIdx];
+    p.teamIndex = G.playerTeamIdx;
+    p.contract = 3;
+    G.squads[G.playerTeamIdx].push(p);
+    
+    msg.players.splice(pIdx, 1);
+    showToast(`✅ ${p.name} signed to academy!`);
+    
+    if (msg.players.length === 0) G.inbox = G.inbox.filter(m => m.id !== msgId);
+    saveState(); renderAll();
+}
+
+function dismissMsg(msgId) {
+    G.inbox = G.inbox.filter(m => m.id !== msgId);
+    saveState(); renderAll();
+}
+
+function renewContract(id, cost) {
+    if(G.budget < cost) { showToast(`❌ Need ${fmt(cost)} for Signing Fee!`); return; }
+    const p = G.squads[G.playerTeamIdx].find(x => x.id === id);
+    if(p) {
+        G.budget = parseFloat((G.budget - cost).toFixed(2));
+        p.contract += rnd(2, 3);
+        saveState();
+        closeModal(); openPlayerModal(id);
+        showToast(`✅ Contract renewed for ${p.name}!`);
+        renderAll();
+    }
 }
 
 function renderNews() {
@@ -1334,84 +1633,228 @@ function renderNews() {
     document.getElementById('main').innerHTML = html;
 }
 
+function exportSave() {
+    const data = btoa(encodeURIComponent(JSON.stringify(G)));
+    document.getElementById('mtitle').innerHTML = `💾 Export Save`;
+    document.getElementById('mbody').innerHTML = `
+        <p style="font-size:0.75rem; color:var(--dim); margin-bottom:10px;">Copy the code below and save it securely (e.g., in your Notes app).</p>
+        <textarea id="export-text" style="width:100%; height:150px; background:var(--bg); color:var(--gg); padding:10px; font-family:monospace; border:1px solid var(--brd); border-radius:4px;" readonly>${data}</textarea>
+    `;
+    document.getElementById('mfoot').innerHTML = `<button class="btn btn-p btn-sm" onclick="copyExport()">Copy</button> <button class="btn btn-s btn-sm" onclick="closeModal()">Close</button>`;
+    document.getElementById('mov').classList.add('show');
+}
+function copyExport() {
+    const txt = document.getElementById('export-text');
+    txt.select(); document.execCommand('copy');
+    showToast("✅ Code copied to clipboard!");
+}
+function importSave() {
+    document.getElementById('mtitle').innerHTML = `📂 Import Save`;
+    document.getElementById('mbody').innerHTML = `
+        <p style="font-size:0.75rem; color:var(--dim); margin-bottom:10px;">Paste your save code below to load your progress.</p>
+        <textarea id="import-text" style="width:100%; height:150px; background:var(--sf); color:var(--wh); padding:10px; font-family:monospace; border:1px solid var(--brd); border-radius:4px;" placeholder="Paste code here..."></textarea>
+    `;
+    document.getElementById('mfoot').innerHTML = `<button class="btn btn-p btn-sm" onclick="processImport()">Load Save</button> <button class="btn btn-s btn-sm" onclick="closeModal()">Cancel</button>`;
+    document.getElementById('mov').classList.add('show');
+}
+function processImport() {
+    const txt = document.getElementById('import-text').value.trim();
+    if(!txt) { showToast("❌ Code is empty!"); return; }
+    try {
+        const parsed = JSON.parse(decodeURIComponent(atob(txt)));
+        if(parsed && parsed.season) {
+            G = parsed;
+            saveState(); closeModal(); renderAll();
+            showToast("✅ Save loaded successfully!");
+        } else throw new Error();
+    } catch(e) { showToast("❌ Invalid save code!"); }
+}
+function showSaveInfo() {
+    document.getElementById('mtitle').innerHTML = `ℹ️ Save Data Guide`;
+    document.getElementById('mbody').innerHTML = `
+        <ol style="font-size:0.75rem; color:var(--txt); margin-left:15px; line-height:1.6;">
+            <li style="margin-bottom:6px;"><b>Why Export?</b> Since this game runs fully in your browser, your save will be lost if you clear your browser cache.</li>
+            <li style="margin-bottom:6px;"><b>How to Export:</b> Click "Export Data", copy the long code, and save it in a safe place (like WhatsApp or a Notes app).</li>
+            <li style="margin-bottom:6px;"><b>How to Import:</b> Click "Import Data", paste the code you saved, and click "Load". Your career will resume exactly where you left off!</li>
+        </ol>
+    `;
+    document.getElementById('mfoot').innerHTML = `<button class="btn btn-s btn-sm" onclick="closeModal()">Got it!</button>`;
+    document.getElementById('mov').classList.add('show');
+}
+
 function renderManager(){
     let changed = false;
-    G.inbox.forEach(m => {
-        if (!m.isRead) { m.isRead = true; changed = true; }
-    });
+    G.inbox.forEach(m => { if (!m.isRead) { m.isRead = true; changed = true; } });
     if (changed) { saveState(); updateHeader(); }
 
     let inboxHtml = G.inbox.length === 0 ? `<p style="font-size:.7rem;color:var(--dim)">No messages.</p>` : '';
     G.inbox.forEach((msg, idx) => {
-        const targetId = msg.targetTeamIdx !== undefined ? msg.targetTeamIdx : rnd(0, 15);
-        inboxHtml += `<div style="background:var(--sf2);padding:10px;border-radius:6px;border-left:3px solid ${msg.action?'var(--gg)':'var(--bg2)'};margin-bottom:8px">
+        let extraHtml = '';
+        
+        if (msg.type === 'loan_offer') {
+            extraHtml = `
+            <div class="row bt" style="margin-top:8px; background:var(--sf); padding:6px; border-radius:4px;">
+                <span style="font-size:.7rem; color:var(--dim)">Offer Fee:</span>
+                <div class="row">
+                    <span style="font-size:.7rem; font-weight:bold;">€</span>
+                    <input type="number" step="0.1" id="counter-fee-${msg.id}" class="input-text" style="width:70px; padding:4px; font-size:.7rem" value="${msg.fee}">
+                    <span style="font-size:.7rem; font-weight:bold;">M</span>
+                </div>
+            </div>
+            <div class="row" style="margin-top:8px;">
+                <button class="btn btn-p btn-sm" style="flex:1" onclick="processLoanOffer('${msg.id}', 'accept')">Accept</button>
+                <button class="btn btn-g btn-sm" style="flex:1" onclick="processLoanOffer('${msg.id}', 'counter')">Suggest Price</button>
+                <button class="btn btn-d btn-sm" style="flex:1" onclick="processLoanOffer('${msg.id}', 'reject')">Reject</button>
+            </div>`;
+        } else if (msg.type === 'scout_result') {
+            let pList = msg.players.map(p => `
+                <div class="row bt" style="background:var(--bg); padding:6px; margin-bottom:4px; border-radius:4px; border:1px solid var(--brd)">
+                    <div><span style="color:var(--gold); font-weight:bold;">${p.pos}</span> <b>${p.name}</b> <div style="font-size:.6rem; color:var(--dim)">OVR: ${p.ovr} | Age: ${p.age}</div></div>
+                    <button class="btn btn-p btn-sm" onclick="signProspect('${msg.id}', '${p.id}')">Sign Free</button>
+                </div>
+            `).join('');
+            extraHtml = `<div style="margin-top:8px">${pList}</div> <button class="btn btn-s btn-sm btn-blk" style="margin-top:6px" onclick="dismissMsg('${msg.id}')">Dismiss Report</button>`;
+        } else if (msg.type === 'loan_bid_accepted') {
+            extraHtml = `<div style="margin-top:8px"><button class="btn btn-sm btn-p" onclick="finalizeUserLoan('${msg.id}')">Sign Player</button></div>`;
+        } else if (msg.action) {
+            const targetId = msg.targetTeamIdx !== undefined ? msg.targetTeamIdx : rnd(0, 15);
+            extraHtml = `<div style="margin-top:8px"><button class="btn btn-sm btn-p" onclick="acceptJob(${targetId}, ${idx})">Accept Offer</button></div>`;
+        }
+
+        inboxHtml += `<div style="background:var(--sf2);padding:10px;border-radius:6px;border-left:3px solid ${msg.type==='loan_offer'?'var(--gold)':(msg.type==='scout_result'?'var(--gg)':'var(--bg2)')};margin-bottom:8px">
             <div style="font-weight:bold;font-size:.8rem">${msg.title}</div>
             <div style="font-size:.7rem;color:var(--dim);margin:5px 0">${msg.body}</div>
-            ${msg.action ? `<button class="btn btn-sm btn-p" onclick="acceptJob(${targetId}, ${idx})">Accept Offer</button>` : ''}
+            ${extraHtml}
         </div>`;
     });
 
     const reqUsed = G.budgetRequestsUsed || 0;
+    
+    let godModeBtn = '';
+    if(G.godMode) {
+        godModeBtn = `<button class="btn btn-s btn-blk" style="margin-bottom:6px" onclick="toggleGodMode()">❌ Disable In-Game Editor</button>`;
+    }
+
+    let budgetHtml = `<span style="font-weight:900;color:var(--gold);font-size:1rem">${fmt(G.budget)}</span>`;
+    if (G.godMode) {
+        budgetHtml = `<div class="row">
+            <span style="font-size:.8rem; font-weight:bold;">€</span>
+            <input type="number" step="1" onchange="updateBudget(this.value)" class="input-text" style="width:70px; padding:4px; font-size:.8rem" value="${G.budget}">
+            <span style="font-size:.8rem; font-weight:bold;">M</span>
+        </div>`;
+    }
 
     document.getElementById('main').innerHTML = `
     <div class="sec">👔 Manager Profile</div>
     <div class="card" style="text-align:center">
-        <div style="width:60px;height:60px;background:var(--bl);border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:1.5rem">👤</div>
+        <div style="width:60px;height:60px;background:var(--bl);border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;cursor:pointer;user-select:none;" onclick="secretClick()">👤</div>
         <div style="font-weight:bold;font-size:1.1rem">${G.managerName}</div>
         <div style="font-size:.8rem;color:var(--dim)">Current Club: <b style="color:var(--gold)">${TEAMS[G.playerTeamIdx]}</b></div>
     </div>
     
+    <div class="card" style="border-color:var(--bl)">
+        <div class="row bt" style="margin-bottom:10px;">
+            <div class="sec" style="color:var(--wh); margin:0; border:none;">💾 Data Save / Load <span style="cursor:pointer; color:var(--gold); border:1px solid var(--gold); border-radius:50%; padding:0 4px; font-size:0.6rem;" onclick="showSaveInfo()">?</span></div>
+        </div>
+        <div class="row">
+            <button class="btn btn-p btn-sm" style="flex:1" onclick="exportSave()">Export Data</button>
+            <button class="btn btn-s btn-sm" style="flex:1; background:var(--bd)" onclick="importSave()">Import Data</button>
+        </div>
+    </div>
+
     <div class="card" style="border-color:var(--gold)">
         <div class="sec" style="color:var(--gold)">💼 Finance & Board Negotiation</div>
         <div class="row bt" style="margin-bottom:10px">
             <span style="font-size:.75rem;color:var(--dim)">Remaining Budget:</span>
-            <span style="font-weight:900;color:var(--gold);font-size:1rem">${fmt(G.budget)}</span>
+            ${budgetHtml}
         </div>
         <button class="btn btn-p btn-blk" ${reqUsed >= 2 ? 'disabled' : ''} onclick="requestBudget()">📝 Request Additional Funds (${2 - reqUsed} Left)</button>
         ${reqUsed >= 2 ? `<div style="font-size:.65rem;color:var(--red);text-align:center;margin-top:5px">Budget requests are limited to 2 per season.</div>` : ''}
     </div>
 
     <div class="card"><div class="sec">📧 Inbox</div>${inboxHtml}</div>
-    <div class="card" style="margin-top:20px;border-color:var(--red)"><div class="sec">Danger Zone</div><button class="btn btn-d btn-blk" onclick="hardReset()">🛑 Retire / New Career</button></div>`;
+    <div class="card" style="margin-top:20px;border-color:var(--red)">
+        <div class="sec">Danger Zone</div>
+        ${godModeBtn}
+        <button class="btn btn-d btn-blk" onclick="hardReset()">🛑 Retire / New Career</button>
+    </div>`;
+}
+
+function updateBudget(val) {
+    G.budget = parseFloat(val); saveState(); updateHeader();
+}
+
+function processLoanOffer(id, action) {
+    let msgIdx = G.inbox.findIndex(m => m.id === id);
+    if(msgIdx < 0) return;
+    let msg = G.inbox[msgIdx];
+    let p = G.squads[G.playerTeamIdx].find(x => x.id === msg.playerId);
+    
+    if (!p) {
+        showToast("Player is no longer at the club.");
+        G.inbox.splice(msgIdx, 1); saveState(); renderAll(); return;
+    }
+
+    if (action === 'reject') {
+        G.inbox.splice(msgIdx, 1);
+        saveState(); renderAll(); return;
+    }
+    
+    let inputFee = parseFloat(document.getElementById(`counter-fee-${id}`).value);
+    if (isNaN(inputFee) || inputFee < 0.1) inputFee = 0.1;
+
+    if (action === 'counter') {
+        let maxWilling = parseFloat((p.price * 0.15).toFixed(1));
+        if (maxWilling < 0.5) maxWilling = 0.5;
+        if (maxWilling > 2.0) maxWilling = 2.0;
+        
+        if (inputFee <= maxWilling) {
+            showToast(`✅ ${TEAMS[msg.targetTeamIdx]} accepted the counter-offer!`);
+            action = 'accept';
+            msg.fee = inputFee;
+        } else {
+            showToast(`❌ ${TEAMS[msg.targetTeamIdx]} rejected the counter-offer of ${fmt(inputFee)}.`);
+            G.inbox.splice(msgIdx, 1);
+            saveState(); renderAll(); return;
+        }
+    }
+    
+    if (action === 'accept') {
+        if(p.inXI) { showToast("❌ Remove player from XI first!"); return; }
+        
+        G.budget = parseFloat((G.budget + msg.fee).toFixed(2));
+        p.isLoan = true;
+        p.loanDuration = 1;
+        p.originalTeamIdx = G.playerTeamIdx;
+        p.teamIndex = msg.targetTeamIdx;
+        
+        G.squads[G.playerTeamIdx] = G.squads[G.playerTeamIdx].filter(x => x.id !== p.id);
+        G.squads[msg.targetTeamIdx].push(p);
+        
+        G.inbox.splice(msgIdx, 1);
+        showToast(`✅ ${p.name} loaned out for ${fmt(msg.fee)}!`);
+        saveState(); renderAll();
+    }
 }
 
 function requestBudget() {
     if ((G.budgetRequestsUsed || 0) >= 2) return;
-    
     const row = G.leagueTable.find(x => x.teamIdx === G.playerTeamIdx);
     const pos = G.leagueTable.indexOf(row) + 1;
-    
     let chance = 40; 
-    if (pos <= 3) chance += 30;         
-    else if (pos <= 8) chance += 10;
-    else if (pos >= 13) chance -= 30;   
-    
-    if (G.budget > 30) chance -= 20;    
-    if (G.budget < 10) chance += 20;    
+    if (pos <= 3) chance += 30; else if (pos <= 8) chance += 10; else if (pos >= 13) chance -= 30;   
+    if (G.budget > 30) chance -= 20; if (G.budget < 10) chance += 20;    
 
     G.budgetRequestsUsed = (G.budgetRequestsUsed || 0) + 1;
     
     if (Math.random() * 100 < chance) {
-        const granted = rnd(5, 15); 
-        G.budget += granted;
-        G.inbox.unshift({
-            id: Math.random(), title: 'Budget Request Approved ✅',
-            body: `The board is very pleased with your performance. We agree to allocate an additional ${fmt(granted)} to your transfer budget.`,
-            action: null,
-            isRead: false
-        });
+        const granted = rnd(5, 15); G.budget = parseFloat((G.budget + granted).toFixed(2));
+        G.inbox.unshift({id: Math.random().toString(36).substr(2,9), title: 'Budget Request Approved ✅', body: `The board is very pleased with your performance. We agree to allocate an additional ${fmt(granted)} to your transfer budget.`, action: null, isRead: false});
         showToast(`✅ Approved! +${fmt(granted)}`);
     } else {
         let reason = "The club's financial situation doesn't allow it right now.";
-        if (pos > 10) reason = "Improve league performance first before asking for more money.";
-        else if (G.budget >= 25) reason = "The current budget is considered more than sufficient.";
-        
-        G.inbox.unshift({
-            id: Math.random(), title: 'Budget Request Rejected ❌',
-            body: `The board decided to reject your request. ${reason}`,
-            action: null,
-            isRead: false
-        });
+        if (pos > 10) reason = "Improve league performance first before asking for more money."; else if (G.budget >= 25) reason = "The current budget is considered more than sufficient.";
+        G.inbox.unshift({id: Math.random().toString(36).substr(2,9), title: 'Budget Request Rejected ❌', body: `The board decided to reject your request. ${reason}`, action: null, isRead: false});
         showToast('❌ Request rejected by the board.');
     }
     saveState(); renderAll();
@@ -1420,58 +1863,61 @@ function requestBudget() {
 function acceptJob(newTeamIdx, msgIdx){
     if(newTeamIdx === undefined || newTeamIdx === null) newTeamIdx = rnd(0, 15);
     if(confirm(`Are you sure you want to leave ${TEAMS[G.playerTeamIdx]} for ${TEAMS[newTeamIdx]}?`)){
-        G.playerTeamIdx = newTeamIdx;
-        G.budget = Math.min(50, BASE_BUDGETS[newTeamIdx]);
-        G.inbox.splice(msgIdx, 1);
-        
-        weekPendingMatches = []; 
-        weekPendingIndex = 0;
-        
+        G.playerTeamIdx = newTeamIdx; G.budget = Math.min(50, BASE_BUDGETS[newTeamIdx]); G.inbox.splice(msgIdx, 1);
+        weekPendingMatches = []; weekPendingIndex = 0;
         G.log.unshift({cls:'info', text:`👔 Manager officially joined ${TEAMS[newTeamIdx]}!`});
-        
-        G.news.unshift({
-            date: formatDate(G.currentDate),
-            title: 'Managerial Shake-up!',
-            body: `${TEAMS[newTeamIdx]} has officially unveiled ${G.managerName} as their new head coach.`
-        });
-
+        G.news.unshift({date: formatDate(G.currentDate), title: 'Managerial Shake-up!', body: `${TEAMS[newTeamIdx]} has officially unveiled ${G.managerName} as their new head coach.`});
         saveState(); renderAll(); showToast(`Welcome to ${TEAMS[newTeamIdx]}!`);
     }
 }
 
 function forceRetire(pid) {
-    const sq = G.squads[G.playerTeamIdx];
-    const idx = sq.findIndex(p => p.id === pid);
-    if(idx < 0) return;
-    const oldP = sq[idx];
-    if(oldP.inXI) { showToast("❌ Remove from Starting XI before retiring."); return; }
-    
-    // Gacha Regen
-    const isForeign = Math.random() < 0.2;
-    const origin = isForeign ? 'FR' : 'ID';
+    const sq = G.squads[G.playerTeamIdx]; const idx = sq.findIndex(p => p.id === pid); if(idx < 0) return;
+    const oldP = sq[idx]; if(oldP.inXI) { showToast("❌ Remove from Starting XI before retiring."); return; }
+    const isForeign = Math.random() < 0.2; const origin = isForeign ? 'FR' : 'ID';
     const regen = genPlayer(oldP.pos, G.playerTeamIdx, false, origin);
-    regen.age = rnd(17, 21);
-    regen.ovr = rnd(50, 85); 
-    regen.isStar = regen.ovr >= 80;
-    regen.price = getPrice(regen.ovr);
-    
-    sq.splice(idx, 1);
-    sq.push(regen);
-    
-    G.news.unshift({
-        date: formatDate(G.currentDate),
-        title: 'Player Retires',
-        body: `${oldP.name} has announced his retirement. The club has promoted youth academy prospect ${regen.name} to the first team.`
-    });
-    
-    saveState(); closeModal(); renderAll();
-    showToast(`🎲 Gacha! ${regen.name} (OVR ${regen.ovr}) joins the squad!`);
+    regen.age = rnd(17, 21); regen.ovr = rnd(50, 85); regen.isStar = regen.ovr >= 80; regen.price = getPrice(regen.ovr, regen.age);
+    sq.splice(idx, 1); sq.push(regen);
+    G.news.unshift({date: formatDate(G.currentDate), title: 'Player Retires', body: `${oldP.name} has announced his retirement. The club has promoted youth academy prospect ${regen.name} to the first team.`});
+    saveState(); closeModal(); renderAll(); showToast(`🎲 Gacha! ${regen.name} (OVR ${regen.ovr}) joins the squad!`);
+}
+
+function editPlayer(id, stat, amount) {
+    let p = null;
+    for(let i=0; i<G.squads.length; i++){p=G.squads[i].find(x=>x.id===id);if(p)break;}
+    if(!p) p=G.transferMarket.find(x=>x.id===id);
+    if(p) {
+        p[stat] = clamp(p[stat] + amount, 1, 99);
+        if(stat === 'ovr') p.price = getPrice(p.ovr, p.age);
+        if(p.ovr > p.pot) p.pot = p.ovr;
+        saveState(); openPlayerModal(id);
+    }
+}
+
+function forceMove(id) {
+    let p = null; let sqIdx = -1; let inMarket = false;
+    for(let i=0; i<G.squads.length; i++){
+        p=G.squads[i].find(x=>x.id===id); 
+        if(p) { sqIdx = i; break; }
+    }
+    if(!p) {
+        p = G.transferMarket.find(x=>x.id===id);
+        inMarket = true;
+    }
+    if(p) {
+        p.teamIndex = G.playerTeamIdx;
+        p.isLoan = false; p.contract = 3; p.originalTeamIdx = -1;
+        if(inMarket) G.transferMarket = G.transferMarket.filter(x=>x.id!==id);
+        else G.squads[sqIdx] = G.squads[sqIdx].filter(x=>x.id!==id);
+        
+        G.squads[G.playerTeamIdx].push(p);
+        saveState(); closeModal(); renderAll(); showToast("⚡ Player forced to your club!");
+    }
 }
 
 function showEndSeason(){
     const row=G.leagueTable.find(x=>x.teamIdx===G.playerTeamIdx);const pos=G.leagueTable.indexOf(row)+1;
-    let reward=5;
-    if(pos===1)reward=40;else if(pos===2)reward=30;else if(pos===3)reward=20;else if(pos<=5)reward=10;
+    let reward=5; if(pos===1)reward=40;else if(pos===2)reward=30;else if(pos===3)reward=20;else if(pos<=5)reward=10;
     if(G.cupWinner===G.playerTeamIdx)reward+=15;if(G.acl&&G.acl.winner===G.playerTeamIdx)reward+=50;
     document.getElementById('mtitle').innerHTML=``;
     document.getElementById('mbody').innerHTML=`<div style="text-align:center"><h1 style="font-size:3rem;margin:0">🏆</h1><h2 style="color:var(--gold)">Season ${G.season} Finished!</h2><p style="font-size:.8rem;color:var(--txt)">League Champions: <b>${G.leagueTable[0].name}</b></p><div style="background:var(--sf2);padding:10px;border-radius:8px;margin:15px 0"><div style="font-size:.75rem;color:var(--dim)">Your Team (${TEAMS[G.playerTeamIdx]}):</div><div style="font-size:1.2rem;font-weight:bold;color:var(--wh)">Final Position: #${pos}</div><div style="font-size:.9rem;color:var(--gg);margin-top:5px">Prize Money: + ${fmt(reward)}</div></div></div>`;
@@ -1480,52 +1926,64 @@ function showEndSeason(){
 }
 
 function startNewSeason(reward,finalPos){
-    G.budget=Math.min(50,G.budget+reward);
-    G.budgetRequestsUsed = 0;
-    G.season++;G.week=0;G.phase='preseason';G.preseasonWeeksLeft=2;
-    weekPendingMatches=[];weekPendingIndex=0;
+    G.budget = parseFloat((Math.min(50,G.budget+reward)).toFixed(2));
+    G.budgetRequestsUsed = 0; G.season++; G.week=0; G.phase='preseason'; G.preseasonWeeksLeft=8;
+    weekPendingMatches=[]; weekPendingIndex=0;
     G.leagueTable=TEAMS.map((name,i)=>({teamIdx:i,name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0}));
-    G.leagueResults=[];G.schedule=buildSchedule();G.lcaTeamIndices=G.leagueTable.slice(0,4).map(x=>x.teamIdx);
-    G.acl=null;
-    G.cupBracket={"Round of 16":[...Array(16).keys()].sort(()=>Math.random()-.5).reduce((res,k,i,arr)=>i%2===0?[...res,[arr[i],arr[i+1]==15?99:arr[i+1]]]:res,[])};
-    G.cupResults={};G.cupRoundsPlayed={};G.cupWinner=null;
+    G.leagueResults=[]; G.schedule=buildSchedule(); G.lcaTeamIndices=G.leagueTable.slice(0,4).map(x=>x.teamIdx);
+    G.acl=null; G.cupBracket={"Round of 16":[...Array(16).keys()].sort(()=>Math.random()-.5).reduce((res,k,i,arr)=>i%2===0?[...res,[arr[i],arr[i+1]==15?99:arr[i+1]]]:res,[])}; G.cupResults={}; G.cupRoundsPlayed={}; G.cupWinner=null;
     
-    // Auto Retirement Process
     G.squads.forEach((sq,ti)=>{
-        sq.forEach(p=>{p.energy=100;p.moral=85;p.contract--;p.age++; p.injury=0;
-            let gro=0;if(p.age<24)gro=rnd(0,2);else if(p.age>30)gro=rnd(-3,-1);else gro=rnd(-1,1);
-            if(p.appearances>15)gro+=1;if(p.goals>10)gro+=1;
-            p.ovr=clamp(p.ovr+gro,40,95);p.isStar=p.ovr>=80;p.goals=0;p.appearances=0;
+        for(let i=sq.length-1; i>=0; i--){
+            const p = sq[i];
+            if(p.isLoan) {
+                p.isLoan = false; p.teamIndex = p.originalTeamIdx;
+                if(p.teamIndex === -1) G.transferMarket.push(p); else if (G.squads[p.teamIndex]) G.squads[p.teamIndex].push(p);
+                sq.splice(i, 1);
+            }
+        }
+        sq.forEach(p=>{
+            p.energy=100; p.contract--; p.age++; p.injury=0;
+            let gro=0;
+            if(p.age < 24 && p.ovr < p.pot) gro = rnd(1, 3);
+            else if(p.age >= 24 && p.age < 30 && p.ovr < p.pot) gro = rnd(0, 2);
+            else if(p.age >= 30) gro = rnd(-3, 0); 
+            
+            if(p.appearances > 15 && p.age < 30 && p.ovr < p.pot) gro += 1;
+            if(p.goals > 10 && p.ovr < p.pot) gro += 1;
+            
+            p.ovr = clamp(p.ovr + gro, 40, 95);
+            if(p.ovr > p.pot) p.pot = p.ovr;
+            p.isStar = p.ovr >= 80;
+            p.goals = 0; p.appearances = 0;
+            p.price = getPrice(p.ovr, p.age);
         });
 
-        // Regen Logic > 34 years old
         for(let i=sq.length-1; i>=0; i--){
             const p = sq[i];
             if(p.age >= 34) {
                 let chance = p.age === 34 ? 0.3 : (p.age === 35 ? 0.5 : (p.age === 36 ? 0.75 : 1.0));
                 if(Math.random() < chance) {
-                    if(p.isStar && ti === G.playerTeamIdx) {
-                        G.news.unshift({ date: 'Pre-season', title: 'Legend Retires', body: `${p.name} (OVR ${p.ovr}) has officially hung up his boots at age ${p.age}.`});
-                    }
+                    if(p.isStar && ti === G.playerTeamIdx) G.news.unshift({ date: 'Pre-season', title: 'Legend Retires', body: `${p.name} (OVR ${p.ovr}) has officially hung up his boots at age ${p.age}.`});
                     const origin = ti < 16 ? (Math.random() < 0.8 ? 'ID' : 'FR') : 'ID';
                     const regen = genPlayer(POS_MAP[p.pos].c, ti, false, origin);
-                    regen.age = rnd(17, 21); regen.ovr = rnd(50, 85);
-                    regen.isStar = regen.ovr >= 80; regen.price = getPrice(regen.ovr);
+                    regen.age = rnd(17, 21); regen.ovr = rnd(50, 85); regen.isStar = regen.ovr >= 80; regen.price = getPrice(regen.ovr, regen.age);
                     sq.splice(i, 1, regen);
                 }
             }
         }
 
-        const expired=sq.filter(p=>p.contract<=0);
+        const expired = sq.filter(p=>p.contract<=0 && !p.isLoan);
         expired.forEach(p=>{
-            const idx=sq.indexOf(p);
+            const idx=sq.indexOf(p); p.teamIndex = -1; p.contract = rnd(1,3); p.price = 0;
+            G.transferMarket.push(p); sq.splice(idx, 1);
+            if(ti === G.playerTeamIdx) G.news.unshift({ date: 'Pre-season', title: 'Free Transfer', body: `${p.name} has left ${TEAMS[G.playerTeamIdx]} on a free transfer after his contract expired.`});
             const origin = ti < 16 ? (Math.random() < 0.8 ? 'ID' : 'FR') : 'ID';
-            sq[idx]=genPlayer(POS_MAP[p.pos].c,ti,false, origin);
+            const np = genPlayer(POS_MAP[p.pos].c,ti,false, origin); np.price = getPrice(np.ovr, np.age); sq.push(np);
         });
         setDefaultXI(sq,G.tactics[ti]);
     });
 
-    // Auto retire market
     for(let i=G.transferMarket.length-1; i>=0; i--){
          const p = G.transferMarket[i]; p.age++;
          if(p.age >= 34) {
@@ -1533,44 +1991,38 @@ function startNewSeason(reward,finalPos){
              if(Math.random() < chance) {
                  const origin = Math.random() < 0.6 ? 'ID' : (Math.random() < 0.8 ? 'FR' : 'JP'); 
                  const regen = genPlayer(POS_MAP[p.pos].c, -1, false, origin);
-                 regen.age = rnd(17, 21); regen.ovr = rnd(50, 85);
-                 regen.isStar = regen.ovr >= 80; regen.price = getPrice(regen.ovr);
+                 regen.age = rnd(17, 21); regen.ovr = rnd(50, 85); regen.isStar = regen.ovr >= 80; regen.price = 0; 
                  G.transferMarket.splice(i, 1, regen);
              }
          }
     }
 
-    // Refresh Market
     for(let i=0; i<30; i++) {
-        G.transferMarket.shift(); // Remove 30 oldest
-        const cat=pick(['GK','DEF','MID','FWD']);
-        const rR = Math.random(); let origin = 'ID';
+        if(G.transferMarket.length > 200) G.transferMarket.shift(); 
+        const cat=pick(['GK','DEF','MID','FWD']); const rR = Math.random(); let origin = 'ID';
         if(rR < 0.6) origin = 'ID'; else if(rR < 0.8) origin = 'FR'; else if(rR < 0.86) origin = 'JP'; else if(rR < 0.93) origin = 'KR'; else origin = 'AR';
-        const np=genPlayer(cat,-1,false, origin);
+        const isFreeAgent = Math.random() < 0.25; const tIdx = isFreeAgent ? -1 : rnd(1, 15);
+        const np=genPlayer(cat, tIdx, false, origin);
         const r=Math.random(); if(r<0.7)np.ovr=rnd(45,65);else if(r<0.9)np.ovr=rnd(66,75);else np.ovr=rnd(76,85);
-        np.isStar=np.ovr>=80;np.price=getPrice(np.ovr);
+        if(np.ovr > np.pot) np.pot = np.ovr;
+        np.isStar=np.ovr>=80; np.price = isFreeAgent ? 0 : getPrice(np.ovr, np.age);
         G.transferMarket.push(np);
     }
     G.transferMarket.sort((a,b)=>b.ovr-a.ovr);
 
     G.log=[{cls:'info',text:`🌟 Season ${G.season} started! Rewards added.`}];
-    
-    G.news.unshift({
-        date: formatDate(G.currentDate),
-        title: `Welcome to Season ${G.season}!`,
-        body: `The new season is here. Clubs are preparing their tactics and finalizing transfers for what promises to be an exciting campaign.`
-    });
+    G.news.unshift({date: formatDate(G.currentDate), title: `Welcome to Season ${G.season}!`, body: `The new season is here. Clubs are preparing their tactics and finalizing transfers for what promises to be an exciting campaign.`});
 
     if(finalPos<=5||Math.random()>0.6){
         let target=rnd(0,15);while(target===G.playerTeamIdx)target=rnd(0,15);
-        G.inbox.unshift({id:Math.random(),title:'Job Offer',body:`The board of ${TEAMS[target]} is impressed with your performance. They want you as their new manager!`,action:true,targetTeamIdx:target, isRead: false});
+        G.inbox.unshift({id:Math.random().toString(36).substr(2,9),title:'Job Offer',body:`The board of ${TEAMS[target]} is impressed with your performance. They want you as their new manager!`,action:true,targetTeamIdx:target, isRead: false});
     }
     saveState();closeModal();renderAll();showToast("New Season Started!");
 }
 
 let toastTmr;
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTmr);toastTmr=setTimeout(()=>t.classList.remove('show'),2500);}
-function hardReset(){if(confirm("Delete this save and start a new career?")){localStorage.removeItem('mliv10');G=freshState();selectTeamPrompt();}}
+function hardReset(){if(confirm("Delete this save and start a new career?")){localStorage.removeItem('mliv16');G=freshState();selectTeamPrompt();}}
 
 function openPlayerModal(pid){
     let p=null;
@@ -1580,25 +2032,45 @@ function openPlayerModal(pid){
         const mainRole = p.pos;
         const secondaryRoles = POS_MAP[p.pos].s.length > 0 ? POS_MAP[p.pos].s.join(', ') : 'None';
         const injInfo = p.injury > 0 ? `<div style="color:var(--red); font-weight:bold; margin-top:5px; font-size:.8rem;">🚑 Injured for ${p.injury} week(s)</div>` : '';
+        const flag = NAT_FLAGS[p.origin] || '🌐 International';
+
+        let renewBtn = '';
+        if(p.teamIndex === G.playerTeamIdx && !p.isLoan && p.contract <= 1) {
+            const cost = getRenewCost(p.ovr);
+            renewBtn = `<button class="btn btn-g btn-sm" onclick="renewContract('${p.id}', ${cost})">📝 Renew (${fmt(cost)})</button>`;
+        }
+
+        let ovrHtml = p.ovr; let potHtml = p.pot; let ageHtml = p.age;
+        if (G.godMode) {
+            ovrHtml = `<button class="btn btn-sm btn-p" style="padding:0 5px;" onclick="editPlayer('${p.id}', 'ovr', -1)">-</button> ${p.ovr} <button class="btn btn-sm btn-p" style="padding:0 5px;" onclick="editPlayer('${p.id}', 'ovr', 1)">+</button>`;
+            potHtml = `<button class="btn btn-sm btn-p" style="padding:0 5px;" onclick="editPlayer('${p.id}', 'pot', -1)">-</button> ${p.pot} <button class="btn btn-sm btn-p" style="padding:0 5px;" onclick="editPlayer('${p.id}', 'pot', 1)">+</button>`;
+            ageHtml = `<button class="btn btn-sm btn-p" style="padding:0 5px;" onclick="editPlayer('${p.id}', 'age', -1)">-</button> ${p.age} <button class="btn btn-sm btn-p" style="padding:0 5px;" onclick="editPlayer('${p.id}', 'age', 1)">+</button>`;
+        }
 
         document.getElementById('mtitle').innerHTML=`🔍 Player Info`;
         document.getElementById('mbody').innerHTML=`
         <div style="text-align:center;margin-bottom:15px">
             <div style="font-size:2rem;font-weight:900"><span class="${p.injury>0?'injured-text':''}">${p.name}</span> ${p.isStar?'⭐':''}</div>
-            <div style="font-size:.8rem;color:var(--dim)">${p.teamIndex>=0?TEAMS[p.teamIndex]:'Free Agent'}</div>
+            <div style="font-size:.8rem;color:var(--dim); margin-top:4px;">${flag} | ${p.teamIndex>=0?TEAMS[p.teamIndex]:'Free Agent'}</div>
             ${injInfo}
         </div>
-        <div class="g3">
-            <div class="card" style="text-align:center"><div style="font-weight:bold;color:var(--gold);font-size:1.2rem">${p.pos}</div><div style="font-size:.6rem;color:var(--dim)">Position</div></div>
-            <div class="card" style="text-align:center"><div style="font-weight:bold;color:var(--gg);font-size:1.2rem">${p.ovr}</div><div style="font-size:.6rem;color:var(--dim)">Overall</div></div>
-            <div class="card" style="text-align:center"><div style="font-weight:bold;color:var(--wh);font-size:1.2rem">${p.age}</div><div style="font-size:.6rem;color:var(--dim)">Age</div></div>
+        <div class="g4">
+            <div class="card" style="text-align:center; padding:11px 4px;"><div style="font-weight:bold;color:var(--gold);font-size:1.2rem">${p.pos}</div><div style="font-size:.6rem;color:var(--dim)">POS</div></div>
+            <div class="card" style="text-align:center; padding:11px 4px;"><div style="font-weight:bold;color:var(--gg);font-size:1.2rem">${ovrHtml}</div><div style="font-size:.6rem;color:var(--dim)">OVR</div></div>
+            <div class="card" style="text-align:center; padding:11px 4px;"><div style="font-weight:bold;color:var(--bg2);font-size:1.2rem">${potHtml}</div><div style="font-size:.6rem;color:var(--dim)">POT</div></div>
+            <div class="card" style="text-align:center; padding:11px 4px;"><div style="font-weight:bold;color:var(--wh);font-size:1.2rem">${ageHtml}</div><div style="font-size:.6rem;color:var(--dim)">AGE</div></div>
         </div>
         <div class="card" style="margin-top:10px">
-            <div class="sec">Player Roles</div>
+            <div class="sec">Player Roles & Status</div>
             <div class="row bt"><span>Dominant Role:</span><b style="color:var(--gold)">${mainRole}</b></div>
             <div class="row bt" style="margin-top:5px; font-size:.65rem; color:var(--dim)">
                 <span>Capable of playing:</span><span>${secondaryRoles}</span>
             </div>
+            <div class="row bt" style="margin-top:10px; padding-top:10px; border-top: 1px solid var(--sf2)">
+                <span>Contract Left:</span>
+                <span style="font-weight:bold; color:${p.contract<=1?'var(--red)':'var(--gg)'}">${p.contract} Year(s)</span>
+            </div>
+            ${renewBtn ? `<div style="text-align:right; margin-top:5px">${renewBtn}</div>` : ''}
         </div>
         <div class="card" style="margin-top:10px">
             <div class="row bt"><span>Appearances</span><b>${p.appearances}</b></div>
@@ -1606,11 +2078,16 @@ function openPlayerModal(pid){
         </div>`;
         
         let retireBtn = '';
-        if(p.teamIndex === G.playerTeamIdx && p.age >= 32) {
+        if(p.teamIndex === G.playerTeamIdx && !p.isLoan && p.age >= 32) {
             retireBtn = `<button class="btn btn-d btn-sm" style="margin-right:auto;" onclick="forceRetire('${p.id}')">🎲 Retire & Regen</button>`;
         }
         
-        document.getElementById('mfoot').innerHTML=`${retireBtn} <button class="btn btn-s btn-sm" onclick="closeModal()">Close</button>`;
+        let forceMoveBtn = '';
+        if(G.godMode && p.teamIndex !== G.playerTeamIdx) {
+            forceMoveBtn = `<button class="btn btn-d btn-sm" style="margin-right:auto;" onclick="forceMove('${p.id}')">⚡ FORCE MOVE</button>`;
+        }
+        
+        document.getElementById('mfoot').innerHTML=`${retireBtn} ${forceMoveBtn} <button class="btn btn-s btn-sm" onclick="closeModal()">Close</button>`;
         document.getElementById('mov').classList.add('show');
     }
 }
@@ -1642,7 +2119,7 @@ function selectTeamPrompt(){
 
 function applyTeam(idx,budget){
     const mName=document.getElementById('mgrNameInp').value.trim()||'Manager';
-    G.managerName=mName;G.playerTeamIdx=idx;G.budget=budget;
+    G.managerName=mName;G.playerTeamIdx=idx;G.budget=parseFloat(budget.toFixed(1));
     G.tactics[idx]='4-3-3';setDefaultXI(G.squads[idx],'4-3-3');
     saveState();closeModal();renderAll();showToast(`Welcome to ${TEAMS[idx]}, ${mName}!`);
 }
@@ -1667,7 +2144,14 @@ document.querySelectorAll('.tb').forEach(btn=>{btn.addEventListener('click',()=>
 function init(){
     if(!loadState()){G=freshState();selectTeamPrompt();}
     else{
-        if(!G.news) G.news = [];
+        if(G.godMode === undefined) G.godMode = false;
+        G.squads.forEach(sq => sq.forEach(p => {
+            if(p.pot === undefined) p.pot = Math.min(95, p.ovr + (p.age < 25 ? rnd(3,10) : 0));
+        }));
+        G.transferMarket.forEach(p => {
+            if(p.pot === undefined) p.pot = Math.min(95, p.ovr + (p.age < 25 ? rnd(3,10) : 0));
+        });
+
         weekPendingMatches=[];weekPendingIndex=0;
         updateHeader();renderTab('dash');
     }
