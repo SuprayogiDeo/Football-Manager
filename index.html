@@ -225,6 +225,12 @@ const TEAMS = [
     "PSIS Semarang","Dewa United FC","Barito Putera","PSS Sleman",
     "Persik Kediri","RANS Nusantara FC","Persita Tangerang","Malut United"
 ];
+const FOREIGN_CLUBS = [
+    "Manchester City","Liverpool","Real Madrid","Barcelona","Bayern Munich",
+    "Paris Saint-Germain","Chelsea","Arsenal","Juventus","AC Milan",
+    "Inter Milan","Atletico Madrid","Borussia Dortmund","Ajax","Porto",
+    "Flamengo","River Plate","Boca Juniors","São Paulo","Santos"
+];
 const TEAMS_SHORT = ["Persija","Persib","Arema","Bali Utd","PSM","Borneo","Persebaya","Madura","PSIS","Dewa Utd","Barito","PSS","Persik","RANS","Persita","Malut"];
 const TEAM_STADIUMS = [
     "Stadion Utama Gelora Bung Karno","Stadion Si Jalak Harupat","Stadion Kanjuruhan","Stadion Kapten I Wayan Dipta",
@@ -235,7 +241,7 @@ const TEAM_STADIUMS = [
 const ASIAN_LEAGUES = { 'J-League':["Yokohama FM","Vissel Kobe","Kawasaki F.","Urawa Reds","Kashima A.","Sanfrecce","Nagoya","Gamba","FC Tokyo","Cerezo","Hiroshima","Shimizu","Kyoto","Sapporo","Sagan","Niigata"], 'K-League':["Ulsan HD","Jeonbuk","Pohang","FC Seoul","Gwangju","Jeju Utd","Incheon","Daegu","Daejeon","Suwon FC","Gangwon","Suwon SB","Gimcheon","Seongnam","Anyang","Busan"], 'Saudi Pro':["Al Hilal","Al Nassr","Al Ittihad","Al Ahli","Al Shabab","Al Taawoun","Al Ettifaq","Al Fateh","Damac","Al Feiha","Abha","Al Raed","Al Wehda","Al Riyadh","Al Khaleej","Al Hazem"] };
 const BASE_BUDGETS = [48,45,30,42,38,40,42,28,25,35,20,20,15,25,15,30];
 const CUP_WILDCARD = "Klub Amatir";
-const NAT_FLAGS = {'ID':'🇮🇩 Indonesia', 'FR':'🌐 Internasional', 'JP':'🇯🇵 Jepang', 'KR':'🇰🇷 Korea Selatan', 'AR':'🇸🇦 Arab Saudi', 'EU':'🌍 Eropa'};
+const NAT_FLAGS = {'ID':'🇮🇩 Indonesia', 'FR':'🌐 Internasional', 'JP':'🇯🇵 Jepang', 'KR':'🇰🇷 Korea Selatan', 'AR':'🇸🇦 Arab Saudi', 'EU':'🌍 Eropa', 'BR':'🇧🇷 Brasil'};
 const N_ID = {
     f: [
         "Andi","Dimas","Evan","Bagus","Fajar","Wahyu","Kadek","Rendy","Made","Hendra",
@@ -344,6 +350,8 @@ function rollDomesticBiasedOrigin(){
     if(r < 0.98) return 'KR';
     return 'EU';
 }
+const N_BR = { f:['Felipe','Gabriel','Lucas','Rafael','Mateus','Bruno','Diego','Eduardo','Vinicius','Rodolfo','Joao','Marcelo','Thiago','Ricardo','Gustavo','Henrique','Leandro','Fabio','Rodrigo','Carlos'], l:['Silva','Santos','Oliveira','Souza','Costa','Ferreira','Alves','Carvalho','Rodrigues','Nascimento','Lima','Barbosa','Pereira','Gomes','Machado','Rocha','Ribeiro','Teixeira','Nunes','Moreira'] };
+
 function randName(origin) {
     let pool = N_ID;
     if(origin === 'FR') pool = N_FR;
@@ -351,6 +359,7 @@ function randName(origin) {
     else if(origin === 'KR') pool = N_KR;
     else if(origin === 'AR') pool = N_AR;
     else if(origin === 'EU') pool = N_GLOBAL;
+    else if(origin === 'BR') pool = N_BR;
     return pick(pool.f) + ' ' + pick(pool.l);
 }
 function weekToMonthIdx(week){return Math.floor(week/4);}
@@ -594,7 +603,7 @@ function genPlayer(posReq,teamIndex,isInitial=false, origin='ID'){
     
     return{id:Math.random().toString(36).substr(2,9),name:randName(origin), origin: origin, pos, mainCat:POS_MAP[pos].c,
         ovr:ovrBase, pot:potBase, isStar:ovrBase>=80, age:age, energy:100, moral:80+rnd(0,20),
-        contract:rnd(1,3),goals:0,assists:0,appearances:0,teamIndex,inXI:false,slotPos:null,chem:chemBase, injury: 0,
+        contract:rnd(2,4),goals:0,assists:0,appearances:0,teamIndex,inXI:false,slotPos:null,chem:chemBase, injury: 0,
         isLoan: false, loanDuration: 0, originalTeamIdx: -1, totalRating:0, ratingCount:0, motmCount:0
     };
 }
@@ -619,7 +628,7 @@ function genSquad(teamIndex,isInitial=false){
             const pot = Math.min(95, star.ovr + rnd(0, 4));
             sq.push({
                 id: Math.random().toString(36).substr(2,9), name: star.name, origin: star.origin, pos: star.pos, mainCat: POS_MAP[star.pos].c,
-                ovr: star.ovr, pot: pot, isStar: true, age: age, energy: 100, moral: 85, contract: rnd(1,3),
+                ovr: star.ovr, pot: pot, isStar: true, age: age, energy: 100, moral: 85, contract: rnd(2,4),
                 goals: 0, assists: 0, appearances: 0, teamIndex: teamIndex, inXI: false, slotPos: null, chem: rnd(20, 35), injury: 0,
                 isLoan: false, loanDuration: 0, originalTeamIdx: -1, price: getPrice(star.ovr, age), totalRating:0, ratingCount:0, motmCount:0
             });
@@ -656,15 +665,28 @@ function setDefaultXI(squad,tacticName){
 function genTransferPlayer(){
     const cat=pick(['GK','DEF','MID','FWD']);
     const rR = Math.random(); let origin = 'ID';
-    if(rR < 0.55) origin = 'ID'; else if(rR < 0.72) origin = 'FR'; else if(rR < 0.80) origin = 'JP'; else if(rR < 0.88) origin = 'KR'; else if(rR < 0.95) origin = 'AR'; else origin = 'EU';
-    const isFreeAgent = Math.random() < 0.18;
-    const tIdx = isFreeAgent ? -1 : rnd(1, 15);
+    if(rR < 0.40) origin = 'ID'; else if(rR < 0.55) origin = 'FR'; else if(rR < 0.63) origin = 'JP'; else if(rR < 0.71) origin = 'KR'; else if(rR < 0.79) origin = 'AR'; else if(rR < 0.87) origin = 'EU'; else if(rR < 0.93) origin = 'BR'; else origin = 'EU';
+    const isFreeAgent = Math.random() < 0.15;
+    // Transfer market players come from teams OTHER than player's team (or European clubs)
+    // Use indices 0-15 for Indonesian league teams, avoid player's team
+    // Add European "virtual" clubs with high indices (16-30 range used as foreign clubs)
+    let tIdx;
+    if(isFreeAgent){
+        tIdx = -1;
+    } else {
+        // 55% chance from a foreign/European club, 45% from Indonesian league non-player clubs
+        if(Math.random() < 0.55){
+            // foreign club - use a stable index beyond league teams
+            tIdx = rnd(16, 30); // virtual foreign clubs
+        } else {
+            // Indonesian league team (excluding player's team - will be handled at call time)
+            tIdx = rnd(0, 15);
+        }
+    }
     const p=genPlayer(cat, tIdx, false, origin);
     if(isFreeAgent){
-        // Free agents are realistically weaker on average — clubs rarely release their best players.
         const r=Math.random();
         if(r<0.80) p.ovr=rnd(42,62); else if(r<0.95) p.ovr=rnd(63,72); else if(r<0.995) p.ovr=rnd(73,79); else p.ovr=rnd(80,83);
-        // Occasionally an aging veteran star is a free agent — flavor it with higher age.
         if(p.ovr>=73) p.age = rnd(29,35);
     } else {
         const r=Math.random();
@@ -673,11 +695,15 @@ function genTransferPlayer(){
     if(p.ovr > p.pot) p.pot = p.ovr;
     p.isStar=p.ovr>=80;
     p.price = isFreeAgent ? 0 : getPrice(p.ovr, p.age);
+    p.clubName = tIdx >= 16 ? FOREIGN_CLUBS[tIdx-16] || 'European Club' : (tIdx >= 0 ? TEAMS[tIdx] : 'Free Agent');
     return p;
 }
 function genMarket(){
     const ps=[];
-    for(let i=0;i<120;i++){ ps.push(genTransferPlayer()); }
+    for(let i=0;i<120;i++){ 
+        const p = genTransferPlayer();
+        ps.push(p); 
+    }
     return ps.sort((a,b)=>b.ovr-a.ovr);
 }
 let swapIdA=null;
@@ -688,22 +714,33 @@ function handleSwapClick(pid,isLiveMatch=false){
         swapIdA=null;
     }else{
         const sq=G.squads[G.playerTeamIdx];
-        const p1=sq.find(x=>x.id===swapIdA);const p2=sq.find(x=>x.id===pid);
+        const p1=sq.find(x=>x.id===swapIdA);
+        const p2=sq.find(x=>x.id===pid);
         if(p1&&p2){
-            if((p1.injury > 0 && p2.inXI) || (p2.injury > 0 && p1.inXI) || (p1.injury > 0 && p1.inXI && !p2.inXI) || (p2.injury > 0 && p2.inXI && !p1.inXI)) {
-                if ( (p1.injury > 0 && !p1.inXI) || (p2.injury > 0 && !p2.inXI) ) {
-                    showToast("❌ An injured player cannot be placed in the Starting XI!");
-                    swapIdA=null; return;
-                }
+            // Injury check: injured player cannot go into XI
+            if(p1.injury>0 && p2.inXI){
+                showToast("❌ An injured player cannot be placed in the Starting XI!"); swapIdA=null;
+                if(isLiveMatch)openSubModal(false);else renderTab(activeTab); return;
             }
+            if(p2.injury>0 && p1.inXI){
+                showToast("❌ An injured player cannot be placed in the Starting XI!"); swapIdA=null;
+                if(isLiveMatch)openSubModal(false);else renderTab(activeTab); return;
+            }
+            // Live match: count as sub only when one is XI and one is bench
             if(isLiveMatch){
-                if((p1.inXI&&!p2.inXI)||(!p1.inXI&&p2.inXI)){
-                    if(liveMatchState.subsLeft<=0){showToast("❌ No substitutions left!");swapIdA=null;return;}
+                const isSub=(p1.inXI&&!p2.inXI)||(!p1.inXI&&p2.inXI);
+                if(isSub){
+                    if(liveMatchState.subsLeft<=0){showToast("❌ No substitutions left!");swapIdA=null;openSubModal(false);return;}
                     liveMatchState.subsLeft--;
                 }
             }
-            const tX=p1.inXI,tS=p1.slotPos;p1.inXI=p2.inXI;p1.slotPos=p2.slotPos;p2.inXI=tX;p2.slotPos=tS;
-            showToast("🔄 Players swapped!");swapIdA=null;
+            // Swap inXI and slotPos properly
+            const xi1=p1.inXI, sl1=p1.slotPos;
+            const xi2=p2.inXI, sl2=p2.slotPos;
+            p1.inXI=xi2; p1.slotPos=sl2;
+            p2.inXI=xi1; p2.slotPos=sl1;
+            saveState();
+            showToast("🔄 Players swapped!"); swapIdA=null;
             if(isLiveMatch){closeSubModal();return;}
         }else{swapIdA=null;}
     }
@@ -855,8 +892,13 @@ function applyGoalsToScorers(events, compType){
     });
 }
 function getTeamName(idx){
-    if(typeof idx==='number'){if(idx<16)return TEAMS[idx];if(idx===99)return CUP_WILDCARD;}
-    else if(typeof idx==='string')return G.acl.teams[idx].name;
+    if(typeof idx==='number'){
+        if(idx<16&&idx>=0)return TEAMS[idx];
+        if(idx===99)return CUP_WILDCARD;
+        if(idx>=16&&idx<36)return FOREIGN_CLUBS[idx-16]||'Foreign Club';
+        if(idx===-1)return 'Free Agent';
+    }
+    else if(typeof idx==='string')return G.acl&&G.acl.teams&&G.acl.teams[idx]?G.acl.teams[idx].name:idx;
     return "?";
 }
 function getTeamTactic(idx){if(typeof idx==='number'&&idx<16)return G.tactics[idx]||'4-3-3';return '4-3-3';}
@@ -1320,19 +1362,20 @@ function playLeagueWeek(){
             if (!p || p.teamIndex === -1) return; 
             
             let minFee = Math.max(0.1, (p.price * 0.1));
+            const clubName = getTeamName(p.teamIndex);
             
             if (bid.fee >= minFee * 0.8) { 
                 G.inbox.unshift({
                     id: Math.random().toString(36).substr(2,9), type: 'loan_bid_accepted', isRead: false,
                     title: `✅ Loan Accepted: ${p.name}`,
-                    body: `${TEAMS[p.teamIndex]} accepted your loan offer of ${fmt(bid.fee)} for ${p.name}.`,
+                    body: `${clubName} accepted your loan offer of ${fmt(bid.fee)} for ${p.name}.`,
                     playerId: p.id, fee: bid.fee
                 });
             } else {
                 G.inbox.unshift({
                     id: Math.random().toString(36).substr(2,9), isRead: false,
                     title: `❌ Loan Rejected: ${p.name}`,
-                    body: `${TEAMS[p.teamIndex]} rejected your loan offer of ${fmt(bid.fee)} for ${p.name} for being too low.`,
+                    body: `${clubName} rejected your loan offer of ${fmt(bid.fee)} for ${p.name} for being too low.`,
                     action: null
                 });
             }
@@ -1870,12 +1913,25 @@ function playNextPendingMatch(){
     
     function closeSubModal(){swapIdA=null;document.getElementById('mov').classList.remove('show');liveMatchState.isPaused=false;}
     
-    // ─── SQUAD TAB (VERTICAL PITCH) ────────────────
     function renderSquadPitchVertical(squad,tacticName,mode){
         const tacticKey = TACTICS_MAP[tacticName] || '4-3-3';
         const slots=FORMATIONS[tacticKey];
-        const yMap={'4-3-3':[90,72,72,72,72,53,44,53,20,20,20],'4-3-3 Attack':[90, 72,72,72,72, 55,40,55, 20,20,20],'4-4-2':[90,72,72,72,72,52,48,48,52,20,20],'4-2-3-1':[90,75,75,75,75,60,60,38,46,38,18],'4-2-3-1 Wide':[90, 75,75,75,75, 60,60, 36,44,36, 18],'3-5-2':[90,75,75,75,48,60,52,60,48,20,20],'3-4-3':[90, 75,75,75, 52,48,48,52, 20,20,20],'5-3-2':[90,74,72,70,72,74,53,44,53,20,20]}[tacticKey];
-        const xMap={'4-3-3':[50,85,65,35,15,80,50,20,80,50,20],'4-3-3 Attack':[50, 85,65,35,15, 65,50,35, 80,50,20],'4-4-2':[50,85,65,35,15,85,60,40,15,60,40],'4-2-3-1':[50,85,65,35,15,65,35,80,50,20,50],'4-2-3-1 Wide':[50, 85,65,35,15, 65,35, 85,50,15, 50],'3-5-2':[50,75,50,25,90,70,50,30,10,60,40],'3-4-3':[50, 75,50,25, 85,65,35,15, 80,50,20],'5-3-2':[50,90,70,50,30,10,80,50,20,60,40]}[tacticKey];
+        // Unified coordinate maps for all formations (11 positions)
+        // y: % from top (0=top/opponent goal, 100=bottom/own goal)
+        // x: % from left
+        const FORMATION_COORDS = {
+            '4-3-3':     { y:[92,74,74,74,74,53,44,53,18,18,18], x:[50,83,63,37,17,78,50,22,80,50,20] },
+            '4-3-3 Attack':{ y:[92,74,74,74,74,53,44,53,18,18,18], x:[50,83,63,37,17,65,50,35,82,50,18] },
+            '4-4-2':     { y:[92,74,74,74,74,52,52,52,52,20,20],   x:[50,83,63,37,17,83,57,43,17,63,37] },
+            '4-2-3-1':   { y:[92,74,74,74,74,60,60,40,48,40,18],   x:[50,83,63,37,17,65,35,80,50,20,50] },
+            '4-2-3-1 Wide':{ y:[92,74,74,74,74,60,60,38,48,38,18], x:[50,83,63,37,17,65,35,85,50,15,50] },
+            '3-5-2':     { y:[92,74,74,74,55,60,53,60,55,20,20],   x:[50,72,50,28,90,68,50,32,10,62,38] },
+            '3-4-3':     { y:[92,74,74,74,53,53,53,53,18,18,18],   x:[50,72,50,28,83,61,39,17,80,50,20] },
+            '5-3-2':     { y:[92,74,72,70,72,74,52,44,52,20,20],   x:[50,90,70,50,30,10,78,50,22,63,37] }
+        };
+        const coords = FORMATION_COORDS[tacticKey] || FORMATION_COORDS['4-3-3'];
+        const yMap = coords.y;
+        const xMap = coords.x;
         let placedIds=new Set();
         const isLiveSub=mode==='sub';
         let dots=slots.map((slotName,i)=>{
@@ -2036,7 +2092,7 @@ function buildMainActionBtn(){
         const chem=Math.round(calcTeamChemistry(G.playerTeamIdx, tactic));
         const trOpts=[['balanced','⚖️ Balanced'],['attack','⚔️ Attack'],['defense','🛡️ Defense'],['fitness','💪 Fitness'],['tactical','🧠 Tactical']];
         document.getElementById('main').innerHTML=`
-        <div class="sec">👥 Squad (${sq.length}/${MAX_SQUAD_SIZE} total · ${xiCount}/11 XI)</div>
+        <div class="sec">👥 Squad — ${sq.length}/${MAX_SQUAD_SIZE} pemain · <span style="color:var(--gg)">${xiCount} Starting XI</span> · <span style="color:var(--bg2)">${sq.length-xiCount} Bench</span></div>
         <div class="card">
           <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:5px;margin-bottom:5px">
             ${TACTICS.map(t=>`<button class="btn btn-sm ${t===tactic?'btn-p':'btn-s'}" onclick="setTactic('${t}')">${t}</button>`).join('')}
@@ -2050,7 +2106,7 @@ function buildMainActionBtn(){
               <div class="chem-bar" style="margin-top:3px;"><div class="chem-fill" style="width:${chem}%"></div></div>
           </div>
           ${renderSquadPitchVertical(sq,tactic,'squad')}
-          <p style="font-size:.65rem;color:var(--gold);text-align:center;margin-top:8px">💡 Click a player on the pitch, then another player to <b>swap positions</b>.</p>
+          <p style="font-size:.65rem;color:var(--gold);text-align:center;margin-top:8px">💡 Klik pemain (XI atau Bench) lalu klik pemain lain untuk <b>menukar posisi</b>. Bisa tukar XI↔Bench atau sesama Bench.</p>
         </div>
         <div class="card" style="border-color:var(--bg2)">
           <div class="sec">🏋️ Training Focus</div>
@@ -2059,9 +2115,14 @@ function buildMainActionBtn(){
           </div>
           <p style="font-size:.62rem;color:var(--dim);margin-top:7px">Attack/Defense gives a small chance to boost related players' OVR. Fitness speeds up weekly stamina recovery. Tactical speeds up Chemistry growth.</p>
         </div>
-        <div class="sec" style="margin-top:15px">Full Player List</div>
+        <div class="sec" style="margin-top:15px">Full Player List — Starting XI & Bench</div>
         ${['GK','DEF','MID','FWD'].map(cat=>{
-            const players=sq.filter(p=>p.mainCat===cat).sort((a,b)=>POS_ORDER[a.pos]-POS_ORDER[b.pos]||b.ovr-a.ovr);
+            const players=sq.filter(p=>p.mainCat===cat).sort((a,b)=>{
+                // XI players first, then bench, sorted by OVR within each group
+                if(a.inXI&&!b.inXI) return -1;
+                if(!a.inXI&&b.inXI) return 1;
+                return b.ovr-a.ovr;
+            });
             if(!players.length)return'';
             return`<div style="margin-bottom:10px"><div style="font-size:.7rem;font-weight:bold;color:var(--dim);margin-bottom:5px">${cat}</div>${players.map(p=>playerCardHTML(p)).join('')}</div>`;
         }).join('')}`;
@@ -2073,11 +2134,17 @@ function buildMainActionBtn(){
         const injStr = p.injury > 0 ? `<b style="color:var(--red);">🚑 Injured (${p.injury}w)</b>` : `En:${p.energy}% Mor:${Math.round(p.moral)}`;
         const loanBadge = p.isLoan ? `<span class="loan-badge">LOAN</span>` : '';
         const avgR = p.ratingCount>0 ? (p.totalRating/p.ratingCount).toFixed(1) : '-';
+        let statusBadge = '';
+        if(p.inXI){
+            statusBadge = `<span style="font-size:.55rem;color:var(--gg);border:1px solid var(--gg);padding:0 3px;border-radius:3px">XI:${p.slotPos}</span>`;
+        } else {
+            statusBadge = `<span style="font-size:.55rem;color:var(--bg2);border:1px solid var(--bg2);padding:0 3px;border-radius:3px">BENCH</span>`;
+        }
         
         return`<div class="plc ${isSel?'selected-swap':''}" onclick="handleSwapClick('${p.id}')">
           <div style="width:48px;text-align:center;font-weight:900;color:var(--gold);font-size:.65rem">${p.pos}<div style="font-size:.48rem;color:var(--dim);font-weight:normal;white-space:nowrap;overflow:hidden">${POS_LABELS[p.pos]||''}</div></div>
           <div style="flex:1;min-width:0">
-              <div class="pln"><span class="${p.injury>0?'injured-text':''}">${p.name}</span> ${p.isStar?'⭐':''} ${loanBadge} ${p.inXI?`<span style="font-size:.55rem;color:var(--gg);border:1px solid var(--gg);padding:0 3px;border-radius:3px">XI:${p.slotPos}</span>`:''}</div>
+              <div class="pln"><span class="${p.injury>0?'injured-text':''}">${p.name}</span> ${p.isStar?'⭐':''} ${loanBadge} ${statusBadge}</div>
               <div style="font-size:.6rem;color:var(--dim);margin-top:2px">${effStr} | Contract: ${p.contract}y | Rtg: <b style="color:var(--gold)">${avgR}</b> | ${injStr}</div>
           </div>
           <div class="ovr ${ovrCls(p.ovr)}">${p.ovr}</div>
@@ -2304,9 +2371,10 @@ function buildMainActionBtn(){
     function initiateLoanBid(pid, defaultFee) {
         const p = G.transferMarket.find(x=>x.id===pid);
         if(!p) return;
+        const clubName = p.teamIndex >= 16 ? (FOREIGN_CLUBS[p.teamIndex-16]||'European Club') : (p.teamIndex >= 0 ? TEAMS[p.teamIndex] : 'Free Agent');
         document.getElementById('mtitle').innerHTML = `🤝 Loan Offer: ${p.name}`;
         document.getElementById('mbody').innerHTML = `
-            <div style="font-size:.75rem; margin-bottom:10px;">Send a loan offer to <b>${TEAMS[p.teamIndex]}</b> for this player.</div>
+            <div style="font-size:.75rem; margin-bottom:10px;">Send a loan offer to <b>${clubName}</b> for this player.</div>
             <div class="row bt" style="background:var(--sf2); padding:10px; border-radius:6px;">
                 <span style="font-size:.8rem; font-weight:bold; color:var(--dim)">Offer Fee:</span>
                 <div class="row">
@@ -2408,7 +2476,7 @@ function buildMainActionBtn(){
                     </select>
                 </div>
             </div>`;
-            let pool = G.transferMarket;
+            let pool = G.transferMarket.filter(p => p.teamIndex !== G.playerTeamIdx); // never show own team players
             if (tfFilters.search) pool = pool.filter(p => p.name.toLowerCase().includes(tfFilters.search));
             if (tfFilters.role) pool = pool.filter(p => p.mainCat === tfFilters.role);
             if (tfFilters.minOvr) pool = pool.filter(p => p.ovr >= parseInt(tfFilters.minOvr));
@@ -2424,6 +2492,15 @@ function buildMainActionBtn(){
             pool.forEach(p=>{
                 const isFree = p.teamIndex === -1;
                 const canBuy = isFree || G.budget >= p.price;
+                // Determine club display name
+                let clubLabel = '';
+                if(isFree){
+                    clubLabel = '<span style="color:var(--dim);font-size:.6rem">Free Agent</span>';
+                } else if(p.teamIndex >= 16){
+                    clubLabel = `<span style="color:var(--bg2);font-size:.6rem">${FOREIGN_CLUBS[p.teamIndex-16]||'European Club'}</span>`;
+                } else if(p.teamIndex >= 0){
+                    clubLabel = `<span style="color:var(--dim);font-size:.6rem">${TEAMS[p.teamIndex]}</span>`;
+                }
                 
                 let loanFeeRaw = p.price * 0.05;
                 if (loanFeeRaw < 0.1) loanFeeRaw = 0.1;
@@ -2433,7 +2510,7 @@ function buildMainActionBtn(){
                 html+=`<div class="row bt" style="background:var(--sf2);padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--brd)">
                     <div>
                         <div style="font-weight:bold;font-size:.8rem;cursor:pointer" onclick="openPlayerModal('${p.id}')"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> ${p.name}${p.isStar?'⭐':''}</div>
-                        <div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | Age: ${p.age}</div>
+                        <div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | Age: ${p.age} | ${clubLabel}</div>
                     </div>
                     <div style="text-align:right; display:flex; gap:4px; flex-direction:column;">
                         ${isFree ? `
@@ -2453,12 +2530,14 @@ function buildMainActionBtn(){
                 </div>`;
             });
             html+=`</div>`;
-            html+=`<div class="sec">Sell / Release Player</div><div class="card" style="padding-bottom:2px;">`;
+            html+=`<div class="sec">Jual / Lepas Pemain</div><div class="card" style="padding-bottom:2px;">`;
             (G.squads[G.playerTeamIdx]||[]).forEach(p=>{
                 const isLoan = p.isLoan;
                 const sp=Math.max(1,getPrice(p.ovr, p.age)-rnd(0,1));
+                const statusColor = p.inXI ? 'var(--gg)' : 'var(--bg2)';
+                const statusLabel = p.inXI ? 'Starting XI' : 'Bench';
                 html+=`<div class="row bt" style="background:var(--sf2);padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--brd)">
-                    <div><div style="font-weight:bold;font-size:.8rem"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> <span class="${p.injury>0?'injured-text':''}">${p.name}</span>${p.isStar?'⭐':''} ${isLoan?'<span class="loan-badge">LOAN</span>':''}</div><div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | ${p.inXI?'<span style="color:var(--gg)">Starting XI</span>':'<span style="color:var(--dim)">Bench</span>'}</div></div>
+                    <div><div style="font-weight:bold;font-size:.8rem"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> <span class="${p.injury>0?'injured-text':''}">${p.name}</span>${p.isStar?'⭐':''} ${isLoan?'<span class="loan-badge">LOAN</span>':''}</div><div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | <span style="color:${statusColor}">${statusLabel}</span></div></div>
                     <div style="text-align:right">
                         ${isLoan ? 
                           `<button class="btn btn-sm btn-d" onclick="terminateLoan('${p.id}')">RECALL</button>` : 
@@ -2481,7 +2560,7 @@ function buildMainActionBtn(){
         
         if(!isFree) G.budget = parseFloat((G.budget - p.price).toFixed(2));
         p.teamIndex=G.playerTeamIdx;
-        p.contract = rnd(2, 4);
+        p.contract = rnd(2, 4); // new signings get 2-4 year contracts
         p.isLoan = false; p.originalTeamIdx = -1;
         if(Array.isArray(G.squads[G.playerTeamIdx])) G.squads[G.playerTeamIdx].push(p);
         G.transferMarket.splice(idx,1);
@@ -3306,7 +3385,7 @@ function buildMainActionBtn(){
             }
             const expired = sq.filter(p=>p.contract<=0 && !p.isLoan);
             expired.forEach(p=>{
-                const idx=sq.indexOf(p); p.teamIndex = -1; p.contract = rnd(1,3); p.price = 0;
+                const idx=sq.indexOf(p); p.teamIndex = -1; p.contract = rnd(2,4); p.price = getPrice(p.ovr, p.age);
                 G.transferMarket.push(p); sq.splice(idx, 1);
                 if(ti === G.playerTeamIdx) G.news.unshift({ date: 'Pra-Musim', title: 'Bebas Transfer', body: `${p.name} telah meninggalkan ${TEAMS[G.playerTeamIdx]} secara gratis setelah kontraknya habis.`});
                 const origin = ti < 16 ? rollDomesticBiasedOrigin() : 'ID';
@@ -3328,7 +3407,10 @@ function buildMainActionBtn(){
         }
         for(let i=0; i<30; i++) {
             if(G.transferMarket.length > 200) G.transferMarket.shift(); 
-            G.transferMarket.push(genTransferPlayer());
+            const p = genTransferPlayer();
+            // Ensure generated player is not from player's team
+            if(p.teamIndex === G.playerTeamIdx) p.teamIndex = (G.playerTeamIdx + 1) % 16;
+            G.transferMarket.push(p);
         }
         G.transferMarket.sort((a,b)=>b.ovr-a.ovr);
         G.log=[{cls:'info',text:`🌟 Musim ${G.season} dimulai! Hadiah telah masuk kas.`}];
@@ -3369,7 +3451,7 @@ function buildMainActionBtn(){
             document.getElementById('mbody').innerHTML=`
             <div style="text-align:center;margin-bottom:15px">
                 <div style="font-size:2rem;font-weight:900"><span class="${p.injury>0?'injured-text':''}">${p.name}</span> ${p.isStar?'⭐':''}</div>
-                <div style="font-size:.8rem;color:var(--dim); margin-top:4px;">${flag} | ${p.teamIndex>=0?TEAMS[p.teamIndex]:'Bebas Transfer'}</div>
+                <div style="font-size:.8rem;color:var(--dim); margin-top:4px;">${flag} | ${p.teamIndex===-1?'Bebas Transfer':p.teamIndex>=16?(FOREIGN_CLUBS[p.teamIndex-16]||'European Club'):p.teamIndex>=0?TEAMS[p.teamIndex]:'Bebas Transfer'}</div>
                 ${injInfo}
             </div>
             <div class="g4">
