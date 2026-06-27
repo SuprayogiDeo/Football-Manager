@@ -27,6 +27,24 @@
             --txt:#d4eadc;--dim:#7aab8a;--mut:#4a7a5a;--wh:#f0f8f2;
             --shd:0 4px 20px rgba(0,0,0,.5);--r:10px;--rs:6px;
         }
+        /* ─── E6: Soft Light Theme ─────────────────────────────── */
+        body.light-mode{
+            --gd:#cfe8da;--gm:#bfe0cf;--gl:#2d8c63;--gg:#1f9e63;
+            --bd:#dce8f5;--bm:#cfe0f2;--bl:#2d6abf;--bg2:#3a7fd1;
+            --gold:#b8860b;--red:#cf3a3a;--orng:#d2691e;
+            --bg:#f4f1ea;--sf:#ece7da;--sf2:#e3ddcb;--card:#fbf9f3;--brd:#d8d0bd;
+            --txt:#2b2a26;--dim:#6b6657;--mut:#8a8472;--wh:#1f1e1b;
+            --shd:0 4px 16px rgba(60,50,30,.12);
+        }
+        body.light-mode #live-board,body.light-mode #live-board *{
+            /* Live match broadcast view stays dark/immersive in both themes, like a TV overlay */
+            --gd:#0d3b2e;--gm:#1a5c44;--gl:#2d8c63;--gg:#3dba82;
+            --bd:#0a1f3c;--bm:#1a3a6b;--bl:#2d6abf;--bg2:#4a9eff;
+            --bg:#0a1812;--sf:#0f2418;--sf2:#172e20;--card:#1c3828;--brd:#2a5040;
+            --txt:#d4eadc;--dim:#7aab8a;--mut:#4a7a5a;--wh:#f0f8f2;
+        }
+        html,body,#hdr,#app,#tabs,.card,.badge,.btn{transition:background-color .25s ease,color .25s ease,border-color .25s ease;}
+
         html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Segoe UI',sans-serif;font-size:14px;overflow-x:hidden;overscroll-behavior:none;}
         #app{display:flex;flex-direction:column;height:100dvh;max-width:540px;margin:0 auto;position:relative;background:var(--bg)}
         @media(min-width:541px){#app{border-left:1px solid var(--brd);border-right:1px solid var(--brd)}}
@@ -192,6 +210,7 @@
             <span class="badge wthr" id="wthr-badge" style="display:none">☀️ –</span>
             <span class="badge gld" id="bgt">€ 0 M</span>
             <span class="badge" id="inbox-badge" style="cursor:pointer;" onclick="switchTab('inbox')">📧 Inbox</span>
+            <span class="badge" id="theme-toggle-btn" style="cursor:pointer;" onclick="toggleTheme()" title="Toggle dark/light mode">🌙</span>
         </div>
     </div>
     <nav id="tabs">
@@ -751,9 +770,9 @@ function getWeeklyGrowth(p) {
 
 // ─── MILESTONES SYSTEM ────────────────────────────────────
 const MILESTONES_DEF = [
-    { id:'first_win', name:'Kemenangan Pertama', desc:'Menangkan match pertama', icon:'🏆', reward: { reputation: 5 }, check: (G) => G.leagueResults.filter(m=>m.homeIdx===G.playerTeamIdx||m.awayIdx===G.playerTeamIdx).some(m=>(m.homeIdx===G.playerTeamIdx&&m.homeScore>m.awayScore)||(m.awayIdx===G.playerTeamIdx&&m.awayScore>m.homeScore)) },
-    { id:'clean_sheet_run', name:'Tembok Beton', desc:'3 clean sheet berturut-turut', icon:'🧱', reward: { fanSupport: 10 }, check:(G)=>{ const myMatches=G.leagueResults.filter(m=>m.homeIdx===G.playerTeamIdx||m.awayIdx===G.playerTeamIdx).slice(-3); if(myMatches.length<3)return false; return myMatches.every(m=>(m.homeIdx===G.playerTeamIdx&&m.awayScore===0)||(m.awayIdx===G.playerTeamIdx&&m.homeScore===0)); } },
-    { id:'perfect_month', name:'Perfect Month', desc:'Menang 4 match berturut-turut', icon:'🌟', reward: { boardConfidence: 15 }, check:(G)=>{ const myMatches=G.leagueResults.filter(m=>m.homeIdx===G.playerTeamIdx||m.awayIdx===G.playerTeamIdx).slice(-4); if(myMatches.length<4)return false; return myMatches.every(m=>(m.homeIdx===G.playerTeamIdx&&m.homeScore>m.awayScore)||(m.awayIdx===G.playerTeamIdx&&m.awayScore>m.homeScore)); } },
+    { id:'first_win', name:'Kemenangan Pertama', desc:'Menangkan match pertama', icon:'🏆', reward: { reputation: 5 }, check: (G) => G.leagueResults.filter(m=>(m.homeIdx===G.playerTeamIdx||m.awayIdx===G.playerTeamIdx)&&!m._pendingReveal).some(m=>(m.homeIdx===G.playerTeamIdx&&m.homeScore>m.awayScore)||(m.awayIdx===G.playerTeamIdx&&m.awayScore>m.homeScore)) },
+    { id:'clean_sheet_run', name:'Tembok Beton', desc:'3 clean sheet berturut-turut', icon:'🧱', reward: { fanSupport: 10 }, check:(G)=>{ const myMatches=G.leagueResults.filter(m=>(m.homeIdx===G.playerTeamIdx||m.awayIdx===G.playerTeamIdx)&&!m._pendingReveal).slice(-3); if(myMatches.length<3)return false; return myMatches.every(m=>(m.homeIdx===G.playerTeamIdx&&m.awayScore===0)||(m.awayIdx===G.playerTeamIdx&&m.homeScore===0)); } },
+    { id:'perfect_month', name:'Perfect Month', desc:'Menang 4 match berturut-turut', icon:'🌟', reward: { boardConfidence: 15 }, check:(G)=>{ const myMatches=G.leagueResults.filter(m=>(m.homeIdx===G.playerTeamIdx||m.awayIdx===G.playerTeamIdx)&&!m._pendingReveal).slice(-4); if(myMatches.length<4)return false; return myMatches.every(m=>(m.homeIdx===G.playerTeamIdx&&m.homeScore>m.awayScore)||(m.awayIdx===G.playerTeamIdx&&m.awayScore>m.homeScore)); } },
     { id:'comeback_king', name:'Comeback King', desc:'Menang dari ketinggalan 2 gol', icon:'👑', reward: { reputation: 8 } },
     { id:'derby_dominator', name:'Derby Dominator', desc:'Menangkan derby match', icon:'🔥', reward: { fanSupport: 20, budget: 5 } },
     { id:'title_winner', name:'Champion!', desc:'Juara Liga', icon:'🥇', reward: { reputation: 25 } },
@@ -865,6 +884,126 @@ function setDefaultXI(squad,tacticName){
         if(!pool.length)pool=squad.filter(p=>!p.inXI).sort((a,b)=>b.ovr-a.ovr);
         if(pool.length){pool[0].inXI=true;pool[0].slotPos=slot;}
     });
+}
+// ─── Smarter AI: tactical self-adjustment ──────────────────
+// Buckets each formation into a broad attacking/balanced/defensive character so AI clubs can pick
+// a tactic that fits their situation, instead of sitting on one static formation all season.
+const TACTIC_CHARACTER = {
+    "4-3-3 Menyerang": "attack", "3-4-3": "attack", "4-2-3-1 Melebar": "attack",
+    "4-3-3": "balanced", "4-2-3-1": "balanced", "4-4-2": "balanced",
+    "3-5-2": "defensive", "5-3-2": "defensive"
+};
+function pickTacticByCharacter(character){
+    const pool = TACTICS.filter(t => TACTIC_CHARACTER[t] === character);
+    return pick(pool.length ? pool : TACTICS);
+}
+// Called periodically during the league phase so AI opponents react to how their season is going:
+// clubs near the top of the table lean attacking to press their advantage, clubs near the bottom
+// lean defensive to avoid heavy defeats, and clubs out of form (3+ losses in last 5) shake things up.
+function aiAdjustTactics(){
+    if(!Array.isArray(G.leagueTable) || G.leagueTable.length < 16) return;
+    const ranked = [...G.leagueTable].sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga));
+    const n = ranked.length;
+    ranked.forEach((row, rank) => {
+        const teamIdx = row.teamIdx;
+        if(teamIdx === G.playerTeamIdx) return; // never override the user's own tactic choice
+        const squad = G.squads[teamIdx];
+        if(!Array.isArray(squad) || squad.length < 11) return;
+        const recent = G.leagueResults.filter(r=>!r._pendingReveal && (r.homeIdx===teamIdx||r.awayIdx===teamIdx)).slice(-5);
+        const recentLosses = recent.filter(r=>{
+            const isH = r.homeIdx===teamIdx;
+            const my = isH?r.homeScore:r.awayScore, opp = isH?r.awayScore:r.homeScore;
+            return my < opp;
+        }).length;
+        let character;
+        const positionRatio = rank / n; // 0 = top of table, ~1 = bottom
+        if(recentLosses >= 3) character = pick(['attack','defensive']); // out of form: shake things up
+        else if(positionRatio < 0.3) character = Math.random() < 0.65 ? 'attack' : 'balanced';
+        else if(positionRatio > 0.7) character = Math.random() < 0.6 ? 'defensive' : 'balanced';
+        else character = pick(['balanced','attack','defensive']);
+        const newTactic = pickTacticByCharacter(character);
+        if(G.tactics[teamIdx] !== newTactic){
+            G.tactics[teamIdx] = newTactic;
+            setDefaultXI(squad, newTactic);
+        }
+    });
+}
+// ─── Smarter AI: transfer market activity ──────────────────
+// Without this, AI clubs never touch the transfer market — their squads sit static all season
+// while the user is the only one buying/selling. This gives every Liga 1 club (besides the user)
+// a small weekly chance, during the transfer window, to offload a fading/surplus player onto the
+// market and to snap up a market player that would upgrade their own squad. Keeps the market feeling
+// alive and creates real competition for good listings instead of them just waiting for the user.
+function processAITransferActivity(){
+    if(!Array.isArray(G.transferMarket)) return;
+    const isPlayerBidPending = (pid) => {
+        if(G.transferBids && G.transferBids.find(b=>b.id===pid)) return true;
+        if(G.inbox && G.inbox.find(m=>(m.type==='transfer_bid_response'||m.type==='transfer_bid_accepted')&&m.playerId===pid)) return true;
+        if(G.loanBids && G.loanBids.find(b=>b.id===pid)) return true;
+        return false;
+    };
+    for(let teamIdx=0; teamIdx<16; teamIdx++){
+        if(teamIdx === G.playerTeamIdx) continue;
+        const squad = G.squads[teamIdx];
+        if(!Array.isArray(squad) || squad.length < MIN_SQUAD_SIZE+1) continue; // never sell below the floor
+        // --- AI sells a fading/surplus player onto the market ---
+        if(Math.random() < 0.12){
+            const sellable = squad.filter(p => !p.isLoan && !p._listed && (p.age >= 31 || (!p.inXI && p.ovr < 65)));
+            if(sellable.length){
+                const chosen = pick(sellable);
+                chosen._listed = true;
+                chosen.price = getPrice(chosen.ovr, chosen.age);
+                chosen.clubName = TEAMS[teamIdx];
+                chosen.teamIndex = teamIdx;
+                G.transferMarket.push(chosen);
+            }
+        }
+        // --- AI buys a market player who'd upgrade their own squad ---
+        if(Math.random() < 0.10 && squad.length < MAX_SQUAD_SIZE - 2){
+            const candidates = G.transferMarket.filter(p => p.teamIndex !== teamIdx && !isPlayerBidPending(p.id));
+            if(candidates.length){
+                // Look for a real upgrade: a market player noticeably better than this club's
+                // current weakest starter in the same broad category.
+                const byCat = {};
+                candidates.forEach(p=>{ (byCat[p.mainCat] = byCat[p.mainCat]||[]).push(p); });
+                const catsNeeded = Object.keys(byCat);
+                if(catsNeeded.length){
+                    const cat = pick(catsNeeded);
+                    const ownInCat = squad.filter(p=>p.mainCat===cat);
+                    const weakestOwn = ownInCat.length ? Math.min(...ownInCat.map(p=>p.ovr)) : 0;
+                    const pool = byCat[cat].filter(p => p.ovr >= weakestOwn + 4 && p.ovr <= weakestOwn + 22);
+                    if(pool.length){
+                        const target = pick(pool);
+                        const mIdx = G.transferMarket.findIndex(x=>x.id===target.id);
+                        if(mIdx >= 0 && squad.length < MAX_SQUAD_SIZE){
+                            const sellerIdx = target.teamIndex;
+                            const sellerName = (sellerIdx>=0 && sellerIdx<16) ? TEAMS[sellerIdx] : (sellerIdx>=16 ? (FOREIGN_CLUBS[sellerIdx-16]||'European Club') : 'a free agent');
+                            if(sellerIdx >= 0 && sellerIdx < 16 && Array.isArray(G.squads[sellerIdx])){
+                                const origSq = G.squads[sellerIdx];
+                                const origIdx = origSq.indexOf(target);
+                                if(origIdx >= 0){
+                                    origSq.splice(origIdx, 1);
+                                    if(target.inXI) setDefaultXI(origSq, G.tactics[sellerIdx] || '4-3-3');
+                                }
+                            }
+                            delete target._listed;
+                            target.teamIndex = teamIdx;
+                            target.contract = rnd(2,4);
+                            target.isLoan = false; target.originalTeamIdx = -1; target.inXI = false; target.slotPos = null;
+                            squad.push(target);
+                            G.transferMarket.splice(mIdx,1);
+                            G.news.unshift({
+                                date: formatDate(G.currentDate),
+                                title: 'Transfer Completed',
+                                body: `${TEAMS[teamIdx]} have completed the signing of ${target.name} from ${sellerName}.`,
+                                tags: ['transfer']
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 function genTransferPlayer(squads, excludeTeamIdx){
     const cat=pick(['GK','DEF','MID','FWD']);
@@ -1023,17 +1162,33 @@ function teamStrength(teamIdx,tacticName){
     if(G.stadium && teamIdx===G.playerTeamIdx) str += (G.stadium.trainingLevel||1)*0.4;
     return str;
 }
+// Sample a goal count from a Poisson-like distribution for a given expected-goals value (lambda).
+// This produces realistic, continuous-feeling scorelines instead of crude rnd() bracket tables —
+// stronger teams reliably score and concede more, but variance never disappears entirely.
+function poissonGoals(lambda){
+    lambda = Math.max(0.05, Math.min(5, lambda));
+    const L = Math.exp(-lambda);
+    let k = 0, p = 1;
+    do { k++; p *= Math.random(); } while (p > L);
+    return k - 1;
+}
 function simulateMatch(hIdx,aIdx,weatherKey,derby){
     const ht=typeof hIdx==='number'&&hIdx<16?(G.tactics[hIdx]||'4-3-3'):'4-3-3';
     const at=typeof aIdx==='number'&&aIdx<16?(G.tactics[aIdx]||'4-3-3'):'4-3-3';
     const hStr=teamStrength(hIdx,ht);const aStr=teamStrength(aIdx,at);
-    let diff=(hStr)-(aStr)+2+rnd(-4,4);
+    let diff=hStr-aStr;
     if(weatherKey) diff = weatherDiffAdjust(weatherKey, diff);
-    if(derby) diff = diff*0.6 + rnd(-3,3);
-    let h,a;
-    if(diff>8){h=rnd(2,4);a=rnd(0,1);}else if(diff>4){h=rnd(1,3);a=rnd(0,1);}
-    else if(diff>1){h=rnd(0,2);a=rnd(0,2);}else if(diff>-4){h=rnd(0,2);a=rnd(0,2);}
-    else if(diff>-8){h=rnd(0,1);a=rnd(1,3);}else{h=rnd(0,1);a=rnd(2,4);}
+    if(derby) diff *= 0.55; // derbies run closer than the raw quality gap suggests
+    const tacticalNoise = rnd(-30,30)/10; // small game-to-game variance, kept modest relative to the OVR gap
+    diff += tacticalNoise;
+    // Convert the strength gap into expected goals for each side. ~1.3 is a typical league-average
+    // expected-goals baseline; +0.045 per point of `diff` makes a ~20pt OVR gap a heavy (but not
+    // automatic) favourite, matching the statistics of a real top-vs-bottom table matchup.
+    const homeAdv = 0.22;
+    let hLambda = 1.3 + homeAdv + diff*0.045;
+    let aLambda = 1.3 - homeAdv - diff*0.045;
+    const h = poissonGoals(hLambda);
+    const a = poissonGoals(aLambda);
     const events=generateEvents(hIdx,aIdx,h,a);
     const ratingData=computeMatchRatings(hIdx,aIdx,h,a,events);
     return{home:h,away:a,events,ratings:ratingData.ratings,motm:ratingData.motm};
@@ -1253,6 +1408,7 @@ function freshState(){
         log:[{cls:'info',text:'🌟 Welcome! You have 8 pre-season weeks before the league begins.'}],
         scoutQueue: [],
         loanBids: [],
+        transferBids: [],
         godMode: false,
         currentWeather: null,
         training: 'balanced',
@@ -1398,6 +1554,7 @@ function migrateState(){
     if(!Array.isArray(G.log)) G.log = [];
     if(!Array.isArray(G.scoutQueue)) G.scoutQueue = [];
     if(!Array.isArray(G.loanBids)) G.loanBids = [];
+    if(!Array.isArray(G.transferBids)) G.transferBids = [];
 
     // ── Per-player field defaults (covers legacy saves with fewer fields) ──
     if(G.milestones === undefined) G.milestones = {};
@@ -1447,6 +1604,7 @@ function migrateState(){
     // Ensure arrays that older saves might not have
     if(!Array.isArray(G.inbox)) G.inbox = [];
     if(!Array.isArray(G.loanBids)) G.loanBids = [];
+    if(!Array.isArray(G.transferBids)) G.transferBids = [];
     if(!Array.isArray(G.scoutQueue)) G.scoutQueue = [];
     if(!Array.isArray(G.news)) G.news = [];
     if(!Array.isArray(G.log)) G.log = [];
@@ -1586,6 +1744,7 @@ function playLeagueWeek(){
     G.pcPreMatchAvailable = false;  // set true when a match is found for player
     const inTW = G.phase === 'preseason' || (G.week >= 14 && G.week <= 17);
     G.pcTransferAvailable = inTW;
+    if(inTW){ try { processAITransferActivity(); } catch(e) {} }
     // Scout processing
     if (G.scoutQueue && G.scoutQueue.length > 0) {
         G.scoutQueue.forEach(q => {
@@ -1637,6 +1796,40 @@ function playLeagueWeek(){
         });
         G.loanBids = [];
     }
+    // Process User Transfer Bids (C1: BUY -> BID negotiation)
+    if (G.transferBids && G.transferBids.length > 0) {
+        G.transferBids.forEach(bid => {
+            const p = G.transferMarket.find(x => x.id === bid.id);
+            if (!p || p.teamIndex === -1) return;
+            const clubName = getTeamName(p.teamIndex);
+            const ratio = bid.bid / bid.askPrice;
+            if (ratio >= 0.9) {
+                G.inbox.unshift({
+                    id: Math.random().toString(36).substr(2,9), type: 'transfer_bid_accepted', isRead: false,
+                    title: `✅ Bid Accepted: ${p.name}`,
+                    body: `${clubName} accepted your bid of ${fmt(bid.bid)} for ${p.name}. The deal is going through.`,
+                    playerId: p.id, finalFee: bid.bid
+                });
+            } else if (ratio >= 0.55) {
+                // Club counters somewhere between the user's bid and the asking price
+                const counterFee = parseFloat((bid.bid + (bid.askPrice - bid.bid) * 0.6).toFixed(2));
+                G.inbox.unshift({
+                    id: Math.random().toString(36).substr(2,9), type: 'transfer_bid_response', isRead: false,
+                    title: `🤝 Counter-Offer: ${p.name}`,
+                    body: `${clubName} reviewed your offer of ${fmt(bid.bid)} and wants ${fmt(counterFee)} for ${p.name}.`,
+                    playerId: p.id, askPrice: bid.askPrice, counterFee, rounds: 0
+                });
+            } else {
+                G.inbox.unshift({
+                    id: Math.random().toString(36).substr(2,9), type: 'transfer_bid_rejected', isRead: false,
+                    title: `❌ Bid Rejected: ${p.name}`,
+                    body: `${clubName} rejected your bid of ${fmt(bid.bid)} for ${p.name} for being too low.`,
+                    playerId: p.id
+                });
+            }
+        });
+        G.transferBids = [];
+    }
     // AI Loan Offers to Player
     if (inTW && Math.random() < 0.4) {
         let mySq = G.squads[G.playerTeamIdx];
@@ -1671,6 +1864,7 @@ function playLeagueWeek(){
     const baseDate=addDays(G.startDate,14+(G.week-1)*7);
     weekPendingMatches=[];weekPendingIndex=0;
     if(!Array.isArray(G.schedule) || G.schedule.length < SEASON_WEEKS){ G.schedule = buildSchedule(); }
+    if(G.week % 4 === 0){ try { aiAdjustTactics(); } catch(e) {} }
     const leagueMatches=G.schedule[G.week-1] || [];
     const isHomeThisWeek = leagueMatches.some(([h,a])=>h===G.playerTeamIdx);
     payWeeklyIncome(isHomeThisWeek);
@@ -1828,55 +2022,97 @@ function _simulateLeagueWeek(leagueMatches,baseDate){
         const derby = isDerby(h,a);
         const weather = rollWeather();
         const score=simulateMatch(h,a,weather.key,derby);
-        updateTable(h,score.home,score.away);updateTable(a,score.away,score.home);
-        const r={week:G.week,homeIdx:h,awayIdx:a,homeScore:score.home,awayScore:score.away,events:score.events,ratings:score.ratings,motm:score.motm,weather:weather.key,isDerby:derby};
+        const isMyMatch = (h===G.playerTeamIdx||a===G.playerTeamIdx);
+        // For AI-vs-AI matches (which the user never "watches"), apply table/news effects immediately as before.
+        // For the user's own match, the result must stay hidden until they actually press PLAY and watch it —
+        // otherwise the table/news/log would spoil the outcome before the live board even starts.
+        if(!isMyMatch) updateTable(h,score.home,score.away);
+        if(!isMyMatch) updateTable(a,score.away,score.home);
+        const r={week:G.week,homeIdx:h,awayIdx:a,homeScore:score.home,awayScore:score.away,events:score.events,ratings:score.ratings,motm:score.motm,weather:weather.key,isDerby:derby,_baseDate:baseDate};
         G.leagueResults.push(r);
-        applyMatchRatingsToPlayers(score.ratings);
-        const hT=G.squads[h]||[],aT=G.squads[a]||[];
-        
-        hT.forEach(p=>{
-            p.energy=clamp(p.energy-rnd(10,15)-(weather.key==='hot'?6:0),0,100);
-            if(p.inXI) {
-                if(score.home > score.away) p.moral = clamp(p.moral + rnd(3,7), 0, 100);
-                else if(score.home < score.away) p.moral = clamp(p.moral - rnd(2,5), 0, 100);
-                p.appearances++; p.chem=clamp(p.chem+rnd(0,2),0,100); 
-            } else {
-                p.moral = clamp(p.moral - rnd(1,4), 0, 100); 
-            }
-        });
-        
-        aT.forEach(p=>{
-            p.energy=clamp(p.energy-rnd(10,15)-(weather.key==='hot'?6:0),0,100);
-            if(p.inXI) {
-                if(score.away > score.home) p.moral = clamp(p.moral + rnd(3,7), 0, 100);
-                else if(score.away < score.home) p.moral = clamp(p.moral - rnd(2,5), 0, 100);
-                p.appearances++; p.chem=clamp(p.chem+rnd(0,2),0,100); 
-            } else {
-                p.moral = clamp(p.moral - rnd(1,4), 0, 100);
-            }
-        });
-        
-        applyPostMatchEvents(score.events, baseDate, 'league');
-        if(h===G.playerTeamIdx||a===G.playerTeamIdx){
-            const isH=h===G.playerTeamIdx;
-            const my=isH?score.home:score.away,op=isH?score.away:score.home;
-            const derbyTag = derby?` [DERBY]`:'';
-            G.log.unshift({cls:my>op?'win':my<op?'loss':'draw',text:`W${G.week}: ${TEAMS[G.playerTeamIdx]} ${my}–${op} ${TEAMS[isH?a:h]}${derbyTag}`});
-            if(derby){
-                if(my>op){ G.fanSupport=clamp(G.fanSupport+6,0,100); G.boardConfidence=clamp(G.boardConfidence+3,0,100); G.reputation=clamp(G.reputation+1,0,100);
-                    G.news.unshift({date:formatDate(baseDate),title:`🔥 Derby Glory!`,body:`${TEAMS[G.playerTeamIdx]} triumphed in the ${getDerbyName(h,a)}, sending the fans into raptures!`});
-                } else if(my<op){ G.fanSupport=clamp(G.fanSupport-6,0,100); G.boardConfidence=clamp(G.boardConfidence-3,0,100);
-                    G.news.unshift({date:formatDate(baseDate),title:`💔 Derby Heartbreak`,body:`${TEAMS[G.playerTeamIdx]} suffered a painful defeat in the ${getDerbyName(h,a)}.`});
+        if(!isMyMatch){
+            applyMatchRatingsToPlayers(score.ratings);
+            const hT=G.squads[h]||[],aT=G.squads[a]||[];
+            hT.forEach(p=>{
+                p.energy=clamp(p.energy-rnd(10,15)-(weather.key==='hot'?6:0),0,100);
+                if(p.inXI) {
+                    if(score.home > score.away) p.moral = clamp(p.moral + rnd(3,7), 0, 100);
+                    else if(score.home < score.away) p.moral = clamp(p.moral - rnd(2,5), 0, 100);
+                    p.appearances++; p.chem=clamp(p.chem+rnd(0,2),0,100); 
+                } else {
+                    p.moral = clamp(p.moral - rnd(1,4), 0, 100); 
                 }
-            } else {
-                if(my>op) G.fanSupport=clamp(G.fanSupport+1.5,0,100);
-                else if(my<op) G.fanSupport=clamp(G.fanSupport-1.5,0,100);
-            }
-            if(h===G.playerTeamIdx||a===G.playerTeamIdx)myMatch=r;
+            });
+            aT.forEach(p=>{
+                p.energy=clamp(p.energy-rnd(10,15)-(weather.key==='hot'?6:0),0,100);
+                if(p.inXI) {
+                    if(score.away > score.home) p.moral = clamp(p.moral + rnd(3,7), 0, 100);
+                    else if(score.away < score.home) p.moral = clamp(p.moral - rnd(2,5), 0, 100);
+                    p.appearances++; p.chem=clamp(p.chem+rnd(0,2),0,100); 
+                } else {
+                    p.moral = clamp(p.moral - rnd(1,4), 0, 100);
+                }
+            });
+            applyPostMatchEvents(score.events, baseDate, 'league');
+        } else {
+            // Stash everything needed to apply consequences later, once the user has watched the match.
+            r._pendingReveal = true;
+            r._weather = weather.key;
+            myMatch=r;
         }
     });
     G.leagueTable.sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga));
     return myMatch;
+}
+// Applies the table update, player energy/moral, log entry, news and fan/board swings for the
+// user's own league match. Called only after the user has actually watched the match (continueToNext),
+// so nothing about the result leaks into the dashboard/news/table beforehand.
+function applyMyMatchConsequences(r){
+    if(!r || !r._pendingReveal) return; // already applied, or not a pending league match
+    const h=r.homeIdx, a=r.awayIdx, score={home:r.homeScore,away:r.awayScore};
+    const weather={key:r._weather};
+    const baseDate=r._baseDate;
+    const derby=r.isDerby;
+    updateTable(h,score.home,score.away);updateTable(a,score.away,score.home);
+    applyMatchRatingsToPlayers(r.ratings);
+    const hT=G.squads[h]||[],aT=G.squads[a]||[];
+    hT.forEach(p=>{
+        p.energy=clamp(p.energy-rnd(10,15)-(weather.key==='hot'?6:0),0,100);
+        if(p.inXI) {
+            if(score.home > score.away) p.moral = clamp(p.moral + rnd(3,7), 0, 100);
+            else if(score.home < score.away) p.moral = clamp(p.moral - rnd(2,5), 0, 100);
+            p.appearances++; p.chem=clamp(p.chem+rnd(0,2),0,100); 
+        } else {
+            p.moral = clamp(p.moral - rnd(1,4), 0, 100); 
+        }
+    });
+    aT.forEach(p=>{
+        p.energy=clamp(p.energy-rnd(10,15)-(weather.key==='hot'?6:0),0,100);
+        if(p.inXI) {
+            if(score.away > score.home) p.moral = clamp(p.moral + rnd(3,7), 0, 100);
+            else if(score.away < score.home) p.moral = clamp(p.moral - rnd(2,5), 0, 100);
+            p.appearances++; p.chem=clamp(p.chem+rnd(0,2),0,100); 
+        } else {
+            p.moral = clamp(p.moral - rnd(1,4), 0, 100);
+        }
+    });
+    applyPostMatchEvents(r.events, baseDate, 'league');
+    const isH=h===G.playerTeamIdx;
+    const my=isH?score.home:score.away,op=isH?score.away:score.home;
+    const derbyTag = derby?` [DERBY]`:'';
+    G.log.unshift({cls:my>op?'win':my<op?'loss':'draw',text:`W${r.week}: ${TEAMS[G.playerTeamIdx]} ${my}–${op} ${TEAMS[isH?a:h]}${derbyTag}`});
+    if(derby){
+        if(my>op){ G.fanSupport=clamp(G.fanSupport+6,0,100); G.boardConfidence=clamp(G.boardConfidence+3,0,100); G.reputation=clamp(G.reputation+1,0,100);
+            G.news.unshift({date:formatDate(baseDate),title:`🔥 Derby Glory!`,body:`${TEAMS[G.playerTeamIdx]} triumphed in the ${getDerbyName(h,a)}, sending the fans into raptures!`,tags:['match']});
+        } else if(my<op){ G.fanSupport=clamp(G.fanSupport-6,0,100); G.boardConfidence=clamp(G.boardConfidence-3,0,100);
+            G.news.unshift({date:formatDate(baseDate),title:`💔 Derby Heartbreak`,body:`${TEAMS[G.playerTeamIdx]} suffered a painful defeat in the ${getDerbyName(h,a)}.`,tags:['match']});
+        }
+    } else {
+        if(my>op) G.fanSupport=clamp(G.fanSupport+1.5,0,100);
+        else if(my<op) G.fanSupport=clamp(G.fanSupport-1.5,0,100);
+    }
+    r._pendingReveal = false;
+    G.leagueTable.sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga));
 }
 function playNextPendingMatch(){
     if(weekPendingIndex>=weekPendingMatches.length){
@@ -1932,6 +2168,14 @@ function playNextPendingMatch(){
         clearInterval(liveInterval);
         liveInterval = null;
         document.getElementById('live-board').classList.remove('show','theme-league','theme-cup','theme-acl','theme-derby');
+        // Reveal the result now that the user has actually watched the match: update the table,
+        // "Latest Team News" log, news feed and fan/board mood. This must NOT happen earlier
+        // (e.g. in advanceWeek), or the outcome would leak before the PLAY animation even starts.
+        if(liveMatchState.myMatch && liveMatchState.myMatch._pendingReveal){
+            applyMyMatchConsequences(liveMatchState.myMatch);
+            try { checkMilestones(); } catch(e) {}
+            saveState();
+        }
         // Show post-match press conference
         if(liveMatchState.myMatch){
             setTimeout(function(){ openPostMatchPress(); }, 200);
@@ -2755,7 +2999,7 @@ function buildMainActionBtn(){
         </table>
         <div class="card">
           <div class="sec">Recent Results</div>
-          ${G.leagueResults.filter(r=>r.homeIdx===G.playerTeamIdx||r.awayIdx===G.playerTeamIdx).slice(-5).reverse().map(r=>{
+          ${G.leagueResults.filter(r=>(r.homeIdx===G.playerTeamIdx||r.awayIdx===G.playerTeamIdx)&&!r._pendingReveal).slice(-5).reverse().map(r=>{
             const w=r.weather?WEATHER_TYPES.find(x=>x.key===r.weather):null;
             return `<div class="row bt" style="font-size:.75rem;padding:5px 0;border-bottom:1px solid var(--sf2)"><span>vs ${TEAMS[r.homeIdx===G.playerTeamIdx?r.awayIdx:r.homeIdx]} ${r.isDerby?'<span class="derby-badge">DERBY</span>':''} ${w?w.icon:''}</span><b style="color:var(--gold)">${r.homeScore} - ${r.awayScore}</b></div>`;
           }).join('')||'<div style="font-size:.7rem;color:var(--dim)">No matches played yet.</div>'}
@@ -2838,7 +3082,7 @@ function buildMainActionBtn(){
         for(let w=1;w<=30;w++){
             const d=new Date(lgStarts);d.setDate(d.getDate()+w*7);
             const dateStr=formatDate(d);const isCurr=w===G.week;
-            let myLgMatch=G.leagueResults.find(m=>m.week===w&&(m.homeIdx===G.playerTeamIdx||m.awayIdx===G.playerTeamIdx));
+            let myLgMatch=G.leagueResults.find(m=>m.week===w&&(m.homeIdx===G.playerTeamIdx||m.awayIdx===G.playerTeamIdx)&&!m._pendingReveal);
             let scStr='vs';let opName='?';let derbyTag='';let wthrTag='';
             if(!myLgMatch){
                 const sch=G.schedule[w-1]?.find(m=>m[0]===G.playerTeamIdx||m[1]===G.playerTeamIdx);
@@ -3018,6 +3262,44 @@ function buildMainActionBtn(){
         G.inbox.splice(msgIdx, 1);
         saveState(); showToast(`✅ ${p.name} has joined on loan!`); renderAll();
     }
+    function finalizeUserTransferBid(msgId) {
+        let msgIdx = G.inbox.findIndex(m => m.id === msgId);
+        if(msgIdx < 0) return;
+        let msg = G.inbox[msgIdx];
+        
+        let pIdx = G.transferMarket.findIndex(x => x.id === msg.playerId);
+        if (pIdx < 0) { showToast("This player is no longer available."); G.inbox.splice(msgIdx, 1); saveState(); renderAll(); return; }
+        
+        const p = G.transferMarket[pIdx];
+        if (G.budget < msg.finalFee) { showToast("❌ Not enough budget!"); return; }
+        const capCheck=checkSquadMaximum(G.squads[G.playerTeamIdx]);
+        if(!capCheck.ok){showToast('❌ '+capCheck.reason);return;}
+        
+        const sellerName = p.teamIndex >= 16 ? (FOREIGN_CLUBS[p.teamIndex-16]||'European Club') : TEAMS[p.teamIndex];
+        G.budget = parseFloat((G.budget - msg.finalFee).toFixed(2));
+        if(p.teamIndex >= 0 && p.teamIndex < 16 && Array.isArray(G.squads[p.teamIndex])){
+            const origSq = G.squads[p.teamIndex];
+            const origIdx = origSq.indexOf(p);
+            if(origIdx >= 0){
+                origSq.splice(origIdx, 1);
+                if(p.inXI) setDefaultXI(origSq, G.tactics[p.teamIndex] || '4-3-3');
+            }
+        }
+        delete p._listed;
+        p.teamIndex = G.playerTeamIdx;
+        p.contract = rnd(2,4);
+        p.isLoan = false; p.originalTeamIdx = -1; p.inXI = false; p.slotPos = null;
+        if(Array.isArray(G.squads[G.playerTeamIdx])) G.squads[G.playerTeamIdx].push(p);
+        G.transferMarket.splice(pIdx, 1);
+        G.inbox.splice(msgIdx, 1);
+        G.news.unshift({
+            date: formatDate(G.currentDate),
+            title: 'New Signing!',
+            body: `${TEAMS[G.playerTeamIdx]} have agreed a deal with ${sellerName} to sign ${p.name} for ${fmt(msg.finalFee)}.`,
+            tags: ['transfer']
+        });
+        saveState(); showToast(`✅ Deal done! ${p.name} signed for ${fmt(msg.finalFee)}.`); renderAll();
+    }
     
     function renderTransfer(){
         const inTW = G.phase === 'preseason' || (G.week >= 14 && G.week <= 17);
@@ -3104,6 +3386,8 @@ function buildMainActionBtn(){
                 if (loanFeeRaw > 2.0) loanFeeRaw = 2.0;
                 const loanFee = parseFloat(loanFeeRaw.toFixed(2));
                 const canLoan = !isFree;
+                const pendingBid = G.transferBids.find(b=>b.id===p.id);
+                const pendingMsg = !pendingBid ? G.inbox.find(m=>(m.type==='transfer_bid_response'||m.type==='transfer_bid_accepted') && m.playerId===p.id) : null;
                 html+=`<div class="row bt" style="background:var(--sf2);padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--brd)">
                     <div>
                         <div style="font-weight:bold;font-size:.8rem;cursor:pointer" onclick="openPlayerModal('${p.id}')"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> ${p.name}${p.isStar?'⭐':''}</div>
@@ -3113,10 +3397,16 @@ function buildMainActionBtn(){
                         ${isFree ? `
                             <div style="font-weight:bold;color:var(--gg);font-size:.7rem; margin-bottom:4px;">FREE</div>
                             <button class="btn btn-sm btn-p" onclick="buyPlayer('${p.id}', true)">SIGN</button>
+                        ` : pendingBid ? `
+                            <div style="font-weight:bold;color:var(--gold);font-size:.65rem; margin-bottom:4px;">⏳ Bid Pending</div>
+                            <span style="font-size:.6rem;color:var(--dim);">Offered ${fmt(pendingBid.bid)} — awaiting reply</span>
+                        ` : pendingMsg ? `
+                            <div style="font-weight:bold;color:var(--bg2);font-size:.65rem; margin-bottom:4px;">📩 Club Replied</div>
+                            <button class="btn btn-sm btn-g" onclick="switchTab('inbox')">Check Inbox</button>
                         ` : `
                             <div style="display:flex; gap:4px; align-items:center; justify-content:flex-end;">
                                 <span style="font-weight:bold;color:var(--gold);font-size:.7rem">${fmt(p.price)}</span>
-                                <button class="btn btn-sm ${canBuy?'btn-p':'btn-s'}" style="width:50px" ${!canBuy?'disabled':''} onclick="buyPlayer('${p.id}', false)">BUY</button>
+                                <button class="btn btn-sm ${canBuy?'btn-p':'btn-s'}" style="width:50px" ${!canBuy?'disabled':''} onclick="buyPlayer('${p.id}', false)">BID</button>
                             </div>
                             <div style="display:flex; gap:4px; align-items:center; justify-content:flex-end;">
                                 <span style="font-size:.6rem;color:var(--bg2);">Est Fee: ${fmt(loanFee)}</span>
@@ -3151,11 +3441,10 @@ function buildMainActionBtn(){
     function buyPlayer(id, isFree){
         const idx=G.transferMarket.findIndex(p=>p.id===id);if(idx<0)return;
         const p=G.transferMarket[idx];
-        if(!isFree && G.budget<p.price){showToast('❌ Not enough budget!');return;}
+        if(!isFree){ initiateTransferBid(id); return; } // paid transfers now go through the BID negotiation flow
         const capCheck=checkSquadMaximum(G.squads[G.playerTeamIdx]);
         if(!capCheck.ok){showToast('❌ '+capCheck.reason);return;}
         
-        if(!isFree) G.budget = parseFloat((G.budget - p.price).toFixed(2));
         // If this listing referenced a real Liga 1 club's actual squad player, remove them
         // from that club's real roster first so they don't end up duplicated in two squads.
         if(p.teamIndex >= 0 && p.teamIndex < 16 && Array.isArray(G.squads[p.teamIndex])){
@@ -3175,10 +3464,162 @@ function buildMainActionBtn(){
         
         G.news.unshift({
             date: formatDate(G.currentDate),
-            title: isFree ? 'Free Transfer Signing' : 'New Signing!',
-            body: `${TEAMS[G.playerTeamIdx]} have officially signed ${p.name} ${isFree ? 'on a free transfer' : `for ${fmt(p.price)}`}.`
+            title: 'Free Transfer Signing',
+            body: `${TEAMS[G.playerTeamIdx]} have officially signed ${p.name} on a free transfer.`,
+            tags: ['transfer']
         });
         saveState();showToast(`✅ ${p.name} successfully signed!`);renderAll();
+    }
+    // ─── C1: Transfer Negotiation (BID system, 2-step) ─────────
+    // Step 1: user submits an opening bid (initiateTransferBid -> submitTransferBid)
+    // Step 2: resolved next week in playLeagueWeek(); selling club accepts / counters / rejects via Inbox
+    function initiateTransferBid(pid){
+        const p = G.transferMarket.find(x=>x.id===pid);
+        if(!p) return;
+        if(p.teamIndex === -1){ buyPlayer(pid, true); return; } // safety net: free agents never need bids
+        const capCheck=checkSquadMaximum(G.squads[G.playerTeamIdx]);
+        if(!capCheck.ok){showToast('❌ '+capCheck.reason);return;}
+        const clubName = p.teamIndex >= 16 ? (FOREIGN_CLUBS[p.teamIndex-16]||'European Club') : TEAMS[p.teamIndex];
+        const askPrice = p.price;
+        document.getElementById('mtitle').innerHTML = `💰 Transfer Bid: ${p.name}`;
+        document.getElementById('mbody').innerHTML = `
+            <div style="font-size:.75rem; margin-bottom:10px;">Submit an opening bid to <b>${clubName}</b> for <b>${p.name}</b> (${p.pos}, OVR ${p.ovr}).</div>
+            <div class="row bt" style="background:var(--sf2); padding:10px; border-radius:6px;">
+                <span style="font-size:.8rem; font-weight:bold; color:var(--dim)">Asking Price:</span>
+                <span style="font-size:.85rem; font-weight:900; color:var(--gold)">${fmt(askPrice)}</span>
+            </div>
+            <div class="row bt" style="background:var(--sf2); padding:10px; border-radius:6px; margin-top:8px;">
+                <span style="font-size:.8rem; font-weight:bold; color:var(--dim)">Your Bid:</span>
+                <div class="row">
+                    <span style="font-size:.8rem; font-weight:bold;">€</span>
+                    <input type="number" step="0.1" id="user-transfer-bid" class="input-text" style="width:90px; padding:6px; font-size:.8rem" value="${askPrice}">
+                    <span style="font-size:.8rem; font-weight:bold;">M</span>
+                </div>
+            </div>
+            <p style="font-size:.65rem; color:var(--dim); margin-top:10px;">Bidding below the asking price may get countered or rejected. The club will respond in your Inbox next week.</p>
+        `;
+        document.getElementById('mfoot').innerHTML = `<button class="btn btn-p btn-sm" onclick="submitTransferBid('${p.id}')">Send Bid</button> <button class="btn btn-s btn-sm" onclick="closeModal()">Cancel</button>`;
+        document.getElementById('mov').classList.add('show');
+    }
+    function submitTransferBid(pid){
+        const p = G.transferMarket.find(x=>x.id===pid);
+        if(!p) return;
+        let bid = parseFloat(document.getElementById('user-transfer-bid').value);
+        if(isNaN(bid) || bid < 0.1) bid = 0.1;
+        if(G.budget < bid){ showToast('❌ Not enough budget for this bid!'); return; }
+        if(G.transferBids.find(b=>b.id===pid)){ showToast('⏳ A bid for this player is already pending.'); return; }
+        G.transferBids.push({ id: pid, bid: parseFloat(bid.toFixed(2)), askPrice: p.price, rounds: 0 });
+        closeModal();
+        showToast('✅ Bid submitted! Check your inbox next week for the club\'s response.');
+    }
+    function openBidNegotiationModal(msgId){
+        let msgIdx = G.inbox.findIndex(m => m.id === msgId);
+        if(msgIdx < 0) return;
+        let msg = G.inbox[msgIdx];
+        let p = G.transferMarket.find(x => x.id === msg.playerId);
+        if(!p){
+            showToast('This player is no longer available.');
+            G.inbox.splice(msgIdx,1); saveState(); renderInbox(); return;
+        }
+        const clubName = p.teamIndex >= 16 ? (FOREIGN_CLUBS[p.teamIndex-16]||'European Club') : TEAMS[p.teamIndex];
+        document.getElementById('mtitle').innerHTML = `🤝 Counter-Offer: ${p.name}`;
+        document.getElementById('mbody').innerHTML = `
+            <div style="font-size:.75rem; margin-bottom:10px;"><b>${clubName}</b> has responded to your bid for <b>${p.name}</b>.</div>
+            <div class="row bt" style="background:var(--sf2); padding:10px; border-radius:6px;">
+                <span style="font-size:.8rem; font-weight:bold; color:var(--dim)">Their Counter:</span>
+                <span style="font-size:.85rem; font-weight:900; color:var(--gold)">${fmt(msg.counterFee)}</span>
+            </div>
+            <div class="row bt" style="background:var(--sf2); padding:10px; border-radius:6px; margin-top:8px;">
+                <span style="font-size:.8rem; font-weight:bold; color:var(--dim)">Your New Offer:</span>
+                <div class="row">
+                    <span style="font-size:.8rem; font-weight:bold;">€</span>
+                    <input type="number" step="0.1" id="counter-bid-modal" class="input-text" style="width:90px; padding:6px; font-size:.8rem" value="${msg.counterFee}">
+                    <span style="font-size:.8rem; font-weight:bold;">M</span>
+                </div>
+            </div>
+            <p style="font-size:.65rem; color:var(--dim); margin-top:10px;">Accept their price, raise your offer, or walk away from the deal.</p>
+        `;
+        document.getElementById('mfoot').innerHTML = `
+            <button class="btn btn-p btn-sm" onclick="processTransferBid('${msg.id}','accept')">Accept</button>
+            <button class="btn btn-g btn-sm" onclick="processTransferBid('${msg.id}','counter')">Raise Offer</button>
+            <button class="btn btn-d btn-sm" onclick="processTransferBid('${msg.id}','reject')">Walk Away</button>
+            <button class="btn btn-s btn-sm" onclick="closeModal()">Close</button>
+        `;
+        document.getElementById('mov').classList.add('show');
+    }
+    function processTransferBid(msgId, action){
+        let msgIdx = G.inbox.findIndex(m => m.id === msgId);
+        if(msgIdx < 0) return;
+        let msg = G.inbox[msgIdx];
+        const mIdx = G.transferMarket.findIndex(x => x.id === msg.playerId);
+        if(mIdx < 0){
+            showToast('This player is no longer available.');
+            G.inbox.splice(msgIdx,1); saveState(); closeModal(); renderInbox(); return;
+        }
+        const p = G.transferMarket[mIdx];
+        if(action === 'reject'){
+            G.inbox.splice(msgIdx,1);
+            saveState(); closeModal(); showToast(`You walked away from the ${p.name} deal.`); renderInbox(); return;
+        }
+        if(action === 'counter'){
+            let newBid = parseFloat(document.getElementById('counter-bid-modal').value);
+            if(isNaN(newBid) || newBid < 0.1) newBid = 0.1;
+            if(G.budget < newBid){ showToast('❌ Not enough budget!'); return; }
+            const rounds = (msg.rounds||0) + 1;
+            // Selling club accepts if the new offer meets their counter, or (with diminishing patience) something close to it.
+            const tolerance = Math.max(0, 0.06 - rounds*0.02); // patience shrinks each round
+            if(newBid >= msg.counterFee * (1 - tolerance)){
+                action = 'accept';
+                msg.finalFee = Math.max(newBid, msg.counterFee);
+            } else if(rounds >= 3){
+                // club loses patience after too many rounds
+                G.inbox.splice(msgIdx,1);
+                saveState(); closeModal();
+                showToast(`❌ ${TEAMS[p.teamIndex]||'The club'} ended negotiations — too far apart on price.`);
+                renderInbox(); return;
+            } else {
+                // Club raises their counter slightly, still under the original asking price
+                const newCounter = Math.min(msg.askPrice, parseFloat((msg.counterFee - (msg.counterFee-newBid)*0.5).toFixed(2)));
+                msg.counterFee = newCounter;
+                msg.rounds = rounds;
+                msg.body = `${TEAMS[p.teamIndex]||'The club'} reviewed your offer of ${fmt(newBid)} and now wants ${fmt(newCounter)} for ${p.name}.`;
+                saveState(); closeModal();
+                showToast(`📩 ${TEAMS[p.teamIndex]||'The club'} sent a new counter-offer.`);
+                renderInbox(); return;
+            }
+        }
+        if(action === 'accept'){
+            const finalFee = msg.finalFee !== undefined ? msg.finalFee : msg.counterFee;
+            if(G.budget < finalFee){ showToast('❌ Not enough budget!'); return; }
+            const capCheck=checkSquadMaximum(G.squads[G.playerTeamIdx]);
+            if(!capCheck.ok){ showToast('❌ '+capCheck.reason); return; }
+            G.budget = parseFloat((G.budget - finalFee).toFixed(2));
+            if(p.teamIndex >= 0 && p.teamIndex < 16 && Array.isArray(G.squads[p.teamIndex])){
+                const origSq = G.squads[p.teamIndex];
+                const origIdx = origSq.indexOf(p);
+                if(origIdx >= 0){
+                    origSq.splice(origIdx, 1);
+                    if(p.inXI) setDefaultXI(origSq, G.tactics[p.teamIndex] || '4-3-3');
+                }
+            }
+            const sellerName = p.teamIndex >= 16 ? (FOREIGN_CLUBS[p.teamIndex-16]||'European Club') : TEAMS[p.teamIndex];
+            delete p._listed;
+            p.teamIndex = G.playerTeamIdx;
+            p.contract = rnd(2,4);
+            p.isLoan = false; p.originalTeamIdx = -1; p.inXI = false; p.slotPos = null;
+            if(Array.isArray(G.squads[G.playerTeamIdx])) G.squads[G.playerTeamIdx].push(p);
+            G.transferMarket.splice(mIdx,1);
+            G.inbox.splice(msgIdx,1);
+            G.news.unshift({
+                date: formatDate(G.currentDate),
+                title: 'New Signing!',
+                body: `${TEAMS[G.playerTeamIdx]} have agreed a deal with ${sellerName} to sign ${p.name} for ${fmt(finalFee)}.`,
+                tags: ['transfer']
+            });
+            saveState(); closeModal();
+            showToast(`✅ Deal done! ${p.name} signed for ${fmt(finalFee)}.`);
+            renderAll();
+        }
     }
     function sellPlayer(id){
         const sq=G.squads[G.playerTeamIdx];const idx=sq.findIndex(p=>p.id===id);if(idx<0)return;
@@ -3406,7 +3847,7 @@ function buildMainActionBtn(){
         } else {
             title = '🎤 Post-Match Press Conference';
             if(!resultCtx){
-                const myResults = G.leagueResults.filter(r=>r.homeIdx===G.playerTeamIdx||r.awayIdx===G.playerTeamIdx);
+                const myResults = G.leagueResults.filter(r=>(r.homeIdx===G.playerTeamIdx||r.awayIdx===G.playerTeamIdx)&&!r._pendingReveal);
                 const last = myResults[myResults.length-1];
                 if(last){
                     const isH = last.homeIdx===G.playerTeamIdx;
@@ -3687,6 +4128,10 @@ function buildMainActionBtn(){
                     extraHtml = `<div style="margin-top:8px">${pList}</div> <button class="btn btn-s btn-sm btn-blk" style="margin-top:6px" onclick="dismissMsg('${msg.id}')">Close Report</button>`;
                 } else if (msg.type === 'loan_bid_accepted') {
                     extraHtml = `<div style="margin-top:8px"><button class="btn btn-sm btn-p" onclick="finalizeUserLoan('${msg.id}')">Sign Player (Loan)</button></div>`;
+                } else if (msg.type === 'transfer_bid_response') {
+                    extraHtml = `<div style="margin-top:8px"><button class="btn btn-g btn-sm btn-blk" onclick="openBidNegotiationModal('${msg.id}')">Respond to Counter-Offer</button></div>`;
+                } else if (msg.type === 'transfer_bid_accepted') {
+                    extraHtml = `<div style="margin-top:8px"><button class="btn btn-sm btn-p" onclick="finalizeUserTransferBid('${msg.id}')">Sign Player</button></div>`;
                 } else if (msg.type === 'sponsor_shirt' || msg.type === 'sponsor_stadium') {
                     const kind = msg.type === 'sponsor_shirt' ? 'shirt' : 'stadium';
                     const offers = kind==='shirt' ? G.pendingSponsorShirtOffer : G.pendingSponsorStadiumOffer;
@@ -3701,7 +4146,7 @@ function buildMainActionBtn(){
                     const targetId = msg.targetTeamIdx !== undefined ? msg.targetTeamIdx : rnd(0, 15);
                     extraHtml = `<div style="margin-top:8px"><button class="btn btn-sm btn-p" onclick="acceptJob(${targetId}, ${idx})">Accept Offer</button></div>`;
                 }
-                html += `<div class="card" style="border-left:3px solid ${msg.type==='loan_offer'?'var(--gold)':(msg.type==='scout_result'?'var(--gg)':'var(--bg2)')};margin-bottom:8px">
+                html += `<div class="card" style="border-left:3px solid ${(msg.type==='loan_offer'||msg.type==='transfer_bid_response'||msg.type==='transfer_bid_accepted')?'var(--gold)':(msg.type==='scout_result'?'var(--gg)':'var(--bg2)')};margin-bottom:8px">
                     <div style="font-weight:bold;font-size:.8rem">${msg.title}</div>
                     <div style="font-size:.7rem;color:var(--dim);margin:5px 0">${msg.body}</div>
                     ${extraHtml}
@@ -4452,6 +4897,13 @@ function buildMainActionBtn(){
         else{
             migrateState();
             weekPendingMatches=[];weekPendingIndex=0;
+            // Safety net: if the page was reloaded/closed after advanceWeek() simulated the user's
+            // match but before they pressed PLAY to watch it, the in-memory pending-match queue is
+            // lost on reload. Rather than leave that match's result stuck "hidden" forever (which
+            // would desync the league table), silently reveal it now so the game state stays consistent.
+            if(Array.isArray(G.leagueResults)){
+                G.leagueResults.forEach(r=>{ if(r && r._pendingReveal) applyMyMatchConsequences(r); });
+            }
             updateHeader();renderTab('dash');
         }
     }
