@@ -29,14 +29,14 @@
         }
         /* ─── E6: Soft Light Theme ─────────────────────────────── */
         body.light-mode{
-            --gd:#cfe8da;--gm:#bfe0cf;--gl:#2d8c63;--gg:#1f9e63;
-            --bd:#dce8f5;--bm:#cfe0f2;--bl:#2d6abf;--bg2:#3a7fd1;
+            --gd:#bfe0cf;--gm:#a8d6bd;--gl:#2d8c63;--gg:#1f9e63;
+            --bd:#3a6ea8;--bm:#4a7fc0;--bl:#2d6abf;--bg2:#3a7fd1;
             --gold:#b8860b;--red:#cf3a3a;--orng:#d2691e;
             --bg:#f4f1ea;--sf:#ece7da;--sf2:#e3ddcb;--card:#fbf9f3;--brd:#d8d0bd;
-            --txt:#2b2a26;--dim:#6b6657;--mut:#8a8472;--wh:#1f1e1b;
+            --txt:#2b2a26;--dim:#6b6657;--mut:#8a8472;--wh:#f0f8f2;
             --shd:0 4px 16px rgba(60,50,30,.12);
         }
-        body.light-mode #live-board,body.light-mode #live-board *{
+        body.light-mode #live-board,body.light-mode #live-board *,body.light-mode #live-mini-bar,body.light-mode #live-mini-bar *{
             /* Live match broadcast view stays dark/immersive in both themes, like a TV overlay */
             --gd:#0d3b2e;--gm:#1a5c44;--gl:#2d8c63;--gg:#3dba82;
             --bd:#0a1f3c;--bm:#1a3a6b;--bl:#2d6abf;--bg2:#4a9eff;
@@ -130,6 +130,8 @@
         .pdot-circle.away-dot{background:#8b1a1a;border-color:#ff8060}
         .pdot-name{font-size:.45rem;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);white-space:nowrap;max-width:40px;overflow:hidden;text-overflow:ellipsis}
         .pdot-ovr{font-size:.5rem;color:var(--gold);font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,.8);background:#0008;padding:1px 3px;border-radius:3px}
+        .heatmap-mini .pdot-circle{width:24px;height:24px;font-size:.52rem}
+        .heatmap-mini .pdot-name{max-width:46px}
         .match-ball{
             width:12px;height:12px;background:#fff;border-radius:50%;position:absolute;z-index:5;
             transition:left 0.35s cubic-bezier(0.2, 0.8, 0.4, 1), top 0.35s cubic-bezier(0.2, 0.8, 0.4, 1), transform 0.2s ease;
@@ -141,7 +143,9 @@
         @keyframes milestoneIn{from{transform:scale(0.7) translateY(-20px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
         #live-board{position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:600;display:none;flex-direction:column;overflow-y:auto}
         #live-board.show{display:flex}
-        .lb-header{padding:8px 10px;text-align:center;font-weight:bold;color:var(--wh);font-size:.95rem}
+        .lb-header{padding:8px 10px;text-align:center;font-weight:bold;color:var(--wh);font-size:.95rem;display:flex;align-items:center;justify-content:center;position:relative}
+        .lb-header .lb-minimize-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.25);border:none;color:var(--wh);font-size:.85rem;width:26px;height:26px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        .lb-header .lb-minimize-btn:active{background:rgba(0,0,0,.45)}
         #live-board.theme-league .lb-header{background:linear-gradient(135deg,var(--gd),var(--bd));}
         #live-board.theme-cup .lb-header{background:linear-gradient(135deg,var(--orng),#c0392b);}
         #live-board.theme-acl .lb-header{background:linear-gradient(135deg,#2980b9,#2c3e50);}
@@ -170,6 +174,15 @@
         .modal-close-btn{position:absolute;top:6px;right:6px;width:40px;height:40px;border-radius:50%;background:var(--sf2);border:1px solid var(--brd);color:var(--txt);font-size:1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:5;transition:background .15s;}
         .modal-close-btn:active{background:var(--brd)}
         #toast{position:fixed;bottom:68px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card);border:1px solid var(--gl);border-radius:30px;padding:9px 18px;font-size:.78rem;font-weight:600;color:var(--wh);z-index:9999;transition:all .3s ease;opacity:0;visibility:hidden;box-shadow:var(--shd);max-width:88%;text-align:center;}
+        /* ─── E7: Live Match Mini-Bar ───────────────────────────── */
+        #live-mini-bar{display:none;position:sticky;top:0;z-index:90;background:linear-gradient(135deg,var(--gd),var(--bd));border-bottom:2px solid var(--gold);padding:7px 12px;cursor:pointer;align-items:center;gap:8px;box-shadow:0 2px 10px rgba(0,0,0,.3);}
+        #live-mini-bar.show{display:flex;}
+        #live-mini-bar .lmb-live-dot{width:7px;height:7px;border-radius:50%;background:#ff4444;flex-shrink:0;animation:lmbPulse 1.2s infinite;}
+        @keyframes lmbPulse{0%,100%{opacity:1}50%{opacity:.35}}
+        #live-mini-bar .lmb-min{font-size:.65rem;font-weight:800;color:var(--gold);flex-shrink:0;min-width:38px;}
+        #live-mini-bar .lmb-teams{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.72rem;font-weight:700;color:var(--wh);overflow:hidden;white-space:nowrap;}
+        #live-mini-bar .lmb-score{background:rgba(0,0,0,.3);padding:2px 8px;border-radius:6px;font-weight:900;color:var(--gold);flex-shrink:0;}
+        #live-mini-bar .lmb-expand{font-size:.65rem;color:var(--dim);flex-shrink:0;font-weight:700;}
         #toast.show{transform:translateX(-50%) translateY(0);opacity:1;visibility:visible}
         .bench-strip{display:flex;flex-wrap:wrap;gap:3px;padding:5px 10px;background:var(--sf);border-top:1px solid var(--brd)}
         .bench-pill{padding:3px 7px;border-radius:12px;font-size:.6rem;font-weight:700;border:1px solid var(--brd);background:var(--sf2);cursor:pointer;display:flex;align-items:center;gap:3px;color:var(--txt)}
@@ -229,6 +242,7 @@
     <main id="main"></main>
     <div id="swipe-hint"></div>
     <div id="live-board"></div>
+    <div id="live-mini-bar" onclick="expandLiveMatch()"></div>
     <div id="mov" onmousedown="handleModalBackdropClick(event)"><div id="mbox">
         <button id="mclose" class="modal-close-btn" onclick="closeModal()" aria-label="Close">✕</button>
         <h2 id="mtitle" style="color:var(--gold);margin-bottom:10px"></h2>
@@ -485,6 +499,22 @@ function formatDate(dateStr){
 function addDays(dateStr,days){const d=new Date(dateStr);d.setDate(d.getDate()+days);return d.toISOString().split('T')[0];}
 function ovrCls(v){return v>=80?'ovr-h':v>=70?'ovr-m':'ovr-l'}
 function ratingCls(r){return r>=8.5?'rt-9':r>=7?'rt-7':r>=6?'rt-6':r>=5?'rt-5':'rt-4'}
+// ─── E2: Player Rating Heatmap ──────────────────────────────
+// Continuous red->yellow->green gradient (vs. the 5-tier rating-chip classes) so the pitch heatmap
+// reads as a smooth performance gradient rather than blocky color bands.
+function getRatingColor(r){
+    r = Math.max(4, Math.min(9.5, r));
+    const t = (r - 4) / 5.5;
+    let rr, gg, bb;
+    if(t < 0.5){
+        const tt = t / 0.5;
+        rr = 220; gg = Math.round(40 + tt*150); bb = 40;
+    } else {
+        const tt = (t-0.5)/0.5;
+        rr = Math.round(220 - tt*170); gg = Math.round(190 + tt*30); bb = Math.round(40 + tt*40);
+    }
+    return `rgb(${rr},${gg},${bb})`;
+}
 // ─── Rivalries / Derby data ────────────────────────────────
 const RIVALS = {0:1,1:0,2:6,6:2,3:14,14:3,4:9,9:4,5:15,15:5,7:12,12:7,8:13,13:8,10:11,11:10};
 const DERBY_NAMES = {'0-1':'El Clasico Indonesia','2-6':'East Java Derby','3-14':'Java-Bali Derby','4-9':'South Sulawesi Derby','5-15':'Kalimantan-Maluku Derby','7-12':'Madura-Kediri Derby','8-13':'Central Java Derby','10-11':'Kalimantan-Jogja Derby'};
@@ -668,6 +698,123 @@ const PRESS_QUESTIONS_PREMATCH = [
               {label:'Your support always pushes us further — come and cheer!', moral:2, board:0, fan:3},
               {label:"We'll give our very best. That's the promise.", moral:2, board:1, fan:2} ] }
 ];
+// ─── A3: Contextual Pre-Match Press Conference question banks ──────────────
+// Each pool below targets a specific matchup context (derby, big favourite, underdog, table
+// rivalry, current form) so the questions a manager faces actually reflect the situation,
+// instead of always drawing from one generic pool regardless of who's next on the calendar.
+const PRESS_QUESTIONS_DERBY = [
+    { q: 'This is derby week against {opp}. How are you setting the tone for your players?',
+      opts: [ {label:'This match means everything to our fans — we will give it our all', moral:5, board:1, fan:4},
+              {label:"We treat it like any other game, even if it doesn't feel that way", moral:1, board:1, fan:0},
+              {label:"The rivalry is huge, but three points matter most", moral:2, board:1, fan:2} ] },
+    { q: '{opp} have history with this club. What does this fixture mean to you personally?',
+      opts: [ {label:'Every manager wants to win this one — the city deserves it', moral:4, board:0, fan:5},
+              {label:"I respect the history, but I focus on tactics, not emotion", moral:1, board:2, fan:0},
+              {label:"Our fans live for this — we want to make them proud", moral:3, board:0, fan:3} ] },
+    { q: 'Derby matches can be unpredictable. Are you worried about your players losing composure against {opp}?',
+      opts: [ {label:'We have prepared the players mentally — discipline comes first', moral:2, board:2, fan:1},
+              {label:'Passion is good, as long as it stays controlled', moral:1, board:1, fan:1},
+              {label:"This rivalry brings out the best in my squad", moral:3, board:0, fan:2} ] }
+];
+const PRESS_QUESTIONS_FAVOURITE = [
+    { q: 'On paper, {opp} should be a comfortable game for your side. Do you agree?',
+      opts: [ {label:'No match is comfortable — we will respect {opp} fully', moral:2, board:2, fan:1},
+              {label:"We're clearly favourites, and we intend to prove it", moral:3, board:-1, fan:2},
+              {label:"We just focus on doing our job properly", moral:1, board:1, fan:0} ] },
+    { q: 'Many expect a routine win against {opp}. Is there a risk of complacency?',
+      opts: [ {label:"I've made sure the players take nothing for granted", moral:2, board:2, fan:1},
+              {label:'Complacency is always a risk, but we are professionals', moral:1, board:1, fan:1},
+              {label:"We respect every opponent, regardless of the table", moral:2, board:1, fan:2} ] }
+];
+const PRESS_QUESTIONS_UNDERDOG = [
+    { q: '{opp} are one of the strongest sides in the league. How do you approach this game?',
+      opts: [ {label:'We have nothing to lose — we will go all out for a result', moral:3, board:0, fan:3},
+              {label:'A disciplined, organized performance is our best chance', moral:2, board:2, fan:0},
+              {label:"It's a tough task, but upsets happen in football", moral:1, board:0, fan:2} ] },
+    { q: 'Few people expect you to take anything from this match against {opp}. Your response?',
+      opts: [ {label:"We'll surprise people — belief is free and we have plenty", moral:4, board:-1, fan:3},
+              {label:'We focus on a defensively solid performance first', moral:1, board:2, fan:0},
+              {label:"Let the doubters talk. We'll let our performance answer", moral:2, board:0, fan:2} ] }
+];
+const PRESS_QUESTIONS_TITLE_RIVAL = [
+    { q: 'This match against {opp} could be crucial for the title race. How big is it?',
+      opts: [ {label:"This is exactly the kind of game that decides champions", moral:4, board:1, fan:3},
+              {label:"It's important, but the title isn't decided in one match", moral:2, board:1, fan:1},
+              {label:'We treat it like any other three points up for grabs', moral:1, board:1, fan:0} ] },
+    { q: '{opp} are right behind you in the table. Do you feel the pressure of staying ahead?',
+      opts: [ {label:'Pressure is a privilege when you are fighting at the top', moral:3, board:1, fan:2},
+              {label:'We control what we can control — our own performance', moral:2, board:1, fan:1},
+              {label:"It's tight up there, but we believe in this squad", moral:2, board:0, fan:2} ] }
+];
+const PRESS_QUESTIONS_RELEGATION_RIVAL = [
+    { q: '{opp} are fighting alongside you near the bottom of the table. How vital are these points?',
+      opts: [ {label:"This is a must-win game — there's no other way to say it", moral:3, board:2, fan:2},
+              {label:'Every game from now on is a final for us', moral:2, board:2, fan:1},
+              {label:'We stay calm — panicking never helps in a relegation fight', moral:1, board:1, fan:0} ] },
+    { q: 'A defeat to {opp} could be very costly given your position. How do you keep the squad calm?',
+      opts: [ {label:'We focus on what we can control: effort and discipline', moral:2, board:2, fan:1},
+              {label:'The players know the situation — that motivation is enough', moral:1, board:1, fan:1},
+              {label:"We've faced pressure before and come through it", moral:3, board:1, fan:2} ] }
+];
+const PRESS_QUESTIONS_WINNING_STREAK = [
+    { q: "Your team is on a strong run of results heading into the match with {opp}. What's the key to this form?",
+      opts: [ {label:'The belief and chemistry in this squad is growing every week', moral:3, board:1, fan:3},
+              {label:'We stay grounded — one bad result can change everything', moral:1, board:2, fan:0},
+              {label:"Hard work in training is finally paying off on matchday", moral:2, board:1, fan:2} ] },
+    { q: 'Can this winning momentum continue against {opp}?',
+      opts: [ {label:'We feel unstoppable right now — bring on {opp}', moral:4, board:0, fan:3},
+              {label:'We take it one match at a time, starting with {opp}', moral:1, board:2, fan:1},
+              {label:"Confidence is high, but we won't get ahead of ourselves", moral:2, board:1, fan:1} ] }
+];
+const PRESS_QUESTIONS_LOSING_STREAK = [
+    { q: 'The team has struggled for results recently. How do you turn things around against {opp}?',
+      opts: [ {label:"We need a response now, and {opp} is the perfect game for it", moral:3, board:0, fan:1},
+              {label:"We're working hard behind the scenes to fix our issues", moral:1, board:1, fan:0},
+              {label:'A difficult moment, but I trust this group to bounce back', moral:2, board:0, fan:1} ] },
+    { q: 'Some fans are growing frustrated with recent results. What is your message before facing {opp}?',
+      opts: [ {label:"I understand the frustration — actions will speak louder than words", moral:1, board:0, fan:1},
+              {label:'We ask for patience — the work we are doing will show', moral:0, board:1, fan:-1},
+              {label:"This squad will fight for a result against {opp}, I guarantee it", moral:3, board:-1, fan:2} ] }
+];
+// Determines which question pool fits the upcoming opponent best. Checked in priority order:
+// derby rivalry first (most distinctive context), then table-position stakes, then raw squad
+// strength gap, then the user's recent form — falling back to the generic pool if nothing
+// distinctive stands out about this particular fixture.
+function getContextualPrematchPool(oppIdx){
+    const myIdx = G.playerTeamIdx;
+    if(isDerby(myIdx, oppIdx) || isDerby(oppIdx, myIdx)) return PRESS_QUESTIONS_DERBY;
+    if(Array.isArray(G.leagueTable) && G.leagueTable.length >= 16){
+        const myRow = G.leagueTable.find(x=>x.teamIdx===myIdx);
+        const oppRow = G.leagueTable.find(x=>x.teamIdx===oppIdx);
+        if(myRow && oppRow){
+            const myRank = G.leagueTable.indexOf(myRow)+1;
+            const oppRank = G.leagueTable.indexOf(oppRow)+1;
+            const n = G.leagueTable.length;
+            const rankGap = Math.abs(myRank - oppRank);
+            // Close rivalry near the top of the table (title race) or bottom (relegation fight)
+            if(rankGap <= 3 && myRank <= 6 && oppRank <= 6) return PRESS_QUESTIONS_TITLE_RIVAL;
+            if(rankGap <= 3 && myRank >= n-5 && oppRank >= n-5) return PRESS_QUESTIONS_RELEGATION_RIVAL;
+        }
+    }
+    const myStr = teamStrength(myIdx, getTeamTactic(myIdx));
+    const oppStr = teamStrength(oppIdx, getTeamTactic(oppIdx));
+    const strDiff = myStr - oppStr;
+    if(strDiff >= 12) return PRESS_QUESTIONS_FAVOURITE;
+    if(strDiff <= -12) return PRESS_QUESTIONS_UNDERDOG;
+    if(Array.isArray(G.leagueResults)){
+        const recent = G.leagueResults.filter(r=>!r._pendingReveal && (r.homeIdx===myIdx||r.awayIdx===myIdx)).slice(-3);
+        if(recent.length === 3){
+            const outcomes = recent.map(r=>{
+                const isH = r.homeIdx===myIdx;
+                const my = isH?r.homeScore:r.awayScore, opp = isH?r.awayScore:r.homeScore;
+                return my>opp ? 'W' : my<opp ? 'L' : 'D';
+            });
+            if(outcomes.every(o=>o==='W')) return PRESS_QUESTIONS_WINNING_STREAK;
+            if(outcomes.every(o=>o==='L')) return PRESS_QUESTIONS_LOSING_STREAK;
+        }
+    }
+    return PRESS_QUESTIONS_PREMATCH;
+}
 // Transfer-window questions — asked mid transfer window, framed around squad business
 const PRESS_QUESTIONS_TRANSFER = [
     { q: 'Plenty of transfer rumors are circulating. What are your plans for the rest of this window?',
@@ -822,12 +969,30 @@ function genPlayer(posReq,teamIndex,isInitial=false, origin='ID'){
         ovr:ovrBase, pot:potBase, isStar:ovrBase>=80, age:age, energy:100, moral:80+rnd(0,20),
         contract:rnd(2,4),goals:0,assists:0,appearances:0,teamIndex,inXI:false,slotPos:null,chem:chemBase, injury: 0,
         isLoan: false, loanDuration: 0, originalTeamIdx: -1, totalRating:0, ratingCount:0, motmCount:0,
-        form: 5, traits: []
+        form: 5, traits: [], injuryProneness: rollInjuryProneness(age), injuryHistory: 0
     };
     p.traits = assignTraits(p);
     // Apply Glass Cannon trait ovrBonus
     if (p.traits.includes('Glass Cannon')) p.ovr = Math.min(95, p.ovr + 2);
     return p;
+}
+// ─── G4: Injury Proneness & Recovery ────────────────────────
+// A hidden-ish 1-100 rating, rolled once per player, that drives both how often they pick up
+// injuries and how long those injuries tend to last. Older players skew more fragile on average,
+// mirroring how durability tends to decline with age, but there's enough spread that you'll still
+// meet sturdy veterans and fragile 19-year-olds.
+function rollInjuryProneness(age){
+    let base = rnd(15, 55);
+    if(age >= 30) base += rnd(10, 25);
+    else if(age >= 27) base += rnd(0, 12);
+    else if(age <= 21) base -= rnd(0, 8);
+    return clamp(base, 5, 95);
+}
+function injuryPronenessLabel(score){
+    if(score >= 70) return {label:'Very Fragile', cls:'rt-4'};
+    if(score >= 50) return {label:'Injury-Prone', cls:'rt-5'};
+    if(score >= 30) return {label:'Average', cls:'rt-6'};
+    return {label:'Durable', cls:'rt-7'};
 }
 function getPrice(ovr, age){
     let base = 0;
@@ -852,7 +1017,8 @@ function genSquad(teamIndex,isInitial=false){
                 id: Math.random().toString(36).substr(2,9), name: star.name, origin: star.origin, pos: star.pos, mainCat: POS_MAP[star.pos].c,
                 ovr: star.ovr, pot: pot, isStar: true, age: age, energy: 100, moral: 85, contract: rnd(2,4),
                 goals: 0, assists: 0, appearances: 0, teamIndex: teamIndex, inXI: false, slotPos: null, chem: rnd(20, 35), injury: 0,
-                isLoan: false, loanDuration: 0, originalTeamIdx: -1, price: getPrice(star.ovr, age), totalRating:0, ratingCount:0, motmCount:0
+                isLoan: false, loanDuration: 0, originalTeamIdx: -1, price: getPrice(star.ovr, age), totalRating:0, ratingCount:0, motmCount:0,
+                injuryProneness: rollInjuryProneness(age), injuryHistory: 0
             });
         });
     }
@@ -959,7 +1125,10 @@ function processAITransferActivity(){
             }
         }
         // --- AI buys a market player who'd upgrade their own squad ---
-        if(Math.random() < 0.10 && squad.length < MAX_SQUAD_SIZE - 2){
+        // (squad.length < MAX_SQUAD_SIZE here, not MAX-2: initial squads already sit around 24
+        // players, so a tighter cap was silently blocking AI buying entirely from week one.
+        // The real overflow guard is the squad.length < MAX_SQUAD_SIZE check right before the push.)
+        if(Math.random() < 0.10 && squad.length < MAX_SQUAD_SIZE){
             const candidates = G.transferMarket.filter(p => p.teamIndex !== teamIdx && !isPlayerBidPending(p.id));
             if(candidates.length){
                 // Look for a real upgrade: a market player noticeably better than this club's
@@ -1223,19 +1392,34 @@ function generateEvents(hIdx,aIdx,hGoals,aGoals){
         const isRed=Math.random()<0.1;
         evs.push({type:'card',min:rnd(5,89),team,player:playerName,playerId:cardPlayerId,card:isRed?'red':'yellow',teamIdx:idx});
     }
-    const totalInjuries = Math.random() < 0.15 ? 1 : 0; 
+    // G4: injury chance scales with the squad's average proneness instead of a flat global rate,
+    // and which player gets hurt is a weighted pick favouring more injury-prone players — not a
+    // uniform roll across the whole XI. Severity (and therefore recovery time) is also weighted by
+    // that same proneness score, so fragile players don't just get hurt more often, but worse too.
+    const allXI = [];
+    if(typeof hIdx === 'number' && hIdx < 16 && G.squads[hIdx]) G.squads[hIdx].filter(p=>p.inXI).forEach(p=>allXI.push({p,team:'home',idx:hIdx}));
+    if(typeof aIdx === 'number' && aIdx < 16 && G.squads[aIdx]) G.squads[aIdx].filter(p=>p.inXI).forEach(p=>allXI.push({p,team:'away',idx:aIdx}));
+    const avgProneness = allXI.length ? allXI.reduce((s,e)=>s+(e.p.injuryProneness||35),0)/allXI.length : 35;
+    const injuryChance = clamp(0.06 + (avgProneness/100)*0.16, 0.04, 0.28); // ~0.06-0.28 per match
+    const totalInjuries = Math.random() < injuryChance ? 1 : 0;
     for(let i=0; i<totalInjuries; i++){
-        const team = Math.random() < 0.5 ? 'home' : 'away';
-        const idx = team === 'home' ? hIdx : aIdx;
-        let playerName = '?'; let playerId = null;
-        if(typeof idx === 'number' && idx < 16 && G.squads[idx]){
-            const pool = G.squads[idx].filter(p => p.inXI);
-            if(pool.length) {
-                const p = pick(pool);
-                playerName = p.name; playerId = p.id;
-            }
+        let playerName = '?'; let playerId = null; let team = 'home'; let idx = hIdx; let severityWeeks = 1;
+        if(allXI.length){
+            // Weighted pick: each player's chance of being the one hurt scales with their proneness.
+            const weights = allXI.map(e => Math.max(5, e.p.injuryProneness || 35));
+            const totalW = weights.reduce((s,w)=>s+w,0);
+            let roll = Math.random()*totalW;
+            let chosen = allXI[allXI.length-1];
+            for(let j=0;j<allXI.length;j++){ roll -= weights[j]; if(roll<=0){ chosen = allXI[j]; break; } }
+            playerName = chosen.p.name; playerId = chosen.p.id; team = chosen.team; idx = chosen.idx;
+            // Severity: higher proneness skews toward longer lay-offs, but everyone can get unlucky.
+            const pr = chosen.p.injuryProneness || 35;
+            const severityRoll = Math.random()*100 + pr*0.3;
+            if(severityRoll > 95) severityWeeks = rnd(6, 10);       // major injury
+            else if(severityRoll > 65) severityWeeks = rnd(3, 5);   // moderate injury
+            else severityWeeks = rnd(1, 2);                          // minor knock
         }
-        if(playerId) evs.push({type:'injury', min:rnd(5,89), team, player:playerName, playerId, teamIdx: idx});
+        if(playerId) evs.push({type:'injury', min:rnd(5,89), team, player:playerName, playerId, teamIdx: idx, severityWeeks});
     }
     return evs.sort((a,b)=>a.min-b.min);
 }
@@ -1403,7 +1587,7 @@ function freshState(){
         lcaTeamIndices:[0,1,2,3],acl:null,
         transferMarket:genMarket(squads, 0),
         inbox:[{id:Math.random().toString(36).substr(2,9),title:'Welcome, Manager!',body:'Good luck in your new career.',action:null, isRead: false}],
-        news: [{date: 'Pre-Season', title: 'Transfer Window Opens!', body: 'League managers are gearing up for the new season.'}],
+        news: [{date: 'Pre-Season', title: 'Transfer Window Opens!', body: 'League managers are gearing up for the new season.', tags:['transfer']}],
         managerName:'Manager',
         log:[{cls:'info',text:'🌟 Welcome! You have 8 pre-season weeks before the league begins.'}],
         scoutQueue: [],
@@ -1415,6 +1599,7 @@ function freshState(){
         boardConfidence: 60,
         fanSupport: 55,
         reputation: 35,
+        confidenceHistory: [], // H4: weekly snapshots of {boardConfidence, fanSupport} for trend display
         boardObjective: generateBoardObjective(8),
         objectiveFailStreak: 0,
         pressConferenceWeek: -1,
@@ -1458,6 +1643,21 @@ function slotKey(n){ return 'fmweb_slot_'+n; }
 function saveState(){
     try{ localStorage.setItem(slotKey(currentSlot), JSON.stringify(G)); localStorage.setItem('fmweb_current_slot', String(currentSlot)); }catch(e){}
 }
+// ─── E6: Dark/Light Mode Toggle ─────────────────────────────
+// Stored separately from the save-game slots (it's a device/app preference, not part of a
+// particular career save), so switching save slots never resets the chosen theme.
+function applyTheme(theme){
+    const isLight = theme === 'light';
+    document.body.classList.toggle('light-mode', isLight);
+    const btn = document.getElementById('theme-toggle-btn');
+    if(btn) btn.textContent = isLight ? '☀️' : '🌙';
+}
+function toggleTheme(){
+    const isLight = document.body.classList.contains('light-mode');
+    const next = isLight ? 'dark' : 'light';
+    try{ localStorage.setItem('fmweb_theme', next); }catch(e){}
+    applyTheme(next);
+}
 function loadState(){
     const cs=localStorage.getItem('fmweb_current_slot');
     if(cs) currentSlot=parseInt(cs)||1;
@@ -1500,6 +1700,7 @@ function migrateState(){
     if(G.fanSupport === undefined) G.fanSupport = 55;
     if(G.reputation === undefined) G.reputation = 35;
     if(G.boardObjective === undefined) G.boardObjective = generateBoardObjective(8);
+    if(!Array.isArray(G.confidenceHistory)) G.confidenceHistory = [];
     if(G.objectiveFailStreak === undefined) G.objectiveFailStreak = 0;
     if(G.pressConferenceWeek === undefined) G.pressConferenceWeek = -2;
     if(G.pcAvailable === undefined) G.pcAvailable = true;
@@ -1524,6 +1725,15 @@ function migrateState(){
     if(!Array.isArray(G.squads) || G.squads.length < 16){
         G.squads = TEAMS.map((_,i)=> (G.squads && G.squads[i]) ? G.squads[i] : genSquad(i,true));
     }
+    // G4: backfill injury proneness/history on players from saves created before this feature existed
+    G.squads.forEach(sq=>{
+        if(!Array.isArray(sq)) return;
+        sq.forEach(p=>{
+            if(p.injuryProneness === undefined) p.injuryProneness = rollInjuryProneness(p.age||25);
+            if(p.injuryHistory === undefined) p.injuryHistory = 0;
+            if(p.injury > 0 && p.injuryTotalWeeks === undefined) p.injuryTotalWeeks = p.injury;
+        });
+    });
     if(!Array.isArray(G.tactics) || G.tactics.length < 16){
         const old = Array.isArray(G.tactics) ? G.tactics : [];
         G.tactics = TEAMS.map((_,i)=> old[i] || pick(TACTICS));
@@ -1857,6 +2067,7 @@ function playLeagueWeek(){
         
         payWeeklyIncome(false);
         processInjuriesAndAutoSub();
+        pushConfidenceSnapshot();
         saveState();renderAll();showToast('Advanced 1 week!');return;
     }
     if(G.week>=SEASON_WEEKS){showEndSeason();return;}
@@ -1883,8 +2094,8 @@ function playLeagueWeek(){
     }
     G.currentDate=addDays(baseDate,6);
     processInjuriesAndAutoSub();
+    if(weekPendingMatches.length===0){ pushConfidenceSnapshot(); saveState(); renderAll();showToast("⏩ Week advanced — no matches for your team.");return;}
     saveState();
-    if(weekPendingMatches.length===0){renderAll();showToast("⏩ Week advanced — no matches for your team.");return;}
     // Don't auto-start match — let user click "Play Match" in dashboard
     renderAll();
     showToast("⚽ Match week! Press \"Play Match\" when ready.");
@@ -1898,6 +2109,7 @@ function processInjuriesAndAutoSub() {
             if(p.injury > 0){
                 p.injury--;
                 if(idx===G.playerTeamIdx && medLvl>=3 && Math.random()<0.25 && p.injury>0) p.injury--;
+                if(p.injury === 0) p.injuryTotalWeeks = 0;
             }
             // Decrement suspension counter each week (a match was played)
             if((p.suspensionMatchesLeft || 0) > 0){
@@ -1958,13 +2170,17 @@ function applyPostMatchEvents(events, baseDate, compType) {
             const teamSq = G.squads[e.teamIdx];
             const p = teamSq ? teamSq.find(x => x.id === e.playerId) : null;
             if (p && p.injury === 0) {
-                p.injury = rnd(1, 4);
+                p.injury = e.severityWeeks || rnd(1, 4);
+                p.injuryTotalWeeks = p.injury;
+                p.injuryHistory = (p.injuryHistory || 0) + 1;
                 const medLvl = (G.stadium && e.teamIdx===G.playerTeamIdx) ? G.stadium.medicalLevel : 1;
                 if(medLvl>=4) p.injury = Math.max(1, p.injury-1);
+                const severityLabel = p.injury >= 6 ? 'a major injury' : p.injury >= 3 ? 'a moderate injury' : 'a minor knock';
                 G.news.unshift({
                     date: formatDate(baseDate),
                     title: 'A Heavy Blow! (Injury)',
-                    body: `Bad news for ${TEAMS[e.teamIdx]}! Key player ${p.name} has suffered an injury and will be out for ${p.injury} weeks.`
+                    body: `Bad news for ${TEAMS[e.teamIdx]}! Key player ${p.name} has suffered ${severityLabel} and will be out for ${p.injury} weeks.`,
+                    tags: ['injury']
                 });
             }
         }
@@ -1981,7 +2197,8 @@ function applyPostMatchEvents(events, baseDate, compType) {
                             G.news.unshift({
                                 date: formatDate(baseDate),
                                 title: '🟥 Red Card Suspension!',
-                                body: `${p.name} received a red card and will serve a suspension of ${p.suspensionMatchesLeft} match(es).`
+                                body: `${p.name} received a red card and will serve a suspension of ${p.suspensionMatchesLeft} match(es).`,
+                                tags: ['match']
                             });
                         }
                     }
@@ -1996,7 +2213,8 @@ function applyPostMatchEvents(events, baseDate, compType) {
                             G.news.unshift({
                                 date: formatDate(baseDate),
                                 title: '🟨 Accumulated Yellow Cards!',
-                                body: `${p.name} has reached 3 yellow cards and will be suspended for 1 match.`
+                                body: `${p.name} has reached 3 yellow cards and will be suspended for 1 match.`,
+                                tags: ['match']
                             });
                         }
                     }
@@ -2113,6 +2331,62 @@ function applyMyMatchConsequences(r){
     }
     r._pendingReveal = false;
     G.leagueTable.sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga));
+    pushConfidenceSnapshot();
+}
+// ─── H4: Confidence Meter Visual ────────────────────────────
+// Keeps a rolling weekly history of board confidence / fan support so the dashboard can show a
+// trend (rising/falling/stable) rather than just a single static snapshot number.
+function pushConfidenceSnapshot(){
+    if(!Array.isArray(G.confidenceHistory)) G.confidenceHistory = [];
+    G.confidenceHistory.push({week:G.week, board:Math.round(G.boardConfidence), fan:Math.round(G.fanSupport)});
+    if(G.confidenceHistory.length > 12) G.confidenceHistory.shift(); // keep a manageable rolling window
+}
+function getConfidenceTrend(key){
+    if(!Array.isArray(G.confidenceHistory) || G.confidenceHistory.length < 2) return 0;
+    const cur = G[key === 'board' ? 'boardConfidence' : 'fanSupport'];
+    const prev = G.confidenceHistory[G.confidenceHistory.length-2][key];
+    return Math.round(cur - prev);
+}
+function confidenceStatus(boardConfidence, failStreak){
+    if(failStreak >= 1 && boardConfidence < 35) return {label:'Critical — Job at Risk', cls:'rt-4', icon:'🔴'};
+    if(boardConfidence < 30) return {label:'Very Low', cls:'rt-4', icon:'🔴'};
+    if(boardConfidence < 45) return {label:'Under Pressure', cls:'rt-5', icon:'🟠'};
+    if(boardConfidence < 65) return {label:'Stable', cls:'rt-6', icon:'🟡'};
+    if(boardConfidence < 85) return {label:'Strong', cls:'rt-7', icon:'🟢'};
+    return {label:'Excellent', cls:'rt-9', icon:'🟢'};
+}
+function renderConfidenceMeter(compact){
+    const board = Math.round(G.boardConfidence);
+    const fan = Math.round(G.fanSupport);
+    const boardTrend = getConfidenceTrend('board');
+    const fanTrend = getConfidenceTrend('fan');
+    const status = confidenceStatus(G.boardConfidence, G.objectiveFailStreak||0);
+    const trendArrow = (t) => t > 0 ? `<span style="color:var(--gg)">▲${Math.abs(t)}</span>` : t < 0 ? `<span style="color:var(--red)">▼${Math.abs(t)}</span>` : `<span style="color:var(--dim)">—</span>`;
+    const warningHtml = (G.objectiveFailStreak||0) >= 1
+        ? `<div style="margin-top:8px;padding:6px 8px;background:rgba(220,40,40,.12);border:1px solid var(--red);border-radius:6px;font-size:.65rem;color:var(--red);font-weight:bold">
+             ⚠️ Failed objective ${G.objectiveFailStreak} season(s) running — one more failure risks the sack!
+           </div>` : '';
+    return `
+        <div class="card" style="margin-bottom:10px">
+            <div class="row bt" style="margin-bottom:6px">
+                <div class="sec" style="margin-bottom:0">🎯 Board Objective</div>
+                <span class="rating-chip ${status.cls}">${status.icon} ${status.label}</span>
+            </div>
+            <div style="font-size:.78rem;margin-bottom:10px">${G.boardObjective.desc}</div>
+            <div class="g2">
+                <div>
+                    <div class="row bt" style="font-size:.6rem;color:var(--dim)"><span>Board Confidence</span><span>${trendArrow(boardTrend)}</span></div>
+                    <div class="stat-bar"><div class="stat-fill" style="width:${board}%;background:${board>=65?'var(--gg)':board>=45?'var(--gold)':'var(--red)'}"></div></div>
+                    <div style="font-size:.68rem;margin-top:2px;font-weight:bold">${board}%</div>
+                </div>
+                <div>
+                    <div class="row bt" style="font-size:.6rem;color:var(--dim)"><span>Fan Support</span><span>${trendArrow(fanTrend)}</span></div>
+                    <div class="stat-bar"><div class="stat-fill" style="width:${fan}%;background:var(--gold)"></div></div>
+                    <div style="font-size:.68rem;margin-top:2px;font-weight:bold">${fan}%</div>
+                </div>
+            </div>
+            ${warningHtml}
+        </div>`;
 }
 function playNextPendingMatch(){
     if(weekPendingIndex>=weekPendingMatches.length){
@@ -2303,7 +2577,7 @@ function playNextPendingMatch(){
         const isDerby = st.isDerbyMatch;
 
         lb.innerHTML=`
-        <div class="lb-header${isDerby?' derby-header':''}" ${isDerby ? 'style="background:linear-gradient(90deg,#7f1d1d,#991b1b,#7f1d1d);animation:derbyPulse 2s infinite"' : ''}>${isDerby?'🔥 ':''} ${st.label} · ${st.dateStr?formatDate(st.dateStr):''} ${isDerby?'🔥':''}</div>
+        <div class="lb-header${isDerby?' derby-header':''}" ${isDerby ? 'style="background:linear-gradient(90deg,#7f1d1d,#991b1b,#7f1d1d);animation:derbyPulse 2s infinite"' : ''}><span>${isDerby?'🔥 ':''} ${st.label} · ${st.dateStr?formatDate(st.dateStr):''} ${isDerby?'🔥':''}</span><button class="lb-minimize-btn" onclick="minimizeLiveMatch(event)" title="Minimize">▾</button></div>
         ${st.weather?`<div class="lb-weather">${st.weather.icon} ${st.weather.label} — ${st.weather.desc}</div>`:''}
         ${attendanceHtml}
         ${weekPendingMatches.length>1?`<div class="match-queue-bar">${queueBar}</div>`:''}
@@ -2340,6 +2614,49 @@ function playNextPendingMatch(){
         </div>
         `;
         updateLiveBoardDynamic();
+    }
+
+    // ─── E7: Live Match Mini-Bar ────────────────────────────────
+    // Lets the user keep an eye on their live match while browsing other tabs (Squad, Transfer,
+    // etc). The simulation interval (liveInterval) keeps ticking in the background regardless —
+    // minimizing only changes what's visually shown, never pauses the match itself.
+    function minimizeLiveMatch(evt){
+        if(evt) evt.stopPropagation();
+        const st = liveMatchState;
+        if(st.min >= 90){ showToast('Match has ended — view the result first.'); return; }
+        document.getElementById('live-board').classList.remove('show');
+        const bar = document.getElementById('live-mini-bar');
+        bar.classList.add('show');
+        renderMiniBar();
+    }
+    function expandLiveMatch(){
+        const bar = document.getElementById('live-mini-bar');
+        bar.classList.remove('show');
+        const lb = document.getElementById('live-board');
+        lb.classList.add('show');
+        renderLiveBoardFull();
+    }
+    function renderMiniBar(){
+        const bar = document.getElementById('live-mini-bar');
+        if(!bar || !bar.classList.contains('show')) return;
+        const st = liveMatchState;
+        const my = st.myMatch;
+        if(!my){ bar.classList.remove('show'); return; }
+        const isFT = st.min >= 90;
+        const myEvs = my.events.filter(e=>e.min<=st.min);
+        const hScore = isFT ? my.homeScore : myEvs.filter(e=>e.team==='home'&&e.type==='goal').length;
+        const aScore = isFT ? my.awayScore : myEvs.filter(e=>e.team==='away'&&e.type==='goal').length;
+        const hName = getTeamName(my.homeIdx), aName = getTeamName(my.awayIdx);
+        bar.innerHTML = `
+            <span class="lmb-live-dot"></span>
+            <span class="lmb-min">${isFT?'FT':st.min+"'"}</span>
+            <span class="lmb-teams">${hName} <span class="lmb-score">${hScore} - ${aScore}</span> ${aName}</span>
+            <span class="lmb-expand">▴ Expand</span>
+        `;
+        if(isFT){
+            // Auto-expand once the match finishes, so the user doesn't miss the result/press conference flow.
+            setTimeout(()=>{ if(document.getElementById('live-mini-bar').classList.contains('show')) expandLiveMatch(); }, 600);
+        }
     }
     
     // ─── SHOUT MODAL ─────────────────────────────────────────
@@ -2417,9 +2734,26 @@ function playNextPendingMatch(){
         return lines;
     }
     
+    let matchReportView = 'list'; // 'list' | 'heatmap' — resets each time the report is reopened
     function openMatchReport(){
+        matchReportView = 'list';
+        renderMatchReportBody();
+        document.getElementById('mfoot').innerHTML=`<button class="btn btn-s btn-sm" onclick="closeModal()">Close</button>`;
+        document.getElementById('mov').classList.add('show');
+    }
+    function renderMatchReportBody(){
         const my=liveMatchState.myMatch;
         if(!my||!my.ratings){ showToast('Ratings not available for this match.'); return; }
+        document.getElementById('mtitle').innerHTML=`📋 Match Report`;
+        const toggleBar = `
+            <div style="display:flex;gap:6px;margin-bottom:12px">
+                <button class="btn btn-sm ${matchReportView==='list'?'btn-p':'btn-s'}" style="flex:1" onclick="switchMatchReportView('list')">📃 List</button>
+                <button class="btn btn-sm ${matchReportView==='heatmap'?'btn-p':'btn-s'}" style="flex:1" onclick="switchMatchReportView('heatmap')">🔥 Heatmap</button>
+            </div>`;
+        if(matchReportView === 'heatmap'){
+            document.getElementById('mbody').innerHTML = toggleBar + renderMatchReportHeatmap(my);
+            return;
+        }
         const hSq=getTeamSquad(my.homeIdx).filter(p=>p.inXI);
         const aSq=getTeamSquad(my.awayIdx).filter(p=>p.inXI);
         const buildRows=(sq)=>sq.map(p=>({name:p.name,pos:p.slotPos,rating:my.ratings[p.id]||6.0,isMotm:my.motm&&my.motm.playerId===p.id}))
@@ -2429,15 +2763,16 @@ function playNextPendingMatch(){
             <span><b style="color:var(--gold);width:28px;display:inline-block">${r.pos}</b> ${r.name} ${r.isMotm?'⭐':''}</span>
             <span class="rating-chip ${ratingCls(r.rating)}">${r.rating.toFixed(1)}</span>
         </div>`;
-        document.getElementById('mtitle').innerHTML=`📋 Match Report`;
-        document.getElementById('mbody').innerHTML=`
+        document.getElementById('mbody').innerHTML=toggleBar+`
             <div class="sec">${getTeamName(my.homeIdx)} (${my.homeScore})</div>
             ${hRows.map(rowHtml).join('')}
             <div class="sec" style="margin-top:12px">${getTeamName(my.awayIdx)} (${my.awayScore})</div>
             ${aRows.map(rowHtml).join('')}
         `;
-        document.getElementById('mfoot').innerHTML=`<button class="btn btn-s btn-sm" onclick="closeModal()">Close</button>`;
-        document.getElementById('mov').classList.add('show');
+    }
+    function switchMatchReportView(view){
+        matchReportView = view;
+        renderMatchReportBody();
     }
     
     function renderHorizontalPitch(homeSq, homeTac, awaySq, awayTac, homeIsPlayer){
@@ -2498,6 +2833,56 @@ function playNextPendingMatch(){
           </div>
         </div>
         ${benchHtml}`;
+    }
+    // ─── E2: Player Rating Heatmap (Match Report) ──────────────
+    // Renders one compact horizontal mini-pitch per team, with each player's dot colored along a
+    // red->green gradient by their match rating instead of showing OVR — a heatmap of who actually
+    // performed well, at a glance, rather than reading a flat list of numbers.
+    function renderRatingHeatmapMiniPitch(squad, tacticName, ratings, motm, teamLabel, isHomeSide){
+        const slots = FORMATIONS[TACTICS_MAP[tacticName] || '4-3-3'];
+        const coords = H_POS[TACTICS_MAP[tacticName] || '4-3-3'];
+        let dots = '';
+        let placed = new Set();
+        slots.forEach((slot, i) => {
+            const p = squad.find(x => x.inXI && x.slotPos === slot && !placed.has(x.id));
+            // Always orient this team attacking left-to-right within its own mini-pitch for readability.
+            const bx = coords.x[i], by = coords.y[i];
+            if(p){
+                placed.add(p.id);
+                const rating = ratings[p.id] || 6.0;
+                const color = getRatingColor(rating);
+                const isMotm = motm && motm.playerId === p.id;
+                dots += `<div class="pdot" style="left:${bx}%;top:${by}%;" onclick="event.stopPropagation();showToast('${p.name.replace(/'/g,"")} — ${rating.toFixed(1)}')">
+                  <div class="pdot-circle" style="background:${color};border-color:rgba(255,255,255,.7);${isMotm?'box-shadow:0 0 0 2px var(--gold)':''}">${rating.toFixed(1)}</div>
+                  <div class="pdot-name">${p.name.split(' ')[0]}${isMotm?'⭐':''}</div>
+                </div>`;
+            }
+        });
+        return `
+        <div style="margin-bottom:10px">
+          <div style="font-size:.7rem;font-weight:700;color:var(--dim);margin-bottom:3px;padding:0 4px">${teamLabel}</div>
+          <div class="pitch-wrap horizontal heatmap-mini" style="aspect-ratio:16/8">
+            <div class="pitch-lines">
+              <div class="pl-hw"></div><div class="pl-cc"></div>
+              <div class="pl-pb-top"></div><div class="pl-pb-bot"></div>
+              <div class="pl-gb-top"></div><div class="pl-gb-bot"></div>
+            </div>
+            ${dots}
+          </div>
+        </div>`;
+    }
+    function renderMatchReportHeatmap(my){
+        const hSq = getTeamSquad(my.homeIdx), aSq = getTeamSquad(my.awayIdx);
+        const hTac = getTeamTactic(my.homeIdx), aTac = getTeamTactic(my.awayIdx);
+        return `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:.6rem;color:var(--dim)">
+            <span>Performance:</span>
+            <span style="flex:1;height:8px;border-radius:4px;background:linear-gradient(90deg,rgb(220,40,40),rgb(220,190,40),rgb(50,220,80));"></span>
+            <span>Poor → Excellent</span>
+        </div>
+        ${renderRatingHeatmapMiniPitch(hSq, hTac, my.ratings, my.motm, `${getTeamName(my.homeIdx)} (${my.homeScore})`, true)}
+        ${renderRatingHeatmapMiniPitch(aSq, aTac, my.ratings, my.motm, `${getTeamName(my.awayIdx)} (${my.awayScore})`, false)}
+        `;
     }
 
     let pitchAnim = { possessionTeam: 'home', possessionPid: null, lastSwitchAt: 0 };
@@ -2616,6 +3001,9 @@ function playNextPendingMatch(){
                 if (e.type === 'goal') {
                     if (e.team === myTeamSide) { playCrowdCheer(); }
                     else { playCrowdBoo(); }
+                    if(document.getElementById('live-mini-bar').classList.contains('show')){
+                        showToast(e.team===myTeamSide ? `⚽ GOAL! ${e.player} (${e.min}')` : `😬 ${e.min}' Lawan mencetak gol`);
+                    }
                 }
                 if (e.type === 'card') {
                     if (e.card === 'red') {
@@ -2638,6 +3026,7 @@ function playNextPendingMatch(){
                         // Accumulate red card suspension (1-4 matches)
                         p.suspensionMatchesLeft = (p.suspensionMatchesLeft || 0) + rnd(1, 4);
                         st.isPaused = true;
+                        if(document.getElementById('live-mini-bar').classList.contains('show')) expandLiveMatch();
                         document.getElementById('mtitle').innerHTML = '🟥 Kartu Merah!';
                         document.getElementById('mbody').innerHTML  =
                             `<p style="text-align:center;color:var(--red);font-size:.9rem;font-weight:bold">
@@ -2661,12 +3050,19 @@ function playNextPendingMatch(){
                     const sq = G.squads[G.playerTeamIdx];
                     const p  = sq ? sq.find(x => x.id === e.playerId) : null;
                     if (p && p.inXI) {
-                        p.injury = 1;
+                        p.injury = e.severityWeeks || rnd(1,3);
+                        p.injuryTotalWeeks = p.injury;
+                        p.injuryHistory = (p.injuryHistory || 0) + 1;
                         st.isPaused = true;
+                        if(document.getElementById('live-mini-bar').classList.contains('show')) expandLiveMatch();
+                        const severityLabel = p.injury >= 6 ? 'Cedera Parah' : p.injury >= 3 ? 'Cedera Sedang' : 'Cedera Ringan';
                         document.getElementById('mtitle').innerHTML = '🚑 Pemain Cedera!';
                         document.getElementById('mbody').innerHTML  =
                             `<p style="text-align:center;color:var(--gold);font-size:.9rem;font-weight:bold">
                                 ${p.name} mengalami cedera!
+                             </p>
+                             <p style="text-align:center;font-size:.7rem;color:var(--red);font-weight:bold">
+                                ${severityLabel} — diperkirakan absen ${p.injury} minggu
                              </p>
                              <p style="text-align:center;font-size:.75rem;color:var(--dim)">
                                 Disarankan segera diganti.<br>Sisa Substitusi: <b>${st.subsLeft}</b>
@@ -2703,6 +3099,8 @@ function playNextPendingMatch(){
                 resetPitchAnim();
             }
         }
+        // Keep the mini-bar's score/minute in sync every tick, even while the user is on another tab.
+        if(document.getElementById('live-mini-bar').classList.contains('show')) renderMiniBar();
     }
 
     function openForcedSubModal(){
@@ -2877,14 +3275,7 @@ function buildMainActionBtn(){
             </div>
             <div class="chem-bar"><div class="chem-fill" style="width:${chem}%"></div></div>
         </div>
-        <div class="card" style="margin-bottom:10px">
-            <div class="sec" style="margin-bottom:8px">🎯 Board Objective</div>
-            <div style="font-size:.78rem">${G.boardObjective.desc}</div>
-            <div class="g2" style="margin-top:8px">
-                <div style="text-align:center"><div style="font-size:.6rem;color:var(--dim)">Board Confidence</div><div class="stat-bar"><div class="stat-fill" style="width:${G.boardConfidence}%;background:${G.boardConfidence>50?'var(--gg)':'var(--red)'}"></div></div></div>
-                <div style="text-align:center"><div style="font-size:.6rem;color:var(--dim)">Fan Support</div><div class="stat-bar"><div class="stat-fill" style="width:${G.fanSupport}%;background:var(--gold)"></div></div></div>
-            </div>
-        </div>
+        ${renderConfidenceMeter()}
         ${nextDerbyHtml}
         ${pendingHtml}
         
@@ -3727,15 +4118,54 @@ function buildMainActionBtn(){
         }
     }
     
+    // ─── G1: Transfer Window News Feed ──────────────────────────
+    let newsFilter = 'all'; // 'all' | 'transfer' | 'match' | 'injury' | 'club' — persists while browsing
+    const NEWS_CATEGORY_META = {
+        transfer: {label:'Transfer', icon:'💰', color:'var(--gold)'},
+        match:    {label:'Match',    icon:'⚽', color:'var(--gg)'},
+        injury:   {label:'Injury',   icon:'🚑', color:'var(--red)'},
+        club:     {label:'Club',     icon:'🏟️', color:'var(--bg2)'}
+    };
+    function newsItemTag(n){
+        // Older saves / a few generic entries have no tags array — default them to 'club' so
+        // they still show up under the "All" and "Club" filters instead of vanishing.
+        return (Array.isArray(n.tags) && n.tags.length) ? n.tags[0] : 'club';
+    }
+    function setNewsFilter(f){
+        newsFilter = f;
+        renderNews();
+    }
     function renderNews() {
-        let html = '<div class="sec">📰 World Football News</div>';
-        if (!G.news || G.news.length === 0) {
-            html += '<p style="color:var(--dim); font-size:0.75rem;">No news at the moment.</p>';
+        const inTW = G.phase === 'preseason' || (G.week >= 14 && G.week <= 17);
+        const counts = {all: G.news.length, transfer:0, match:0, injury:0, club:0};
+        G.news.forEach(n => { const t = newsItemTag(n); if(counts[t]!==undefined) counts[t]++; });
+        const filterBtn = (key, label) => `<button class="btn btn-sm ${newsFilter===key?'btn-p':'btn-s'}" style="flex:1;white-space:nowrap" onclick="setNewsFilter('${key}')">${label}${counts[key]?` (${counts[key]})`:''}</button>`;
+        let html = `<div class="sec">📰 World Football News</div>`;
+        if(inTW){
+            html += `<div style="margin-bottom:10px;padding:7px 10px;background:rgba(240,192,64,.12);border:1px solid var(--gold);border-radius:6px;font-size:.68rem;color:var(--gold);font-weight:bold">
+                🔥 Transfer Window is OPEN — clubs across the league are actively buying and selling.
+            </div>`;
+        }
+        html += `<div style="display:flex;gap:5px;margin-bottom:10px;overflow-x:auto">
+            ${filterBtn('all','All')}
+            ${filterBtn('transfer','💰 Transfer')}
+            ${filterBtn('match','⚽ Match')}
+            ${filterBtn('injury','🚑 Injury')}
+            ${filterBtn('club','🏟️ Club')}
+        </div>`;
+        const filtered = newsFilter === 'all' ? G.news : G.news.filter(n => newsItemTag(n) === newsFilter);
+        if (!filtered || filtered.length === 0) {
+            html += `<p style="color:var(--dim); font-size:0.75rem;">No ${newsFilter==='all'?'':NEWS_CATEGORY_META[newsFilter]?.label.toLowerCase()+' '}news at the moment.</p>`;
         } else {
-            G.news.slice(0, 20).forEach(n => {
+            filtered.slice(0, 30).forEach(n => {
+                const cat = newsItemTag(n);
+                const meta = NEWS_CATEGORY_META[cat] || NEWS_CATEGORY_META.club;
                 html += `
-                <div class="card" style="border-left: 3px solid var(--bg2);">
-                    <div style="font-size:0.65rem; color:var(--dim); margin-bottom:4px;">${n.date}</div>
+                <div class="card" style="border-left: 3px solid ${meta.color};">
+                    <div class="row bt" style="margin-bottom:4px">
+                        <div style="font-size:0.65rem; color:var(--dim);">${n.date}</div>
+                        <span style="font-size:.55rem;font-weight:bold;color:${meta.color};background:var(--sf2);padding:1px 6px;border-radius:8px;border:1px solid ${meta.color}">${meta.icon} ${meta.label}</span>
+                    </div>
                     <div style="font-weight:bold; font-size:0.85rem; color:var(--gold); margin-bottom:6px;">${n.title}</div>
                     <div style="font-size:0.75rem; line-height:1.4;">${n.body}</div>
                 </div>`;
@@ -3835,10 +4265,11 @@ function buildMainActionBtn(){
         let q;
         if(type==='prematch'){
             title = '🎤 Pre-Match Press Conference';
-            pool = PRESS_QUESTIONS_PREMATCH;
-            q = JSON.parse(JSON.stringify(pick(pool)));
             const nextOpp = (G.schedule[G.week] || []).find(m=>m[0]===G.playerTeamIdx||m[1]===G.playerTeamIdx);
-            const oppName = nextOpp ? TEAMS[nextOpp[0]===G.playerTeamIdx?nextOpp[1]:nextOpp[0]] : 'the next opponent';
+            const oppIdx = nextOpp ? (nextOpp[0]===G.playerTeamIdx?nextOpp[1]:nextOpp[0]) : null;
+            pool = oppIdx !== null ? getContextualPrematchPool(oppIdx) : PRESS_QUESTIONS_PREMATCH;
+            q = JSON.parse(JSON.stringify(pick(pool)));
+            const oppName = oppIdx !== null ? TEAMS[oppIdx] : 'the next opponent';
             q.q = q.q.replace(/\{opp\}/g, oppName);
         } else if(type==='transfer'){
             title = '🎤 Transfer Window Press Conference';
@@ -3880,15 +4311,17 @@ function buildMainActionBtn(){
             startLiveMatch();
             return;
         }
-        const pool = PRESS_QUESTIONS_PREMATCH;
-        let q = JSON.parse(JSON.stringify(pick(pool)));
         const nextMatch = (weekPendingMatches[weekPendingIndex] || null);
         let oppName = 'the next opponent';
+        let oppIdx = null;
         if(nextMatch && nextMatch.myMatch){
             const my = nextMatch.myMatch;
             const isH = my.homeIdx === G.playerTeamIdx;
-            oppName = getTeamName(isH ? my.awayIdx : my.homeIdx);
+            oppIdx = isH ? my.awayIdx : my.homeIdx;
+            oppName = getTeamName(oppIdx);
         }
+        const pool = oppIdx !== null ? getContextualPrematchPool(oppIdx) : PRESS_QUESTIONS_PREMATCH;
+        let q = JSON.parse(JSON.stringify(pick(pool)));
         q.q = q.q.replace(/\{opp\}/g, oppName);
 
         document.getElementById('mtitle').innerHTML = '🎤 Pre-Match Press Conference';
@@ -4188,15 +4621,8 @@ function buildMainActionBtn(){
             <div class="row bt" style="padding:4px 0"><span style="font-size:.75rem;color:var(--dim)">Post-Match</span>${G.pcAvailable?`<button class="btn btn-g btn-sm" onclick="openPressConference('postmatch')">Hold Now</button>`:`<span style="font-size:.65rem;color:var(--dim)">Done this week</span>`}</div>
             <div class="row bt" style="padding:4px 0"><span style="font-size:.75rem;color:var(--dim)">Transfer Window</span>${(G.phase==='preseason'||(G.week>=14&&G.week<=17))&&G.pcTransferAvailable?`<button class="btn btn-g btn-sm" onclick="openPressConference('transfer')">Hold Now</button>`:`<span style="font-size:.65rem;color:var(--dim)">Not available</span>`}</div>
         </div>
-        <div class="card" style="border-color:var(--gold)">
-            <div class="sec" style="color:var(--gold)">🎯 Board Objective — Season ${G.season}</div>
-            <div style="font-size:.78rem">${G.boardObjective.desc}</div>
-            <div class="g2" style="margin-top:8px">
-                <div style="text-align:center"><div style="font-size:.6rem;color:var(--dim)">Board Confidence</div><div class="stat-bar"><div class="stat-fill" style="width:${G.boardConfidence}%;background:${G.boardConfidence>50?'var(--gg)':'var(--red)'}"></div></div><div style="font-size:.7rem;margin-top:2px">${Math.round(G.boardConfidence)}%</div></div>
-                <div style="text-align:center"><div style="font-size:.6rem;color:var(--dim)">Fan Support</div><div class="stat-bar"><div class="stat-fill" style="width:${G.fanSupport}%;background:var(--gold)"></div></div><div style="font-size:.7rem;margin-top:2px">${Math.round(G.fanSupport)}%</div></div>
-            </div>
-            ${G.objectiveFailStreak>0?`<div style="font-size:.65rem;color:var(--red);margin-top:8px">⚠️ Failed to meet the objective for ${G.objectiveFailStreak} season(s) in a row. 2 failures in a row risks the sack!</div>`:''}
-        </div>
+        <div style="margin-bottom:2px;font-size:.65rem;color:var(--dim);font-weight:bold">SEASON ${G.season}</div>
+        ${renderConfidenceMeter()}
         <div class="card" style="border-color:var(--bg2)">
             <div class="sec" style="color:var(--bg2)">🏟️ Stadium & Facilities — ${G.stadium.name}</div>
             ${stFields.map(([f,label,desc])=>`
@@ -4351,7 +4777,7 @@ function buildMainActionBtn(){
             }
             G.transferMarket = G.transferMarket.filter(p => !(p.teamIndex === newTeamIdx && Array.isArray(G.squads[newTeamIdx]) && G.squads[newTeamIdx].includes(p)));
             G.log.unshift({cls:'info', text:`👔 The manager has officially joined ${TEAMS[newTeamIdx]}!`});
-            G.news.unshift({date: formatDate(G.currentDate), title: 'Managerial Change!', body: `${TEAMS[newTeamIdx]} are proud to announce ${G.managerName} as their new head coach.`});
+            G.news.unshift({date: formatDate(G.currentDate), title: 'Managerial Change!', body: `${TEAMS[newTeamIdx]} are proud to announce ${G.managerName} as their new head coach.`, tags:['club']});
             saveState(); renderAll(); showToast(`Welcome to ${TEAMS[newTeamIdx]}!`);
         }
     }
@@ -4369,7 +4795,7 @@ function buildMainActionBtn(){
         const regen = genPlayer(oldP.pos, G.playerTeamIdx, false, origin);
         regen.age = rnd(17, 21); regen.ovr = rnd(50, 85); regen.isStar = regen.ovr >= 80; regen.price = getPrice(regen.ovr, regen.age);
         sq.splice(idx, 1); sq.push(regen);
-        G.news.unshift({date: formatDate(G.currentDate), title: 'Player Hangs Up Boots', body: `${oldP.name} has announced retirement. The club has promptly promoted academy prospect ${regen.name} to the first team.`});
+        G.news.unshift({date: formatDate(G.currentDate), title: 'Player Hangs Up Boots', body: `${oldP.name} has announced retirement. The club has promptly promoted academy prospect ${regen.name} to the first team.`, tags:['club']});
         saveState(); closeModal(); renderAll(); showToast(`🎲 Gacha! ${regen.name} (OVR ${regen.ovr}) joins the squad!`);
     }
     
@@ -4439,7 +4865,7 @@ function buildMainActionBtn(){
         if(G.objectiveFailStreak>=2){
             let newTeam=rnd(0,15); while(newTeam===G.playerTeamIdx) newTeam=rnd(0,15);
             sackedMsg=`🛑 Anda DIPECAT oleh ${TEAMS[G.playerTeamIdx]} setelah gagal memenuhi target beruntun! Anda mendapat kesempatan melatih ${TEAMS[newTeam]}.`;
-            G.news.unshift({date:'Pra-Musim', title:'Manajer Dipecat!', body:sackedMsg});
+            G.news.unshift({date:'Pra-Musim', title:'Manajer Dipecat!', body:sackedMsg, tags:['club']});
             G.playerTeamIdx=newTeam; G.budget=Math.min(40,BASE_BUDGETS[newTeam]); G.objectiveFailStreak=0; G.boardConfidence=55;
             G.stadium.name=(TEAM_STADIUMS&&TEAM_STADIUMS[newTeam])?TEAM_STADIUMS[newTeam]:TEAMS[newTeam]+' Stadium';
             weekPendingMatches=[]; weekPendingIndex=0;
@@ -4477,10 +4903,10 @@ function buildMainActionBtn(){
         const oldStadium = G.sponsors && G.sponsors.stadium;
         // Expire old sponsor
         if(oldShirt && oldShirt.weeksLeft <= 0){
-            G.news.unshift({date:'Pra-Musim', title:'Sponsor Selesai', body:`Kontrak sponsor jersey dengan ${oldShirt.name} telah berakhir.`});
+            G.news.unshift({date:'Pra-Musim', title:'Sponsor Selesai', body:`Kontrak sponsor jersey dengan ${oldShirt.name} telah berakhir.`, tags:['club']});
         }
         if(oldStadium && oldStadium.weeksLeft <= 0){
-            G.news.unshift({date:'Pra-Musim', title:'Sponsor Stadion Selesai', body:`Kontrak sponsor stadion dengan ${oldStadium.name} telah berakhir.`});
+            G.news.unshift({date:'Pra-Musim', title:'Sponsor Stadion Selesai', body:`Kontrak sponsor stadion dengan ${oldStadium.name} telah berakhir.`, tags:['club']});
         }
         // New season sponsor deals (auto-generated, inbox notification)
         G.sponsors = {
@@ -4538,7 +4964,7 @@ function buildMainActionBtn(){
                 if(p.age >= 34) {
                     let chance = p.age === 34 ? 0.3 : (p.age === 35 ? 0.5 : (p.age === 36 ? 0.75 : 1.0));
                     if(Math.random() < chance) {
-                        if(p.isStar && ti === G.playerTeamIdx) G.news.unshift({ date: 'Pra-Musim', title: 'Legenda Pensiun', body: `${p.name} (OVR ${p.ovr}) resmi menggantung sepatu di usia ${p.age}.`});
+                        if(p.isStar && ti === G.playerTeamIdx) G.news.unshift({ date: 'Pra-Musim', title: 'Legenda Pensiun', body: `${p.name} (OVR ${p.ovr}) resmi menggantung sepatu di usia ${p.age}.`, tags:['club']});
                         // If this retiring player currently has a live transfer-market listing
                         // (a reference to this same object), remove that listing too — a retired
                         // player can no longer be bought.
@@ -4561,7 +4987,7 @@ function buildMainActionBtn(){
                 if(p._listed){ delete p._listed; }
                 else { G.transferMarket.push(p); }
                 sq.splice(idx, 1);
-                if(ti === G.playerTeamIdx) G.news.unshift({ date: 'Pra-Musim', title: 'Bebas Transfer', body: `${p.name} telah meninggalkan ${TEAMS[G.playerTeamIdx]} secara gratis setelah kontraknya habis.`});
+                if(ti === G.playerTeamIdx) G.news.unshift({ date: 'Pra-Musim', title: 'Bebas Transfer', body: `${p.name} telah meninggalkan ${TEAMS[G.playerTeamIdx]} secara gratis setelah kontraknya habis.`, tags:['transfer']});
                 const origin = ti < 16 ? rollDomesticBiasedOrigin() : 'ID';
                 const np = genPlayer(POS_MAP[p.pos].c,ti,false, origin); np.price = getPrice(np.ovr, np.age); sq.push(np);
             });
@@ -4600,7 +5026,7 @@ function buildMainActionBtn(){
             if(discarded) delete discarded._listed;
         }
         G.log=[{cls:'info',text:`🌟 Musim ${G.season} dimulai! Hadiah telah masuk kas.`}];
-        G.news.unshift({date: formatDate(G.currentDate), title: `Selamat Datang di Musim ${G.season}!`, body: `Musim baru di depan mata. Semua klub memantapkan taktik dan merampungkan transfer demi musim yang mendebarkan.`});
+        G.news.unshift({date: formatDate(G.currentDate), title: `Selamat Datang di Musim ${G.season}!`, body: `Musim baru di depan mata. Semua klub memantapkan taktik dan merampungkan transfer demi musim yang mendebarkan.`, tags:['club']});
         if(!sackedMsg && (finalPos<=5||Math.random()>0.6) && G.reputation>=30){
             let target=rnd(0,15);while(target===G.playerTeamIdx)target=rnd(0,15);
             G.inbox.unshift({id:Math.random().toString(36).substr(2,9),title:'Tawaran Pekerjaan',body:`Manajemen ${TEAMS[target]} terkesan dengan kinerja Anda. Mereka ingin Anda menjadi manajer baru!`,action:true,targetTeamIdx:target, isRead: false});
@@ -4679,6 +5105,21 @@ function buildMainActionBtn(){
                     <span style="font-weight:bold; color:${p.contract<=1?'var(--red)':'var(--gg)'}">${p.contract} Tahun</span>
                 </div>
                 ${renewBtn ? `<div style="text-align:right; margin-top:5px">${renewBtn}</div>` : ''}
+            </div>
+            <div class="card" style="margin-top:10px">
+                <div class="sec">🚑 Daya Tahan & Cedera</div>
+                <div class="row bt">
+                    <span>Tingkat Kerawanan:</span>
+                    <span class="rating-chip ${injuryPronenessLabel(p.injuryProneness||35).cls}">${injuryPronenessLabel(p.injuryProneness||35).label}</span>
+                </div>
+                <div class="row bt" style="margin-top:5px"><span>Riwayat Cedera (karir)</span><b style="color:var(--dim)">${p.injuryHistory||0}x</b></div>
+                ${p.injury>0 ? `
+                <div style="margin-top:8px">
+                    <div class="row bt" style="font-size:.65rem;color:var(--dim);margin-bottom:3px"><span>Pemulihan</span><span>${p.injury} dari ${p.injuryTotalWeeks||p.injury} minggu tersisa</span></div>
+                    <div style="height:7px;background:var(--sf2);border-radius:4px;overflow:hidden">
+                        <div style="width:${clamp(100-(p.injury/Math.max(p.injuryTotalWeeks||p.injury,1))*100,0,100)}%;height:100%;background:var(--gg)"></div>
+                    </div>
+                </div>` : ''}
             </div>
             <div class="card" style="margin-top:10px">
                 <div class="row bt"><span>Penampilan</span><b>${p.appearances}</b></div>
@@ -4887,6 +5328,10 @@ function buildMainActionBtn(){
     })();
     
     function init(){
+        try{
+            const savedTheme = localStorage.getItem('fmweb_theme');
+            applyTheme(savedTheme === 'light' ? 'light' : 'dark');
+        }catch(e){}
         try{
             const legacy=localStorage.getItem('mliv16');
             if(legacy && !localStorage.getItem(slotKey(1))){
