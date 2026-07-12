@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-    <title>Football Manager Web</title>
+    <title>Football Manager by Deology</title>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -130,6 +130,7 @@
         .pdot-circle.away-dot{background:#8b1a1a;border-color:#ff8060}
         .pdot-name{font-size:.45rem;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);white-space:nowrap;max-width:40px;overflow:hidden;text-overflow:ellipsis}
         .pdot-ovr{font-size:.5rem;color:var(--gold);font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,.8);background:#0008;padding:1px 3px;border-radius:3px}
+        .pname-link{cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;color:inherit;background:none;border:none;padding:0;font:inherit;display:inline}
         .heatmap-mini .pdot-circle{width:24px;height:24px;font-size:.52rem}
         .heatmap-mini .pdot-name{max-width:46px}
         .match-ball{
@@ -967,9 +968,8 @@ function genPlayer(posReq,teamIndex,isInitial=false, origin='ID'){
     const chemBase=isInitial?rnd(10,30):rnd(50,80);
     const p = {id:Math.random().toString(36).substr(2,9),name:randName(origin), origin: origin, pos, mainCat:POS_MAP[pos].c,
         ovr:ovrBase, pot:potBase, isStar:ovrBase>=80, age:age, energy:100, moral:80+rnd(0,20),
-        contract:rnd(2,4),goals:0,assists:0,appearances:0,cleanSheets:0,teamIndex,inXI:false,slotPos:null,chem:chemBase, injury: 0,
+        contract:rnd(2,4),goals:0,assists:0,appearances:0,teamIndex,inXI:false,slotPos:null,chem:chemBase, injury: 0,
         isLoan: false, loanDuration: 0, originalTeamIdx: -1, totalRating:0, ratingCount:0, motmCount:0,
-        careerGoals:0, careerAssists:0, careerAppearances:0, careerCleanSheets:0,
         form: 5, traits: [], injuryProneness: rollInjuryProneness(age), injuryHistory: 0
     };
     p.traits = assignTraits(p);
@@ -1017,9 +1017,8 @@ function genSquad(teamIndex,isInitial=false){
             sq.push({
                 id: Math.random().toString(36).substr(2,9), name: star.name, origin: star.origin, pos: star.pos, mainCat: POS_MAP[star.pos].c,
                 ovr: star.ovr, pot: pot, isStar: true, age: age, energy: 100, moral: 85, contract: rnd(2,4),
-                goals: 0, assists: 0, appearances: 0, cleanSheets: 0, teamIndex: teamIndex, inXI: false, slotPos: null, chem: rnd(20, 35), injury: 0,
+                goals: 0, assists: 0, appearances: 0, teamIndex: teamIndex, inXI: false, slotPos: null, chem: rnd(20, 35), injury: 0,
                 isLoan: false, loanDuration: 0, originalTeamIdx: -1, price: getPrice(star.ovr, age), totalRating:0, ratingCount:0, motmCount:0,
-                careerGoals:0, careerAssists:0, careerAppearances:0, careerCleanSheets:0,
                 injuryProneness: rollInjuryProneness(age), injuryHistory: 0
             });
         });
@@ -1463,11 +1462,10 @@ function applyGoalsToScorers(events, compType){
                 const p=G.squads[i].find(x=>x.id===e.playerId);
                 if(p){
                     p.goals=(p.goals||0)+1;
-                    p.careerGoals=(p.careerGoals||0)+1;
                     if(compType) p['goals_'+compType]=(p['goals_'+compType]||0)+1;
                     if(e.assistId){
                         const a=G.squads[i].find(x=>x.id===e.assistId);
-                        if(a){ a.assists=(a.assists||0)+1; a.careerAssists=(a.careerAssists||0)+1; if(compType) a['assists_'+compType]=(a['assists_'+compType]||0)+1; }
+                        if(a){ a.assists=(a.assists||0)+1; if(compType) a['assists_'+compType]=(a['assists_'+compType]||0)+1; }
                     }
                     break;
                 }
@@ -1485,12 +1483,52 @@ function getTeamName(idx){
     else if(typeof idx==='string')return G.acl&&G.acl.teams&&G.acl.teams[idx]?G.acl.teams[idx].name:idx;
     return "?";
 }
-function getTeamTactic(idx){if(typeof idx==='number'&&idx<16)return G.tactics[idx]||'4-3-3';return '4-3-3';}
-function getTeamSquad(idx){if(typeof idx==='number'&&idx<16)return G.squads[idx];return [];}
+function getTeamTactic(idx){
+    if(typeof idx==='number'&&idx<16) return G.tactics[idx]||'4-3-3';
+    if(typeof idx==='string'&&G.acl&&G.acl.tactics&&G.acl.tactics[idx]) return G.acl.tactics[idx];
+    return '4-3-3';
+}
+function getTeamSquad(idx){
+    if(typeof idx==='number'&&idx<16) return G.squads[idx];
+    if(typeof idx==='string'&&G.acl&&G.acl.squads&&G.acl.squads[idx]) return G.acl.squads[idx];
+    return [];
+}
+// F3: clickable player names — wraps any name in a dotted-underline span that opens the
+// player info modal when tapped/clicked, usable anywhere in the UI.
+function pLink(name,pid){
+    if(!pid) return name;
+    return `<button class="pname-link" onclick="event.stopPropagation();openPlayerModal('${pid}')">${name}</button>`;
+}
+function pLinkByName(name){
+    if(!name) return name;
+    for(let i=0;i<G.squads.length;i++){
+        if(!Array.isArray(G.squads[i])) continue;
+        const p=G.squads[i].find(x=>x.name===name);
+        if(p) return pLink(name,p.id);
+    }
+    if(Array.isArray(G.transferMarket)){
+        const p=G.transferMarket.find(x=>x.name===name);
+        if(p) return pLink(name,p.id);
+    }
+    return name;
+}
 function buildACL(){
-    const acl={teams:{},groups:{},standings:{},schedule:[],knockout:{},played:{}};
+    const acl={teams:{},groups:{},standings:{},schedule:[],knockout:{},played:{},squads:{},tactics:{}};
     let tCounter=0;
-    const getFTeam=(name,baseOvr, origin)=>{const id='F'+(tCounter++);acl.teams[id]={id,name,ovr:baseOvr+rnd(-2,4), origin};return id;};
+    const getFTeam=(name,baseOvr,origin)=>{
+        const id='F'+(tCounter++);
+        const ovr=baseOvr+rnd(-2,4);
+        acl.teams[id]={id,name,ovr,origin};
+        // Generate minimal virtual squad so live-board pitch has dots on both sides
+        const slots=['GK','CB','CB','LB','RB','CDM','CM','CM','LW','RW','ST'];
+        acl.squads[id]=slots.map((pos,i)=>({
+            id:`${id}_p${i}`, name:randName(origin), pos, mainCat:POS_MAP[pos].c,
+            ovr:clamp(ovr+rnd(-5,5),45,95), inXI:true, slotPos:pos,
+            injury:0, suspensionMatchesLeft:0, moral:80
+        }));
+        acl.tactics[id]='4-3-3';
+        return id;
+    };
     const west=[...ASIAN_LEAGUES['Saudi Pro']].sort(()=>Math.random()-0.5);
     const east1=[...ASIAN_LEAGUES['J-League']].sort(()=>Math.random()-0.5);
     const east2=[...ASIAN_LEAGUES['K-League']].sort(()=>Math.random()-0.5);
@@ -1555,7 +1593,8 @@ let liveMatchState={
     shout: null,
     shoutUsed: false,
     attendance: 0,
-    highlightsText: []
+    highlightsText: [],
+    matchSpeed: 1   // 1 = normal (30s total), 2 = double speed (15s total)
 };
 let gmClicks = 0;
 let gmTimer = null;
@@ -1735,14 +1774,6 @@ function migrateState(){
             if(p.injuryProneness === undefined) p.injuryProneness = rollInjuryProneness(p.age||25);
             if(p.injuryHistory === undefined) p.injuryHistory = 0;
             if(p.injury > 0 && p.injuryTotalWeeks === undefined) p.injuryTotalWeeks = p.injury;
-            // Career totals: backfill from saves created before career tracking existed. We can't
-            // recover prior seasons' numbers, so the current season's tally is used as a starting
-            // point (better than showing 0 for a player who has clearly already scored/played).
-            if(p.careerGoals === undefined) p.careerGoals = p.goals || 0;
-            if(p.careerAssists === undefined) p.careerAssists = p.assists || 0;
-            if(p.careerAppearances === undefined) p.careerAppearances = p.appearances || 0;
-            if(p.cleanSheets === undefined) p.cleanSheets = 0;
-            if(p.careerCleanSheets === undefined) p.careerCleanSheets = 0;
         });
     });
     if(!Array.isArray(G.tactics) || G.tactics.length < 16){
@@ -2262,14 +2293,12 @@ function _simulateLeagueWeek(leagueMatches,baseDate){
         if(!isMyMatch){
             applyMatchRatingsToPlayers(score.ratings);
             const hT=G.squads[h]||[],aT=G.squads[a]||[];
-            const hCleanSheet = score.away === 0, aCleanSheet = score.home === 0;
             hT.forEach(p=>{
                 p.energy=clamp(p.energy-rnd(10,15)-(weather.key==='hot'?6:0),0,100);
                 if(p.inXI) {
                     if(score.home > score.away) p.moral = clamp(p.moral + rnd(3,7), 0, 100);
                     else if(score.home < score.away) p.moral = clamp(p.moral - rnd(2,5), 0, 100);
-                    p.appearances++; p.careerAppearances=(p.careerAppearances||0)+1; p.chem=clamp(p.chem+rnd(0,2),0,100);
-                    if(hCleanSheet && (p.mainCat==='GK'||p.mainCat==='DEF')){ p.cleanSheets=(p.cleanSheets||0)+1; p.careerCleanSheets=(p.careerCleanSheets||0)+1; }
+                    p.appearances++; p.chem=clamp(p.chem+rnd(0,2),0,100); 
                 } else {
                     p.moral = clamp(p.moral - rnd(1,4), 0, 100); 
                 }
@@ -2279,8 +2308,7 @@ function _simulateLeagueWeek(leagueMatches,baseDate){
                 if(p.inXI) {
                     if(score.away > score.home) p.moral = clamp(p.moral + rnd(3,7), 0, 100);
                     else if(score.away < score.home) p.moral = clamp(p.moral - rnd(2,5), 0, 100);
-                    p.appearances++; p.careerAppearances=(p.careerAppearances||0)+1; p.chem=clamp(p.chem+rnd(0,2),0,100);
-                    if(aCleanSheet && (p.mainCat==='GK'||p.mainCat==='DEF')){ p.cleanSheets=(p.cleanSheets||0)+1; p.careerCleanSheets=(p.careerCleanSheets||0)+1; }
+                    p.appearances++; p.chem=clamp(p.chem+rnd(0,2),0,100); 
                 } else {
                     p.moral = clamp(p.moral - rnd(1,4), 0, 100);
                 }
@@ -2308,14 +2336,12 @@ function applyMyMatchConsequences(r){
     updateTable(h,score.home,score.away);updateTable(a,score.away,score.home);
     applyMatchRatingsToPlayers(r.ratings);
     const hT=G.squads[h]||[],aT=G.squads[a]||[];
-    const hCleanSheet = score.away === 0, aCleanSheet = score.home === 0;
     hT.forEach(p=>{
         p.energy=clamp(p.energy-rnd(10,15)-(weather.key==='hot'?6:0),0,100);
         if(p.inXI) {
             if(score.home > score.away) p.moral = clamp(p.moral + rnd(3,7), 0, 100);
             else if(score.home < score.away) p.moral = clamp(p.moral - rnd(2,5), 0, 100);
-            p.appearances++; p.careerAppearances=(p.careerAppearances||0)+1; p.chem=clamp(p.chem+rnd(0,2),0,100);
-            if(hCleanSheet && (p.mainCat==='GK'||p.mainCat==='DEF')){ p.cleanSheets=(p.cleanSheets||0)+1; p.careerCleanSheets=(p.careerCleanSheets||0)+1; }
+            p.appearances++; p.chem=clamp(p.chem+rnd(0,2),0,100); 
         } else {
             p.moral = clamp(p.moral - rnd(1,4), 0, 100); 
         }
@@ -2325,8 +2351,7 @@ function applyMyMatchConsequences(r){
         if(p.inXI) {
             if(score.away > score.home) p.moral = clamp(p.moral + rnd(3,7), 0, 100);
             else if(score.away < score.home) p.moral = clamp(p.moral - rnd(2,5), 0, 100);
-            p.appearances++; p.careerAppearances=(p.careerAppearances||0)+1; p.chem=clamp(p.chem+rnd(0,2),0,100);
-            if(aCleanSheet && (p.mainCat==='GK'||p.mainCat==='DEF')){ p.cleanSheets=(p.cleanSheets||0)+1; p.careerCleanSheets=(p.careerCleanSheets||0)+1; }
+            p.appearances++; p.chem=clamp(p.chem+rnd(0,2),0,100); 
         } else {
             p.moral = clamp(p.moral - rnd(1,4), 0, 100);
         }
@@ -2450,6 +2475,33 @@ function playNextPendingMatch(){
         return;
     }
 
+    // F7: Pre-match XI validation — if any starting XI player is injured or suspended,
+    // block the match and redirect to the Squad tab so the manager can fix their lineup.
+    const mySquad = G.squads[G.playerTeamIdx];
+    if(Array.isArray(mySquad)){
+        const problems = mySquad.filter(p => p.inXI && (p.injury > 0 || (p.suspensionMatchesLeft||0) > 0));
+        if(problems.length > 0){
+            const problemList = problems.map(p => {
+                const reason = p.injury > 0
+                    ? `🚑 Cedera (${p.injury} minggu lagi)`
+                    : `🚫 Suspensi (${p.suspensionMatchesLeft} match)`;
+                return `<div style="padding:6px 0;border-bottom:1px solid var(--sf2);font-size:.75rem"><b>${p.pos}</b> ${p.name} — <span style="color:${p.injury>0?'var(--red)':'var(--orng)'}">${reason}</span></div>`;
+            }).join('');
+            document.getElementById('mtitle').innerHTML = '⚠️ Pemain Tidak Bisa Main';
+            document.getElementById('mbody').innerHTML = `
+                <p style="font-size:.75rem;margin-bottom:10px;color:var(--dim)">Pemain berikut ada di Starting XI tapi tidak bisa bermain. Perbaiki lineup-mu terlebih dahulu!</p>
+                ${problemList}
+                <p style="font-size:.65rem;color:var(--dim);margin-top:10px">Buka tab Squad, ganti mereka, lalu kembali untuk memainkan pertandingan.</p>
+            `;
+            document.getElementById('mfoot').innerHTML = `
+                <button class="btn btn-p btn-sm" onclick="closeModal();switchTab('squad')">🔧 Buka Squad</button>
+                <button class="btn btn-s btn-sm" onclick="closeModal()">Tutup</button>
+            `;
+            document.getElementById('mov').classList.add('show');
+            return;
+        }
+    }
+
     // Show pre-match presser before launching the live board
     openPreMatchPressAndPlay();
 }
@@ -2481,12 +2533,20 @@ function playNextPendingMatch(){
         }
     }
 
-    function skipMatch(){
-        if(liveInterval){clearInterval(liveInterval);liveInterval=null;}
-        liveMatchState.min=90;
-        liveMatchState.halftimeDone=true;
-        playLongWhistle();
-        renderLiveBoardFull();
+    // F6: 30-second match duration with 2× speed toggle — no instant-finish skip allowed.
+    // Each tick the match advances a fixed step; 2× just doubles that step so the same
+    // interval fires but the clock moves twice as fast.
+    const MATCH_TICK_MS   = 333; // ~333ms per tick
+    const MATCH_STEP_NORM = 3;   // menit per tick at 1× → 90 min in ~30s
+    const MATCH_STEP_FAST = 6;   // menit per tick at 2× → 90 min in ~15s
+
+    function getMatchStep(){ return liveMatchState.matchSpeed===2 ? MATCH_STEP_FAST : MATCH_STEP_NORM; }
+
+    function toggleMatchSpeed(){
+        liveMatchState.matchSpeed = liveMatchState.matchSpeed===2 ? 1 : 2;
+        // Restart the running interval at the same tick rate; the step change takes effect on
+        // the very next tick without any visual interruption.
+        updateLiveBoardDynamic(); // refresh button label immediately
     }
 
     function applyTeamTalk(type) {
@@ -2501,14 +2561,15 @@ function playNextPendingMatch(){
         // Resume second half interval
         liveInterval = setInterval(() => {
             if (liveMatchState.isPaused) return;
-            liveMatchState.min = Math.min(liveMatchState.min + rnd(3,8), 90);
+            liveMatchState.min = Math.min(liveMatchState.min + getMatchStep(), 90);
             updateLiveBoardDynamic();
             if (liveMatchState.min >= 90) {
                 clearInterval(liveInterval);
                 playLongWhistle();
+                liveMatchState.highlightsText = buildMatchHighlights(liveMatchState.myMatch);
                 setTimeout(() => renderLiveBoardFull(), 400);
             }
-        }, 600);
+        }, MATCH_TICK_MS);
     }
 
     function playKnockout(bracketObj,resObj,playedTracker,roundName,nextRoundName){
@@ -2560,9 +2621,9 @@ function playNextPendingMatch(){
             pitchHtml=renderHorizontalPitch(homeSq,homeTac,awaySq,awayTac,homeIsPlayer);
         }
         const eventLog=my?my.events.filter(e=>e.min<=st.min).sort((a,b)=>a.min-b.min).map(e=>{
-            if(e.type==='goal')return`<div class="event-item"><span>⚽ ${e.min}' ${e.player}</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
-            if(e.type==='card')return`<div class="event-item"><span class="${e.card==='red'?'red-card':'yellow-card'}">${e.card==='red'?'🟥':'🟨'} ${e.min}' ${e.player}</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
-            if(e.type==='injury')return`<div class="event-item"><span class="injury-event">🚑 ${e.min}' ${e.player} (Injury)</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
+            if(e.type==='goal')return`<div class="event-item"><span>⚽ ${e.min}' ${pLink(e.player,e.playerId)}${e.assistId?` <span style="font-size:.6rem;color:var(--dim)">(${pLink(e.assistPlayer,e.assistId)})</span>`:''}</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
+            if(e.type==='card')return`<div class="event-item"><span class="${e.card==='red'?'red-card':'yellow-card'}">${e.card==='red'?'🟥':'🟨'} ${e.min}' ${pLink(e.player,e.playerId)}</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
+            if(e.type==='injury')return`<div class="event-item"><span class="injury-event">🚑 ${e.min}' ${pLink(e.player,e.playerId)} (Injury)</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
             return'';
         }).join(''):'';
         let motmHtml='';
@@ -2626,7 +2687,7 @@ function playNextPendingMatch(){
               <button class="btn btn-p btn-blk" onclick="continueToNext()" style="flex:1">${weekPendingIndex+1<weekPendingMatches.length?'🎤 Post-Match & Next ➔':'🎤 Finish & Press Conference'}</button>`
             :`${shoutBtn}
               <button class="btn btn-g btn-sm" onclick="openSubModal(true)">🔄 Subs (${st.subsLeft})</button>
-              <button class="btn btn-s" style="flex:1" onclick="skipMatch()">⏩ Skip to FT</button>`
+              <button class="btn btn-s btn-sm" onclick="toggleMatchSpeed()" style="${st.matchSpeed===2?'background:var(--gold);color:#000':''}">⚡ ${st.matchSpeed===2?'2× ON':'2×'}</button>`
           }
         </div>
         `;
@@ -2739,12 +2800,12 @@ function playNextPendingMatch(){
         evs.forEach(e => {
             if (e.type === 'goal') {
                 const teamName = getTeamName(e.teamIdx);
-                const assist = e.assistPlayer ? ` (assist: ${e.assistPlayer})` : '';
-                lines.push(`⚽ ${e.min}' — <b>GOOAL!</b> ${e.player} untuk ${teamName}${assist}`);
+                const assist = e.assistPlayer ? ` (assist: ${pLink(e.assistPlayer,e.assistId)})` : '';
+                lines.push(`⚽ ${e.min}' — <b>GOOAL!</b> ${pLink(e.player,e.playerId)} untuk ${teamName}${assist}`);
             } else if (e.type === 'card') {
-                lines.push(`${e.card==='red'?'🟥':'🟨'} ${e.min}' — Kartu ${e.card==='red'?'merah':'kuning'} untuk ${e.player}`);
+                lines.push(`${e.card==='red'?'🟥':'🟨'} ${e.min}' — Kartu ${e.card==='red'?'merah':'kuning'} untuk ${pLink(e.player,e.playerId)}`);
             } else if (e.type === 'injury') {
-                lines.push(`🚑 ${e.min}' — Cedera: ${e.player}`);
+                lines.push(`🚑 ${e.min}' — Cedera: ${pLink(e.player,e.playerId)}`);
             }
         });
         lines.push(`🔚 FT — ${getTeamName(my.homeIdx)} ${my.homeScore}-${my.awayScore} ${getTeamName(my.awayIdx)}`);
@@ -3095,9 +3156,9 @@ function playNextPendingMatch(){
             const logEl=document.getElementById('event-log');
             if(logEl){
                 logEl.innerHTML=myEvs.sort((a,b)=>a.min-b.min).map(e=>{
-                    if(e.type==='goal')return`<div class="event-item"><span>⚽ ${e.min}' ${e.player}</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
-                    if(e.type==='card')return`<div class="event-item"><span class="${e.card==='red'?'red-card':'yellow-card'}">${e.card==='red'?'🟥':'🟨'} ${e.min}' ${e.player}</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
-                    if(e.type==='injury')return`<div class="event-item"><span class="injury-event">🚑 ${e.min}' ${e.player} (Injury)</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
+                    if(e.type==='goal')return`<div class="event-item"><span>⚽ ${e.min}' ${pLink(e.player,e.playerId)}${e.assistId?` <span style="font-size:.6rem;color:var(--dim)">(${pLink(e.assistPlayer,e.assistId)})</span>`:''}</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
+                    if(e.type==='card')return`<div class="event-item"><span class="${e.card==='red'?'red-card':'yellow-card'}">${e.card==='red'?'🟥':'🟨'} ${e.min}' ${pLink(e.player,e.playerId)}</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
+                    if(e.type==='injury')return`<div class="event-item"><span class="injury-event">🚑 ${e.min}' ${pLink(e.player,e.playerId)} (Injury)</span><span>${e.team==='home'?'🏠':'✈️'}</span></div>`;
                     return'';
                 }).join('');
             }
@@ -3442,11 +3503,11 @@ function buildMainActionBtn(){
             };
             html+=`<div class="card">
                 <div class="sec">⚽ Top Scorers (All Competitions Combined)</div>
-                ${topScorers.length?topScorers.map((p,i)=>`<div class="row bt" style="font-size:.75rem;padding:4px 0;border-bottom:1px solid var(--sf2)${p.teamIdx===G.playerTeamIdx?';color:var(--gg);font-weight:bold':''}"><span>${i+1}. ${p.name} <span style="color:var(--dim);font-size:.65rem">(${TEAMS[p.teamIdx]})</span></span><b style="color:var(--gold)">${p.goals}</b></div>`).join(''):'<div style="font-size:.7rem;color:var(--dim)">No goals scored yet.</div>'}
+                ${topScorers.length?topScorers.map((p,i)=>`<div class="row bt" style="font-size:.75rem;padding:4px 0;border-bottom:1px solid var(--sf2)${p.teamIdx===G.playerTeamIdx?';color:var(--gg);font-weight:bold':''}"><span>${i+1}. ${pLink(p.name,p.id)} <span style="color:var(--dim);font-size:.65rem">(${TEAMS[p.teamIdx]})</span></span><b style="color:var(--gold)">${p.goals}</b></div>`).join(''):'<div style="font-size:.7rem;color:var(--dim)">No goals scored yet.</div>'}
             </div>
             <div class="card">
                 <div class="sec">🅰️ Top Assists (All Competitions Combined)</div>
-                ${topAssists.length?topAssists.map((p,i)=>`<div class="row bt" style="font-size:.75rem;padding:4px 0;border-bottom:1px solid var(--sf2)${p.teamIdx===G.playerTeamIdx?';color:var(--gg);font-weight:bold':''}"><span>${i+1}. ${p.name} <span style="color:var(--dim);font-size:.65rem">(${TEAMS[p.teamIdx]})</span></span><b style="color:var(--bg2)">${p.assists||0}</b></div>`).join(''):'<div style="font-size:.7rem;color:var(--dim)">No assists recorded yet.</div>'}
+                ${topAssists.length?topAssists.map((p,i)=>`<div class="row bt" style="font-size:.75rem;padding:4px 0;border-bottom:1px solid var(--sf2)${p.teamIdx===G.playerTeamIdx?';color:var(--gg);font-weight:bold':''}"><span>${i+1}. ${pLink(p.name,p.id)} <span style="color:var(--dim);font-size:.65rem">(${TEAMS[p.teamIdx]})</span></span><b style="color:var(--bg2)">${p.assists||0}</b></div>`).join(''):'<div style="font-size:.7rem;color:var(--dim)">No assists recorded yet.</div>'}
             </div>
             <div class="sec" style="margin-top:12px">📋 Top Scorers & Assists per Competition</div>
             ${compMini('⚽ League', 'goals_league', 'assists_league')}
@@ -3832,11 +3893,13 @@ function buildMainActionBtn(){
                 const statusColor = p.inXI ? 'var(--gg)' : 'var(--bg2)';
                 const statusLabel = p.inXI ? 'Starting XI' : 'Bench';
                 html+=`<div class="row bt" style="background:var(--sf2);padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--brd)">
-                    <div><div style="font-weight:bold;font-size:.8rem"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> <span class="${p.injury>0?'injured-text':''}">${p.name}</span>${p.isStar?'⭐':''} ${isLoan?'<span class="loan-badge">LOAN</span>':''}</div><div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | <span style="color:${statusColor}">${statusLabel}</span></div></div>
+                    <div><div style="font-weight:bold;font-size:.8rem"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> <span class="${p.injury>0?'injured-text':''}" onclick="openPlayerModal('${p.id}')" style="cursor:pointer">${p.name}</span>${p.isStar?'⭐':''} ${isLoan?'<span class="loan-badge">LOAN</span>':''}</div><div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | <span style="color:${statusColor}">${statusLabel}</span></div></div>
                     <div style="text-align:right">
                         ${isLoan ? 
                           `<button class="btn btn-sm btn-d" onclick="terminateLoan('${p.id}')">RECALL</button>` : 
-                          `<div style="font-weight:bold;color:var(--gold);margin-bottom:4px">+ ${fmt(sp)}</div><button class="btn btn-sm btn-d" onclick="sellPlayer('${p.id}')">SELL</button>`
+                          p._listed ?
+                          `<div style="font-size:.6rem;color:var(--gold);margin-bottom:3px">Listed ${fmt(p.price)}</div><button class="btn btn-sm btn-s" style="font-size:.6rem" onclick="delistPlayer('${p.id}')">Unlist</button>` :
+                          `<button class="btn btn-sm btn-s" onclick="openListForSaleModal('${p.id}')">💲 Jual</button>`
                         }
                     </div>
                 </div>`;
@@ -4066,6 +4129,63 @@ function buildMainActionBtn(){
         }
         
         saveState();showToast(`✅ ${p.name} sold for ${fmt(sp)}!`);renderAll();
+    }
+    // F5: List player for sale at a set asking price — appears in transfer market,
+    // stays in your squad until another club (AI or user) actually completes the purchase.
+    function openListForSaleModal(id){
+        const sq=G.squads[G.playerTeamIdx];
+        const p=sq?sq.find(x=>x.id===id):null;
+        if(!p){showToast('Pemain tidak ditemukan.');return;}
+        if(p.inXI){showToast('❌ Keluarkan dari Starting XI terlebih dahulu!');return;}
+        const check=checkSquadMinimum(sq,p);
+        if(!check.ok){showToast('❌ '+check.reason);return;}
+        const suggested=getPrice(p.ovr,p.age);
+        document.getElementById('mtitle').innerHTML='💲 Pasang Harga Jual';
+        document.getElementById('mbody').innerHTML=`
+            <div style="font-size:.8rem;margin-bottom:12px">Pasang <b>${p.name}</b> (${p.pos}, OVR ${p.ovr}) di transfer market. Pemain tetap di skuadmu sampai ada yang beli.</div>
+            <div class="row bt" style="background:var(--sf2);padding:10px;border-radius:6px;margin-bottom:8px">
+                <span style="font-size:.75rem;color:var(--dim)">Market Value:</span>
+                <span style="font-weight:900;color:var(--gold)">${fmt(suggested)}</span>
+            </div>
+            <div class="row bt" style="background:var(--sf2);padding:10px;border-radius:6px">
+                <span style="font-size:.75rem;font-weight:bold">Harga Jual (juta €):</span>
+                <div style="display:flex;align-items:center;gap:4px">
+                    <span style="font-size:.8rem">€</span>
+                    <input type="number" id="list-price-inp" min="0.1" step="0.5" class="input-text" style="width:80px;padding:6px;font-size:.8rem" value="${suggested}">
+                    <span style="font-size:.8rem">M</span>
+                </div>
+            </div>
+            <p style="font-size:.62rem;color:var(--dim);margin-top:10px">Kamu tetap bisa memainkan pemain ini sampai terjual. Kamu bisa unlist kapan saja.</p>
+        `;
+        document.getElementById('mfoot').innerHTML=`
+            <button class="btn btn-p btn-sm" onclick="confirmListForSale('${id}')">Pasang ke Market</button>
+            <button class="btn btn-s btn-sm" onclick="closeModal()">Batal</button>
+        `;
+        document.getElementById('mov').classList.add('show');
+    }
+    function confirmListForSale(id){
+        const sq=G.squads[G.playerTeamIdx];
+        const p=sq?sq.find(x=>x.id===id):null;
+        if(!p){closeModal();return;}
+        let price=parseFloat(document.getElementById('list-price-inp').value);
+        if(isNaN(price)||price<0.1) price=0.1;
+        p._listed=true;
+        p.price=parseFloat(price.toFixed(2));
+        p.clubName=TEAMS[G.playerTeamIdx];
+        if(!G.transferMarket.find(x=>x.id===p.id)) G.transferMarket.push(p);
+        saveState();closeModal();
+        showToast(`✅ ${p.name} dipasang di market dengan harga ${fmt(p.price)}.`);
+        renderAll();
+    }
+    function delistPlayer(id){
+        const sq=G.squads[G.playerTeamIdx];
+        const p=sq?sq.find(x=>x.id===id):null;
+        if(!p) return;
+        delete p._listed;
+        const mIdx=G.transferMarket.findIndex(x=>x.id===id);
+        if(mIdx>=0) G.transferMarket.splice(mIdx,1);
+        if(G.transferBids) G.transferBids=G.transferBids.filter(b=>b.id!==id);
+        saveState();showToast(`${p.name} dihapus dari transfer market.`);renderAll();
     }
     function terminateLoan(id) {
         const sq=G.squads[G.playerTeamIdx];const idx=sq.findIndex(p=>p.id===id);if(idx<0)return;
@@ -4403,12 +4523,13 @@ function buildMainActionBtn(){
         liveMatchState.attendance = isHome ? Math.round(baseCapacity * (G.fanSupport/100) * (isDerby ? 1.15 : 1.0)) : Math.round(baseCapacity * 0.6 * ((G.fanSupport||55)/100));
         const lb=document.getElementById('live-board');
         lb.className=`show theme-${liveMatchState.isDerbyMatch?'derby':item.compType}`;
+        liveMatchState.matchSpeed = 1; // always start at normal speed
         clearInterval(liveInterval);
         resetPitchAnim();
         renderLiveBoardFull();
         liveInterval=setInterval(()=>{
             if(liveMatchState.isPaused)return;
-            liveMatchState.min=Math.min(liveMatchState.min+rnd(3,8),90);
+            liveMatchState.min=Math.min(liveMatchState.min+getMatchStep(),90);
             // Halftime check
             if (!liveMatchState.halftimeDone && liveMatchState.min >= 45) {
                 liveMatchState.halftimeDone = true;
@@ -4437,11 +4558,10 @@ function buildMainActionBtn(){
             if(liveMatchState.min>=90){
                 clearInterval(liveInterval);
                 playLongWhistle();
-                // Build highlights before rendering FT
                 liveMatchState.highlightsText = buildMatchHighlights(liveMatchState.myMatch);
                 setTimeout(()=>renderLiveBoardFull(),400);
             }
-        },600);
+        },MATCH_TICK_MS);
     }
 
     function openPostMatchPress(){
@@ -4563,10 +4683,10 @@ function buildMainActionBtn(){
                 let extraHtml = '';
                 
                 if (msg.type === 'loan_offer') {
-                    // Modal trigger for negotiation
                     extraHtml = `
-                    <div class="row" style="margin-top:8px;">
-                        <button class="btn btn-g btn-sm btn-blk" onclick="openLoanNegotiationModal('${msg.id}')">Respond to Offer / Negotiate</button>
+                    <div style="display:flex;gap:6px;margin-top:8px">
+                        <button class="btn btn-g btn-sm" style="flex:1" onclick="openLoanNegotiationModal('${msg.id}')">Negotiate</button>
+                        <button class="btn btn-d btn-sm" onclick="dismissMsg('${msg.id}');showToast('Penawaran loan ditolak.')">❌ Tolak</button>
                     </div>`;
                 } else if (msg.type === 'scout_result') {
                     let pList = msg.players.map(p => `
@@ -4577,11 +4697,11 @@ function buildMainActionBtn(){
                     `).join('');
                     extraHtml = `<div style="margin-top:8px">${pList}</div> <button class="btn btn-s btn-sm btn-blk" style="margin-top:6px" onclick="dismissMsg('${msg.id}')">Close Report</button>`;
                 } else if (msg.type === 'loan_bid_accepted') {
-                    extraHtml = `<div style="margin-top:8px"><button class="btn btn-sm btn-p" onclick="finalizeUserLoan('${msg.id}')">Sign Player (Loan)</button></div>`;
+                    extraHtml = `<div style="display:flex;gap:6px;margin-top:8px"><button class="btn btn-sm btn-p" style="flex:1" onclick="finalizeUserLoan('${msg.id}')">✅ Sign Player (Loan)</button><button class="btn btn-d btn-sm" onclick="dismissMsg('${msg.id}');showToast('Penawaran loan dibatalkan.')">❌ Batal</button></div>`;
                 } else if (msg.type === 'transfer_bid_response') {
-                    extraHtml = `<div style="margin-top:8px"><button class="btn btn-g btn-sm btn-blk" onclick="openBidNegotiationModal('${msg.id}')">Respond to Counter-Offer</button></div>`;
+                    extraHtml = `<div style="display:flex;gap:6px;margin-top:8px"><button class="btn btn-g btn-sm" style="flex:1" onclick="openBidNegotiationModal('${msg.id}')">🤝 Counter-Offer</button><button class="btn btn-d btn-sm" onclick="dismissMsg('${msg.id}');showToast('Negosiasi dibatalkan.')">❌ Walk Away</button></div>`;
                 } else if (msg.type === 'transfer_bid_accepted') {
-                    extraHtml = `<div style="margin-top:8px"><button class="btn btn-sm btn-p" onclick="finalizeUserTransferBid('${msg.id}')">Sign Player</button></div>`;
+                    extraHtml = `<div style="display:flex;gap:6px;margin-top:8px"><button class="btn btn-sm btn-p" style="flex:1" onclick="finalizeUserTransferBid('${msg.id}')">✅ Sign Player</button><button class="btn btn-d btn-sm" onclick="dismissMsg('${msg.id}');showToast('Transfer dibatalkan.')">❌ Batal</button></div>`;
                 } else if (msg.type === 'sponsor_shirt' || msg.type === 'sponsor_stadium') {
                     const kind = msg.type === 'sponsor_shirt' ? 'shirt' : 'stadium';
                     const offers = kind==='shirt' ? G.pendingSponsorShirtOffer : G.pendingSponsorStadiumOffer;
@@ -4970,7 +5090,7 @@ function buildMainActionBtn(){
                 p.ovr = clamp(p.ovr + gro, 40, 95);
                 if(p.ovr > p.pot) p.pot = p.ovr;
                 p.isStar = p.ovr >= 80;
-                p.goals = 0; p.assists = 0; p.appearances = 0; p.cleanSheets = 0; p.totalRating=0; p.ratingCount=0;
+                p.goals = 0; p.assists = 0; p.appearances = 0; p.totalRating=0; p.ratingCount=0;
                 p.goals_league=0; p.goals_cup=0; p.goals_lca=0; p.assists_league=0; p.assists_cup=0; p.assists_lca=0;
                 p.yellowCards = 0; // reset yellow card accumulation each season
                 // suspension carries over if multi-match (decrement by season length would be too harsh, just keep remaining)
@@ -5121,6 +5241,10 @@ function buildMainActionBtn(){
                     <span>Sisa Kontrak:</span>
                     <span style="font-weight:bold; color:${p.contract<=1?'var(--red)':'var(--gg)'}">${p.contract} Tahun</span>
                 </div>
+                <div class="row bt" style="margin-top:5px">
+                    <span>💰 Market Value:</span>
+                    <b style="color:var(--gold)">${fmt(getPrice(p.ovr,p.age))}</b>
+                </div>
                 ${renewBtn ? `<div style="text-align:right; margin-top:5px">${renewBtn}</div>` : ''}
             </div>
             <div class="card" style="margin-top:10px">
@@ -5139,17 +5263,8 @@ function buildMainActionBtn(){
                 </div>` : ''}
             </div>
             <div class="card" style="margin-top:10px">
-                <div class="sec">📊 Career Statistics</div>
-                <div class="g4">
-                    <div style="text-align:center"><div style="font-weight:900;font-size:1.1rem">${p.careerAppearances||0}</div><div style="font-size:.58rem;color:var(--dim)">APPS</div></div>
-                    <div style="text-align:center"><div style="font-weight:900;font-size:1.1rem;color:var(--gold)">${p.careerGoals||0}</div><div style="font-size:.58rem;color:var(--dim)">GOALS</div></div>
-                    <div style="text-align:center"><div style="font-weight:900;font-size:1.1rem;color:var(--bg2)">${p.careerAssists||0}</div><div style="font-size:.58rem;color:var(--dim)">ASSISTS</div></div>
-                    <div style="text-align:center"><div style="font-weight:900;font-size:1.1rem;color:var(--gg)">${p.careerCleanSheets||0}</div><div style="font-size:.58rem;color:var(--dim)">CLEAN SH.</div></div>
-                </div>
-                <div class="row bt" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--sf2);font-size:.65rem;color:var(--dim)">
-                    <span>This Season</span>
-                    <span>${p.appearances} apps · ${p.goals}G · ${p.assists}A${(p.mainCat==='GK'||p.mainCat==='DEF')?` · ${p.cleanSheets||0} CS`:''}</span>
-                </div>
+                <div class="row bt"><span>Penampilan</span><b>${p.appearances}</b></div>
+                <div class="row bt" style="margin-top:5px"><span>Gol</span><b style="color:var(--gold)">${p.goals}</b></div>
                 <div class="row bt" style="margin-top:5px"><span>Rata-Rata Rating</span><span class="rating-chip ${p.ratingCount>0?ratingCls(p.totalRating/p.ratingCount):'rt-5'}">${avgR}</span></div>
                 <div class="row bt" style="margin-top:5px"><span>Penghargaan Pemain Terbaik</span><b style="color:var(--gold)">🏅 ${p.motmCount||0}</b></div>
                 ${(p.yellowCards||0)>0 ? `<div class="row bt" style="margin-top:5px"><span>Kartu Kuning (akumulasi)</span><b style="color:#f0c040">🟨 ${p.yellowCards}/3</b></div>` : ''}
@@ -5161,13 +5276,19 @@ function buildMainActionBtn(){
             if(p.teamIndex === G.playerTeamIdx && !p.isLoan && p.age >= 32) {
                 retireBtn = `<button class="btn btn-d btn-sm" style="margin-right:auto;" onclick="forceRetire('${p.id}')">🎲 Pensiun & Regen</button>`;
             }
-            
+            let listBtn = '';
+            if(p.teamIndex === G.playerTeamIdx && !p.isLoan){
+                if(p._listed){
+                    listBtn = `<button class="btn btn-s btn-sm" onclick="closeModal();delistPlayer('${p.id}')">📤 Unlist</button>`;
+                } else if(!p.inXI) {
+                    listBtn = `<button class="btn btn-g btn-sm" onclick="closeModal();openListForSaleModal('${p.id}')">💲 Jual</button>`;
+                }
+            }
             let forceMoveBtn = '';
             if(G.godMode && p.teamIndex !== G.playerTeamIdx) {
                 forceMoveBtn = `<button class="btn btn-d btn-sm" style="margin-right:auto;" onclick="forceMove('${p.id}')">⚡ TARIK PAKSA</button>`;
             }
-            
-            document.getElementById('mfoot').innerHTML=`${retireBtn} ${forceMoveBtn} <button class="btn btn-s btn-sm" onclick="closeModal()">Tutup</button>`;
+            document.getElementById('mfoot').innerHTML=`${retireBtn} ${listBtn} ${forceMoveBtn} <button class="btn btn-s btn-sm" onclick="closeModal()">Tutup</button>`;
             document.getElementById('mov').classList.add('show');
         }
     }
@@ -5380,45 +5501,6 @@ function buildMainActionBtn(){
     }
 
     init();
-</script>
-
-<!-- PWA: Service Worker registration for offline play -->
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('FM Web: offline support active', reg.scope))
-      .catch(err => console.warn('FM Web: SW registration failed', err));
-  });
-}
-
-// PWA: capture install prompt so we can trigger it at a good moment
-let _fmInstallPrompt = null;
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  _fmInstallPrompt = e;
-  // Show a subtle install badge in the header after a short delay
-  setTimeout(() => {
-    const hdr = document.getElementById('hdr');
-    if (hdr && _fmInstallPrompt) {
-      const btn = document.createElement('button');
-      btn.id = 'pwa-install-btn';
-      btn.textContent = '📲 Install';
-      btn.title = 'Install game untuk dimainkan offline';
-      btn.style.cssText = 'font-size:.6rem;padding:3px 8px;border-radius:6px;border:1px solid var(--gg);background:rgba(61,186,130,.15);color:var(--gg);cursor:pointer;font-weight:700;flex-shrink:0';
-      btn.addEventListener('click', () => {
-        _fmInstallPrompt.prompt();
-        _fmInstallPrompt.userChoice.then(r => {
-          if (r.outcome === 'accepted') btn.remove();
-          _fmInstallPrompt = null;
-        });
-      });
-      // Insert before the last child (toast/etc) in header
-      const badgeRow = hdr.querySelector('.row');
-      if (badgeRow) badgeRow.appendChild(btn);
-    }
-  }, 4000);
-});
 </script>
 </body>
 </html>
