@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-    <title>Football Manager by Deology</title>
+    <title>Football Manager Web</title>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -361,6 +361,31 @@ const FOREIGN_CLUBS = [
     "Flamengo","River Plate","Boca Juniors","São Paulo","Santos"
 ];
 const TEAMS_SHORT = ["Persija","Persib","Arema","Bali Utd","PSM","Borneo","Persebaya","Madura","PSIS","Dewa Utd","Barito","PSS","Persik","RANS","Persita","Malut"];
+// ─── Relegation / Promotion ─────────────────────────────────
+// Pool of Liga 2-style challenger clubs that can be promoted into the league when an existing
+// Liga 1 club gets relegated. Whichever club goes down gets pushed to the back of this same
+// pool, so relegated identities can resurface again in a later season instead of vanishing
+// for good — it's one shared rotating queue, not a one-way replacement.
+const RELEGATION_CANDIDATE_POOL = [
+    {name:"Sriwijaya FC", short:"Sriwijaya"}, {name:"PSMS Medan", short:"PSMS"},
+    {name:"Persis Solo", short:"Persis"}, {name:"PSIM Yogyakarta", short:"PSIM"},
+    {name:"Persela Lamongan", short:"Persela"}, {name:"Semen Padang FC", short:"Semen Padang"},
+    {name:"PSPS Riau", short:"PSPS"}, {name:"Persiraja Banda Aceh", short:"Persiraja"}
+];
+// ─── Liga 2 (Divisi 2) — fully simulated second-tier league, same 16-team single-table
+// format as Liga 1. Real Indonesian second-tier club names. These arrays are MUTABLE:
+// whenever a promotion/relegation swap happens at season rollover, the slot that gets
+// promoted to Liga 1 is overwritten with the identity of the club that just went down,
+// mirroring exactly how TEAMS/TEAMS_SHORT are swapped for Liga 1.
+let LIGA2_TEAMS = [
+    "PSS Sleman","PSIS Semarang","Barito Putera","Persipura Jayapura","Sriwijaya FC",
+    "PSMS Medan","Persela Lamongan","PSPS Pekanbaru","Persiraja Banda Aceh","Persiku Kudus",
+    "Deltras FC","Adhyaksa FC","PSKC Cimahi","Persikas Subang","Sumut United FC","Persiba Balikpapan"
+];
+let LIGA2_TEAMS_SHORT = [
+    "PSS","PSIS","Barito","Persipura","Sriwijaya","PSMS","Persela","PSPS","Persiraja",
+    "Persiku","Deltras","Adhyaksa","PSKC","Persikas","Sumut Utd","Persiba"
+];
 const TEAM_STADIUMS = [
     "Stadion Utama Gelora Bung Karno","Stadion Si Jalak Harupat","Stadion Kanjuruhan","Stadion Kapten I Wayan Dipta",
     "Stadion Gelora BJ Habibie","Stadion Segiri","Stadion Gelora Bung Tomo","Stadion Gelora Madura Ratu Pamelingan",
@@ -498,6 +523,12 @@ function formatDate(dateStr){
     return `${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear()}`;
 }
 function addDays(dateStr,days){const d=new Date(dateStr);d.setDate(d.getDate()+days);return d.toISOString().split('T')[0];}
+function twRange(){ return { start: addDays(G.startDate,14+13*7), end: addDays(G.startDate,14+16*7+6) }; }
+function isTransferWindowOpen(){
+    if(G.phase==='preseason') return true;
+    const r=twRange();
+    return G.currentDate>=r.start && G.currentDate<=r.end;
+}
 function ovrCls(v){return v>=80?'ovr-h':v>=70?'ovr-m':'ovr-l'}
 function ratingCls(r){return r>=8.5?'rt-9':r>=7?'rt-7':r>=6?'rt-6':r>=5?'rt-5':'rt-4'}
 // ─── E2: Player Rating Heatmap ──────────────────────────────
@@ -1125,29 +1156,66 @@ function processAITransferActivity(){
                 G.transferMarket.push(chosen);
             }
         }
-        // --- AI buys a market player who'd upgrade their own squad ---
+        // --- AI buys market player(s) who'd upgrade (or fill a gap in) their own squad ---
         // (squad.length < MAX_SQUAD_SIZE here, not MAX-2: initial squads already sit around 24
         // players, so a tighter cap was silently blocking AI buying entirely from week one.
         // The real overflow guard is the squad.length < MAX_SQUAD_SIZE check right before the push.)
-        if(Math.random() < 0.10 && squad.length < MAX_SQUAD_SIZE){
-            const candidates = G.transferMarket.filter(p => p.teamIndex !== teamIdx && !isPlayerBidPending(p.id));
+        // Two attempts per club per week: with only ~12 transfer-window weeks a season across 16
+        // clubs, a single low-probability roll left listed players (especially the user's own)
+        // sitting unsold for an entire season. This is what actually clears the market.
+        for(let attempt=0; attempt<2; attempt++){
+        const myAiBudget = (Array.isArray(G.aiBudgets) ? G.aiBudgets[teamIdx] : null);
+        if(Math.random() < 0.45 && squad.length < MAX_SQUAD_SIZE && (myAiBudget===null || myAiBudget > 1)){
+            const candidates = G.transferMarket.filter(p => p.teamIndex !== teamIdx && !isPlayerBidPending(p.id) && (myAiBudget===null || p.price <= myAiBudget));
             if(candidates.length){
-                // Look for a real upgrade: a market player noticeably better than this club's
-                // current weakest starter in the same broad category.
                 const byCat = {};
                 candidates.forEach(p=>{ (byCat[p.mainCat] = byCat[p.mainCat]||[]).push(p); });
-                const catsNeeded = Object.keys(byCat);
-                if(catsNeeded.length){
-                    const cat = pick(catsNeeded);
+                // Try every position category this club needs, shuffled — not just one random
+                // pick that gives up entirely on a miss. This is what actually clears listed
+                // players off the market instead of them sitting there for an entire season.
+                const catsToTry = Object.keys(byCat).sort(()=>Math.random()-0.5);
+                let target = null;
+                for(const cat of catsToTry){
                     const ownInCat = squad.filter(p=>p.mainCat===cat);
                     const weakestOwn = ownInCat.length ? Math.min(...ownInCat.map(p=>p.ovr)) : 0;
-                    const pool = byCat[cat].filter(p => p.ovr >= weakestOwn + 4 && p.ovr <= weakestOwn + 22);
+                    // Depth/squad-building signings are in scope now too, not just clean upgrades —
+                    // anything from well below our weakest starter up to a big upgrade, or any
+                    // player at all if we have a genuine gap in that category.
+                    const pool = byCat[cat].filter(p => ownInCat.length===0 || (p.ovr >= weakestOwn - 6 && p.ovr <= weakestOwn + 30));
                     if(pool.length){
-                        const target = pick(pool);
+                        // Prefer domestic Liga 1 listings (teamIndex 0-15, including the human
+                        // player's) over the much larger pool of free agents/foreign transfer
+                        // targets. Without this, a locally-listed player was a needle in a
+                        // haystack of 100+ background candidates and almost never got bought.
+                        const domesticPool = pool.filter(p => p.teamIndex >= 0 && p.teamIndex < 16);
+                        target = domesticPool.length ? pick(domesticPool) : pick(pool);
+                        break;
+                    }
+                }
+                if(target){
                         const mIdx = G.transferMarket.findIndex(x=>x.id===target.id);
                         if(mIdx >= 0 && squad.length < MAX_SQUAD_SIZE){
                             const sellerIdx = target.teamIndex;
                             const sellerName = (sellerIdx>=0 && sellerIdx<16) ? TEAMS[sellerIdx] : (sellerIdx>=16 ? (FOREIGN_CLUBS[sellerIdx-16]||'European Club') : 'a free agent');
+                            // Settle the transfer fee: debit the buying club, credit the selling
+                            // club. If the seller is the human player's own club, the fee must go
+                            // to G.budget (not G.aiBudgets) — this was previously routed to the
+                            // wrong place, so selling a listed player to an AI club silently paid
+                            // nothing and gave no notification at all.
+                            if(Array.isArray(G.aiBudgets)){
+                                G.aiBudgets[teamIdx] = parseFloat((Math.max(0,(G.aiBudgets[teamIdx]||0) - target.price)).toFixed(2));
+                            }
+                            if(sellerIdx === G.playerTeamIdx){
+                                G.budget = parseFloat((G.budget + target.price).toFixed(2));
+                                G.inbox.unshift({
+                                    id: Math.random().toString(36).substr(2,9), type: 'sale_completed', isRead: false,
+                                    date: formatDate(G.currentDate),
+                                    title: `💰 ${target.name} Terjual!`,
+                                    body: `${TEAMS[teamIdx]} resmi membeli ${target.name} dari klub Anda seharga ${fmt(target.price)}. Dana sudah masuk ke budget Anda.`
+                                });
+                            } else if(sellerIdx >= 0 && sellerIdx < 16 && Array.isArray(G.aiBudgets)){
+                                G.aiBudgets[sellerIdx] = parseFloat((((G.aiBudgets[sellerIdx]||0) + target.price)).toFixed(2));
+                            }
                             if(sellerIdx >= 0 && sellerIdx < 16 && Array.isArray(G.squads[sellerIdx])){
                                 const origSq = G.squads[sellerIdx];
                                 const origIdx = origSq.indexOf(target);
@@ -1170,8 +1238,8 @@ function processAITransferActivity(){
                             });
                         }
                     }
-                }
             }
+        }
         }
     }
 }
@@ -1557,6 +1625,8 @@ function simulateACLGroups(){
             const h=grpTeams[pair[0]],a=grpTeams[pair[1]];
             const score=simulateMatch(h,a);
             updateACLTable(h,score.home,score.away);updateACLTable(a,score.away,score.home);
+            applyMatchFinance(h, score.home, score.away, 3);
+            applyMatchFinance(a, score.away, score.home, 3);
             applyGoalsToScorers(score.events);applyMatchRatingsToPlayers(score.ratings);
             const res={homeIdx:h,awayIdx:a,homeScore:score.home,awayScore:score.away,events:score.events,ratings:score.ratings,motm:score.motm};
             if(h===G.playerTeamIdx||a===G.playerTeamIdx)results.push(res);
@@ -1582,6 +1652,11 @@ let liveInterval=null;
 let weekPendingMatches = []; 
 let weekPendingIndex = 0;    
 let tfFilters = { search: '', minOvr: '', maxAge: '', minAge: '', maxPrice: '', minPrice: '', type: 'all', role: '' };
+let tfMode = 'buy'; // 'buy' = normal transfer market, 'loan' = dedicated Loan List
+function setTfMode(mode){
+    tfMode = mode;
+    renderTransfer();
+}
 let liveMatchState={
     min:0,myMatch:null,isPaused:false,subsLeft:5,
     compType:'league',label:'Liga',dateStr:'',
@@ -1622,8 +1697,12 @@ function freshState(){
         season:1,week:0,phase:'preseason',preseasonWeeksLeft:8,
         startDate:"2026-07-01",currentDate:"2026-07-01",
         playerTeamIdx:0,budget:0,budgetRequestsUsed:0,squads,tactics,
+        aiBudgets: TEAMS.map((_,i)=>BASE_BUDGETS[i]||25),
+        promotionPool: RELEGATION_CANDIDATE_POOL.map(t=>({...t})),
         leagueTable:TEAMS.map((name,i)=>({teamIdx:i,name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0})),
         schedule:buildSchedule(),leagueResults:[],
+        liga2Table:LIGA2_TEAMS.map((name,i)=>({teamIdx:i,name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0})),
+        liga2Schedule:buildSchedule(),liga2Results:[],
         cupBracket:{"Round of 16":[...Array(16).keys()].sort(()=>Math.random()-.5).reduce((res,k,i,arr)=>i%2===0?[...res,[arr[i],arr[i+1]==15?99:arr[i+1]]]:res,[])},
         cupResults:{},cupRoundsPlayed:{},cupWinner:null,
         lcaTeamIndices:[0,1,2,3],acl:null,
@@ -1635,6 +1714,10 @@ function freshState(){
         scoutQueue: [],
         loanBids: [],
         transferBids: [],
+        pendingTransfers: [],
+        dayCursor: 0,
+        weekPlan: [],
+        weekBaseDate: "2026-07-01",
         godMode: false,
         currentWeather: null,
         training: 'balanced',
@@ -1649,7 +1732,7 @@ function freshState(){
         pcPreMatchAvailable: true,
         pcTransferAvailable: true,
         stadium: { capacityLevel:1, trainingLevel:1, medicalLevel:1, youthLevel:1, name: (TEAM_STADIUMS && TEAM_STADIUMS[0]) ? TEAM_STADIUMS[0] : TEAMS[0]+' Stadium' },
-        sponsors: { shirt: { name: SPONSOR_NAMES_SHIRT[0], value: 0.4, weeksLeft: 20 }, stadium: { name: SPONSOR_NAMES_STADIUM[0], value: 0.3, weeksLeft: 20 } },
+        sponsors: { shirt: { name: SPONSOR_NAMES_SHIRT[0], value: 0.28, weeksLeft: 20 }, stadium: { name: SPONSOR_NAMES_STADIUM[0], value: 0.2, weeksLeft: 20 } },
         history: []
     };
 }
@@ -1738,6 +1821,8 @@ function migrateState(){
     // ── Core scalar fields ──
     if(G.godMode === undefined) G.godMode = false;
     if(G.training === undefined) G.training = 'balanced';
+    if(!Array.isArray(G.u21Selected)) G.u21Selected = [];
+    if(!Array.isArray(G.u21Results)) G.u21Results = [];
     if(G.boardConfidence === undefined) G.boardConfidence = 60;
     if(G.fanSupport === undefined) G.fanSupport = 55;
     if(G.reputation === undefined) G.reputation = 35;
@@ -1749,7 +1834,7 @@ function migrateState(){
     if(G.pcPreMatchAvailable === undefined) G.pcPreMatchAvailable = true;
     if(G.pcTransferAvailable === undefined) G.pcTransferAvailable = true;
     if(G.stadium === undefined) G.stadium = { capacityLevel:1, trainingLevel:1, medicalLevel:1, youthLevel:1, name: (TEAMS[G.playerTeamIdx]||'Club')+' Stadium' };
-    if(G.sponsors === undefined) G.sponsors = { shirt: { name: SPONSOR_NAMES_SHIRT[0], value: 0.4, weeksLeft: 20 }, stadium: { name: SPONSOR_NAMES_STADIUM[0], value: 0.3, weeksLeft: 20 } };
+    if(G.sponsors === undefined) G.sponsors = { shirt: { name: SPONSOR_NAMES_SHIRT[0], value: 0.28, weeksLeft: 20 }, stadium: { name: SPONSOR_NAMES_STADIUM[0], value: 0.2, weeksLeft: 20 } };
     if(G.history === undefined) G.history = [];
     if(G.currentWeather === undefined) G.currentWeather = null;
     if(G.season === undefined) G.season = 1;
@@ -1787,6 +1872,13 @@ function migrateState(){
         G.schedule = buildSchedule();
     }
     if(!Array.isArray(G.leagueResults)) G.leagueResults = [];
+    if(!Array.isArray(G.liga2Table) || G.liga2Table.length < 16){
+        G.liga2Table = LIGA2_TEAMS.map((name,i)=>({teamIdx:i,name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0}));
+    }
+    if(!Array.isArray(G.liga2Schedule) || G.liga2Schedule.length < SEASON_WEEKS){
+        G.liga2Schedule = buildSchedule();
+    }
+    if(!Array.isArray(G.liga2Results)) G.liga2Results = [];
     if(!G.cupBracket || typeof G.cupBracket !== 'object'){
         G.cupBracket = {"Round of 16":[...Array(16).keys()].sort(()=>Math.random()-.5).reduce((res,k,i,arr)=>i%2===0?[...res,[arr[i],arr[i+1]==15?99:arr[i+1]]]:res,[])};
     }
@@ -1807,6 +1899,17 @@ function migrateState(){
     if(!Array.isArray(G.scoutQueue)) G.scoutQueue = [];
     if(!Array.isArray(G.loanBids)) G.loanBids = [];
     if(!Array.isArray(G.transferBids)) G.transferBids = [];
+    if(!Array.isArray(G.pendingTransfers)) G.pendingTransfers = [];
+    if(G.dayCursor === undefined) G.dayCursor = 0;
+    if(!Array.isArray(G.weekPlan)) G.weekPlan = [];
+    if(G.weekBaseDate === undefined) G.weekBaseDate = G.currentDate;
+    if(!Array.isArray(G.aiBudgets) || G.aiBudgets.length < 16){
+        const old = Array.isArray(G.aiBudgets) ? G.aiBudgets : [];
+        G.aiBudgets = TEAMS.map((_,i)=> (typeof old[i]==='number') ? old[i] : (BASE_BUDGETS[i]||25));
+    }
+    if(!Array.isArray(G.promotionPool) || G.promotionPool.length === 0){
+        G.promotionPool = RELEGATION_CANDIDATE_POOL.map(t=>({...t}));
+    }
 
     // ── Per-player field defaults (covers legacy saves with fewer fields) ──
     if(G.milestones === undefined) G.milestones = {};
@@ -1867,7 +1970,12 @@ function migrateState(){
         G.leagueTable = TEAMS.map((name,i)=>({teamIdx:i,name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0}));
     }
     if(!Array.isArray(G.schedule) || G.schedule.length < 1) G.schedule = buildSchedule();
-    if(!G.sponsors) G.sponsors = { shirt:{name:'Unnamed',value:0.5,weeksLeft:30}, stadium:{name:'Unnamed',value:0.3,weeksLeft:30} };
+    if(!Array.isArray(G.liga2Table) || !G.liga2Table.length){
+        G.liga2Table = LIGA2_TEAMS.map((name,i)=>({teamIdx:i,name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0}));
+    }
+    if(!Array.isArray(G.liga2Schedule) || G.liga2Schedule.length < 1) G.liga2Schedule = buildSchedule();
+    if(!Array.isArray(G.liga2Results)) G.liga2Results = [];
+    if(!G.sponsors) G.sponsors = { shirt:{name:'Unnamed',value:0.32,weeksLeft:30}, stadium:{name:'Unnamed',value:0.2,weeksLeft:30} };
     if(!G.sponsors.shirt) G.sponsors.shirt = {name:'Unnamed',value:0.5,weeksLeft:30};
     if(!G.sponsors.stadium) G.sponsors.stadium = {name:'Unnamed',value:0.3,weeksLeft:30};
     if(!G.tactics) G.tactics = {};
@@ -1890,7 +1998,41 @@ function applyTrainingEffects(){
 function setTraining(t){
     G.training=t; saveState(); renderTab(activeTab); showToast(`📋 Training Focus: ${t.toUpperCase()}`);
 }
+// ─── Individual training focus (per-player, stacks on top of team training) ───
+const INDIV_FOCUS = {
+    none:{label:'Tidak Ada'},
+    growth:{label:'🚀 Perkembangan',desc:'+growth OVR ekstra tiap musim.'},
+    fitness:{label:'💪 Fisik',desc:'Kerawanan cedera turun, growth OVR sedikit lebih lambat.'},
+    versatility:{label:'🔄 Versatilitas',desc:'Peluang belajar posisi baru tiap musim, growth OVR sedikit lebih lambat.'}
+};
+function setIndivFocus(pid,f){
+    let p=null; for(const sq of G.squads){ if(!Array.isArray(sq))continue; p=sq.find(x=>x.id===pid); if(p)break; }
+    if(!p) return;
+    p.indivFocus=f; saveState(); openPlayerModal(pid); showToast(`🎯 Fokus Individu: ${INDIV_FOCUS[f].label}`);
+}
 // ─── Weekly income (sponsors + stadium attendance) ─────────
+// ─── Match-day finance: every match now has real financial stakes. Winning brings prize/bonus
+// money, drawing brings a token amount, losing costs a fine/lost-bonus. This applies to every
+// club (the player AND all 15 AI teams via G.aiBudgets), and scales up for Cup/ACL matches which
+// carry more prestige (and more money) than a routine league fixture. AI budgets in turn gate how
+// much AI clubs can spend in the transfer market (see processAITransferActivity), so results now
+// actually feed back into how competitive each AI club is over time — good teams pull away, poor
+// teams fall further behind, instead of every club being equally strong regardless of form.
+function applyMatchFinance(teamIdx, gf, ga, mult){
+    if(typeof teamIdx !== 'number' || teamIdx < 0 || teamIdx >= 16) return; // foreign/virtual clubs untracked
+    mult = mult || 1;
+    let delta;
+    if(gf > ga) delta = (0.4 + Math.random()*0.35) * mult;       // win: prize money / sponsor bonus
+    else if(gf === ga) delta = (0.05 + Math.random()*0.1) * mult; // draw: small appearance money
+    else delta = -(0.2 + Math.random()*0.25) * mult;              // loss: fine / lost matchday bonus
+    delta = parseFloat(delta.toFixed(2));
+    if(teamIdx === G.playerTeamIdx){
+        G.budget = parseFloat((G.budget + delta).toFixed(2));
+    } else {
+        if(!Array.isArray(G.aiBudgets)) G.aiBudgets = TEAMS.map((_,i)=>BASE_BUDGETS[i]||25);
+        G.aiBudgets[teamIdx] = parseFloat((Math.max(-15, (G.aiBudgets[teamIdx]||0) + delta)).toFixed(2));
+    }
+}
 function payWeeklyIncome(isHomeMatchThisWeek){
     let income=0;
     if(G.sponsors){
@@ -1899,7 +2041,7 @@ function payWeeklyIncome(isHomeMatchThisWeek){
     }
     if(isHomeMatchThisWeek && G.stadium){
         const cap=G.stadium.capacityLevel||1;
-        const attendanceRevenue = parseFloat((cap * 0.18 * (G.fanSupport/100)).toFixed(2));
+        const attendanceRevenue = parseFloat((cap * 0.12 * (G.fanSupport/100)).toFixed(2));
         income += attendanceRevenue;
     }
     if(income>0){ G.budget=parseFloat((G.budget+income).toFixed(2)); }
@@ -1908,11 +2050,11 @@ function payWeeklyIncome(isHomeMatchThisWeek){
 function checkSponsorExpiry(){
     const offers=[];
     if(G.sponsors.shirt && G.sponsors.shirt.weeksLeft<=0 && !G.pendingSponsorShirtOffer){
-        G.pendingSponsorShirtOffer = genSponsorOffers(SPONSOR_NAMES_SHIRT, 0.5);
+        G.pendingSponsorShirtOffer = genSponsorOffers(SPONSOR_NAMES_SHIRT, 0.32);
         G.inbox.unshift({id:Math.random().toString(36).substr(2,9), type:'sponsor_shirt', isRead:false, title:'👕 Shirt Sponsor Expired', body:'Your shirt sponsorship deal has expired. Choose a new sponsor.'});
     }
     if(G.sponsors.stadium && G.sponsors.stadium.weeksLeft<=0 && !G.pendingSponsorStadiumOffer){
-        G.pendingSponsorStadiumOffer = genSponsorOffers(SPONSOR_NAMES_STADIUM, 0.4);
+        G.pendingSponsorStadiumOffer = genSponsorOffers(SPONSOR_NAMES_STADIUM, 0.25);
         G.inbox.unshift({id:Math.random().toString(36).substr(2,9), type:'sponsor_stadium', isRead:false, title:'🏟️ Stadium Naming Rights Expired', body:'Your stadium naming rights deal has expired. Choose a new partner.'});
     }
 }
@@ -1958,46 +2100,85 @@ function isCurrentWeekMatchWeek(){
     return weekPendingMatches.length > 0 && weekPendingIndex < weekPendingMatches.length;
 }
 
-function advanceWeek(){
-    // "Continue" button logic:
-    // If there are still pending matches this week, play next match (with pre-match presser)
-    if(weekPendingMatches.length > 0 && weekPendingIndex < weekPendingMatches.length){
-        playNextPendingMatch();
-        return;
+function executeTransferDeal(p, finalFee){
+    const sellerName = p.teamIndex >= 16 ? (FOREIGN_CLUBS[p.teamIndex-16]||'European Club') : TEAMS[p.teamIndex];
+    G.budget = parseFloat((G.budget - finalFee).toFixed(2));
+    if(p.teamIndex >= 0 && p.teamIndex < 16 && Array.isArray(G.aiBudgets)){
+        G.aiBudgets[p.teamIndex] = parseFloat(((G.aiBudgets[p.teamIndex]||0) + finalFee).toFixed(2));
     }
-    // Stop if there are unread transfer/important inbox events
-    if(hasInboxTransferEvent()){
-        showToast('📬 Check your inbox first! There are events waiting for your response.');
-        switchTab('inbox');
-        return;
+    if(p.teamIndex >= 0 && p.teamIndex < 16 && Array.isArray(G.squads[p.teamIndex])){
+        const origSq = G.squads[p.teamIndex];
+        const origIdx = origSq.indexOf(p);
+        if(origIdx >= 0){ origSq.splice(origIdx, 1); if(p.inXI) setDefaultXI(origSq, G.tactics[p.teamIndex] || '4-3-3'); }
     }
-    // If this is preseason, just advance
-    if(G.phase === 'preseason'){
-        playLeagueWeek();
-        return;
-    }
-    // Check if week limit reached
-    if(G.week >= SEASON_WEEKS){
-        showEndSeason();
-        return;
-    }
-    // Advance the week using existing logic
-    playLeagueWeek();
-    // After playLeagueWeek, renderDash shows "Play Match" if match week,
-    // or "Continue" button if no match this week
+    delete p._listed; delete p.pendingExecution; delete p.pendingFee;
+    p.teamIndex = G.playerTeamIdx; p.contract = rnd(2,4);
+    p.isLoan = false; p.originalTeamIdx = -1; p.inXI = false; p.slotPos = null;
+    if(Array.isArray(G.squads[G.playerTeamIdx])) G.squads[G.playerTeamIdx].push(p);
+    const mIdx = G.transferMarket.indexOf(p);
+    if(mIdx >= 0) G.transferMarket.splice(mIdx,1);
+    G.news.unshift({date: formatDate(G.currentDate), title:'New Signing!', body:`${TEAMS[G.playerTeamIdx]} have agreed a deal with ${sellerName} to sign ${p.name} for ${fmt(finalFee)}.`, tags:['transfer']});
 }
-
-function playLeagueWeek(){
+function queuePendingTransfer(p, finalFee){
+    p.pendingExecution = true; p.pendingFee = finalFee;
+    G.pendingTransfers.push({playerId: p.id, finalFee});
+    showToast(`🤝 Deal disepakati — akan resmi saat window dibuka (${formatDate(twRange().start)}).`);
+}
+function processPendingTransfers(){
+    if(!G.pendingTransfers.length || !isTransferWindowOpen()) return;
+    G.pendingTransfers.forEach(deal=>{
+        const p = G.transferMarket.find(x=>x.id===deal.playerId);
+        if(p) executeTransferDeal(p, deal.finalFee);
+    });
+    G.pendingTransfers = [];
+}
+// ─── Empty-day filler (date-driven calendar) ────────────────────────
+function fillEmptyDay(){
+    if(G.lastFillDay===undefined) G.lastFillDay=-99;
+    const dayNum = Math.round((new Date(G.currentDate)-new Date(G.startDate))/86400000);
+    const roll = Math.random();
+    if(roll < 0.15 && dayNum - G.lastFillDay >= 5){
+        G.lastFillDay = dayNum;
+        G.log.unshift({cls:'info',text:`🏋️ Training update: squad condition and morale are progressing as expected.`});
+    } else if(roll < 0.3){
+        const injuredOrHappy = pick(['Staff report: no major concerns from the medical team this week.','Scout network is monitoring several prospects; nothing to report yet.','Board is satisfied with recent progress.']);
+        G.log.unshift({cls:'info',text:`📋 ${injuredOrHappy}`});
+    } else if(roll < 0.5){
+        G.news.unshift({date: formatDate(G.currentDate), title:'Around the League', body: pick(['Rivals are said to be lining up a big-money move this window.',"Pundits debate the title race after this week's results.",'A relegation battle is heating up at the bottom of the table.']), tags:['club']});
+    } else if(roll < 0.6){
+        G.log.unshift({cls:'info',text:"📰 A media outlet ran a small piece speculating about the club's next signing."});
+    } else {
+        // quiet day, nothing happens
+    }
+}
+function buildWeekPlan(){
+    // Which days (0-6) this week have a match, max 3/week, never two on the same day.
+    const plan = [{dayOffset:0, kind:'league'}];
+    const cupRound = Object.keys(CUP_ROUND_WEEKS).find(k=>CUP_ROUND_WEEKS[k]===G.week);
+    if(cupRound && !G.cupRoundsPlayed[cupRound]) plan.push({dayOffset:4, kind:'cup', cupRound});
+    if(LCA_GROUP_WEEKS.includes(G.week)) plan.push({dayOffset:2, kind:'aclGroup'});
+    const lcaKnock = Object.keys(LCA_KNOCKOUT_WEEKS).find(k=>LCA_KNOCKOUT_WEEKS[k]===G.week);
+    if(lcaKnock) plan.push({dayOffset:5, kind:'aclKnock', lcaKnock});
+    const capped = plan.slice(0,3);
+    const used = new Set();
+    capped.forEach(item=>{ while(used.has(item.dayOffset) && item.dayOffset<6) item.dayOffset++; used.add(item.dayOffset); });
+    return capped.sort((a,b)=>a.dayOffset-b.dayOffset);
+}
+function planItemToPending(item, baseDate){
+    const dateStr = addDays(baseDate, item.dayOffset);
+    if(item.kind==='league') return {compType:G._weekMyLeagueMatch&&G._weekMyLeagueMatch.isDerby?'derby':'league',label:G._weekMyLeagueMatch&&G._weekMyLeagueMatch.isDerby?`🔥 DERBY: ${getDerbyName(G._weekMyLeagueMatch.homeIdx,G._weekMyLeagueMatch.awayIdx)}`:'⚽ League',dateStr,myMatch:G._weekMyLeagueMatch||null};
+    if(item.kind==='cup') return {compType:'cup',label:`🏆 Cup: ${item.cupRound}`,dateStr,_cupRound:item.cupRound};
+    if(item.kind==='aclGroup') return {compType:'acl',label:'🌏 ACL Group Stage',dateStr,_aclGroup:true};
+    if(item.kind==='aclKnock') return {compType:'acl',label:`🌏 ACL: ${item.lcaKnock}`,dateStr,_aclKnock:item.lcaKnock};
+}
+// One-time setup for a new league week: economy, scouting, negotiations, and this week's match plan.
+function weekTick(){
     if(!G.acl)G.acl=buildACL();
-    // Always reset pending matches when advancing a new week
-    weekPendingMatches = [];
-    weekPendingIndex = 0;
-    G.pcAvailable = false;          // set true after a match is played
-    G.pcPreMatchAvailable = false;  // set true when a match is found for player
-    const inTW = G.phase === 'preseason' || (G.week >= 14 && G.week <= 17);
+    G.pcAvailable = false; G.pcPreMatchAvailable = false;
+    const inTW = isTransferWindowOpen();
     G.pcTransferAvailable = inTW;
     if(inTW){ try { processAITransferActivity(); } catch(e) {} }
-    // Scout processing
+    processPendingTransfers();
     if (G.scoutQueue && G.scoutQueue.length > 0) {
         G.scoutQueue.forEach(q => {
             q.weeksLeft--;
@@ -2021,15 +2202,12 @@ function playLeagueWeek(){
         });
         G.scoutQueue = G.scoutQueue.filter(q => q.weeksLeft > 0);
     }
-    // Process User Loan Bids
     if (G.loanBids && G.loanBids.length > 0) {
         G.loanBids.forEach(bid => {
             const p = G.transferMarket.find(x => x.id === bid.id);
             if (!p || p.teamIndex === -1) return; 
-            
             let minFee = Math.max(0.1, (p.price * 0.1));
             const clubName = getTeamName(p.teamIndex);
-            
             if (bid.fee >= minFee * 0.8) { 
                 G.inbox.unshift({
                     id: Math.random().toString(36).substr(2,9), type: 'loan_bid_accepted', isRead: false,
@@ -2048,7 +2226,6 @@ function playLeagueWeek(){
         });
         G.loanBids = [];
     }
-    // Process User Transfer Bids (C1: BUY -> BID negotiation)
     if (G.transferBids && G.transferBids.length > 0) {
         G.transferBids.forEach(bid => {
             const p = G.transferMarket.find(x => x.id === bid.id);
@@ -2063,7 +2240,6 @@ function playLeagueWeek(){
                     playerId: p.id, finalFee: bid.bid
                 });
             } else if (ratio >= 0.55) {
-                // Club counters somewhere between the user's bid and the asking price
                 const counterFee = parseFloat((bid.bid + (bid.askPrice - bid.bid) * 0.6).toFixed(2));
                 G.inbox.unshift({
                     id: Math.random().toString(36).substr(2,9), type: 'transfer_bid_response', isRead: false,
@@ -2082,10 +2258,9 @@ function playLeagueWeek(){
         });
         G.transferBids = [];
     }
-    // AI Loan Offers to Player
     if (inTW && Math.random() < 0.4) {
         let mySq = G.squads[G.playerTeamIdx];
-        let target = mySq.find(p => !p.inXI && !p.isLoan && p.age <= 24);
+        let target = mySq.find(p => p._loanListed && !p.inXI && !p.isLoan) || mySq.find(p => !p.inXI && !p.isLoan && p.age <= 24);
         if (target && !G.inbox.find(m => m.type === 'loan_offer' && m.playerId === target.id)) {
             let aiTeam = rnd(0, 15);
             while (aiTeam === G.playerTeamIdx) aiTeam = rnd(0, 15);
@@ -2102,46 +2277,92 @@ function playLeagueWeek(){
     }
     checkSponsorExpiry();
     applyTrainingEffects();
-    if(G.phase==='preseason'){
-        G.preseasonWeeksLeft--;G.currentDate=addDays(G.currentDate,7);
-        if(G.preseasonWeeksLeft<=0){G.phase='league';G.log.unshift({cls:'info',text:'🏁 The league has started!'});}
-        else G.log.unshift({cls:'info',text:`⏳ Pre-Season: ${G.preseasonWeeksLeft} weeks left!`});
-        
-        payWeeklyIncome(false);
-        processInjuriesAndAutoSub();
-        pushConfidenceSnapshot();
-        saveState();renderAll();showToast('Advanced 1 week!');return;
-    }
-    if(G.week>=SEASON_WEEKS){showEndSeason();return;}
     G.week++;
-    const baseDate=addDays(G.startDate,14+(G.week-1)*7);
-    weekPendingMatches=[];weekPendingIndex=0;
+    G.weekBaseDate = G.currentDate;
     if(!Array.isArray(G.schedule) || G.schedule.length < SEASON_WEEKS){ G.schedule = buildSchedule(); }
     if(G.week % 4 === 0){ try { aiAdjustTactics(); } catch(e) {} }
     const leagueMatches=G.schedule[G.week-1] || [];
     const isHomeThisWeek = leagueMatches.some(([h,a])=>h===G.playerTeamIdx);
     payWeeklyIncome(isHomeThisWeek);
-    const myLeagueMatch=_simulateLeagueWeek(leagueMatches,baseDate);
-    if(myLeagueMatch) weekPendingMatches.push({compType:myLeagueMatch.isDerby?'derby':'league',label:myLeagueMatch.isDerby?`🔥 DERBY: ${getDerbyName(myLeagueMatch.homeIdx,myLeagueMatch.awayIdx)}`:'⚽ League',dateStr:baseDate,myMatch:myLeagueMatch}); G.pcPreMatchAvailable=true;
-    const cupRound=Object.keys(CUP_ROUND_WEEKS).find(k=>CUP_ROUND_WEEKS[k]===G.week);
-    if(cupRound&&!G.cupRoundsPlayed[cupRound]){
-        weekPendingMatches.push({compType:'cup',label:`🏆 Cup: ${cupRound}`,dateStr:addDays(baseDate,4),_cupRound:cupRound}); G.pcPreMatchAvailable=true;
+    if(Array.isArray(G.aiBudgets)){
+        for(let i=0;i<16;i++){
+            if(i===G.playerTeamIdx) continue;
+            G.aiBudgets[i] = parseFloat((Math.max(-15,(G.aiBudgets[i]||0) + (BASE_BUDGETS[i]||25)*0.01)).toFixed(2));
+        }
     }
-    if(LCA_GROUP_WEEKS.includes(G.week)){
-        weekPendingMatches.push({compType:'acl',label:'🌏 ACL Group Stage',dateStr:addDays(baseDate,2),_aclGroup:true}); G.pcPreMatchAvailable=true;
-    }
-    const lcaKnock=Object.keys(LCA_KNOCKOUT_WEEKS).find(k=>LCA_KNOCKOUT_WEEKS[k]===G.week);
-    if(lcaKnock){
-        weekPendingMatches.push({compType:'acl',label:`🌏 ACL: ${lcaKnock}`,dateStr:addDays(baseDate,5),_aclKnock:lcaKnock});
-    }
-    G.currentDate=addDays(baseDate,6);
+    G._weekMyLeagueMatch = _simulateLeagueWeek(leagueMatches, G.weekBaseDate);
+    if(!Array.isArray(G.liga2Schedule) || G.liga2Schedule.length < SEASON_WEEKS){ G.liga2Schedule = buildSchedule(); }
+    try { _simulateLiga2Week(G.liga2Schedule[G.week-1] || []); } catch(e) { /* never let Liga 2 sim break the main week advance */ }
+    try { _simulateU21Week(); } catch(e) { /* never let U21 sim break the main week advance */ }
+    G.weekPlan = buildWeekPlan();
     processInjuriesAndAutoSub();
-    if(weekPendingMatches.length===0){ pushConfidenceSnapshot(); saveState(); renderAll();showToast("⏩ Week advanced — no matches for your team.");return;}
-    saveState();
-    // Don't auto-start match — let user click "Play Match" in dashboard
-    renderAll();
-    showToast("⚽ Match week! Press \"Play Match\" when ready.");
 }
+function advanceWeek(){
+    // "Continue" button logic:
+    // If there are still pending matches this week, play next match (with pre-match presser)
+    if(weekPendingMatches.length > 0 && weekPendingIndex < weekPendingMatches.length){
+        playNextPendingMatch();
+        return;
+    }
+    // Stop if there are unread transfer/important inbox events
+    if(hasInboxTransferEvent()){
+        showToast('📬 Check your inbox first! There are events waiting for your response.');
+        switchTab('inbox');
+        return;
+    }
+    // Preseason: also day-by-day now (6 quiet days, then weekly upkeep on day 7)
+    if(G.phase === 'preseason'){
+        if(G.dayCursor < 6){
+            G.dayCursor++;
+            G.currentDate = addDays(G.currentDate, 1);
+            fillEmptyDay();
+            processPendingTransfers();
+            saveState(); renderAll();
+            return;
+        }
+        G.dayCursor = 0;
+        G.currentDate = addDays(G.currentDate, 1);
+        G.preseasonWeeksLeft--;
+        if(G.preseasonWeeksLeft<=0){ G.phase='league'; G.log.unshift({cls:'info',text:'🏁 The league has started!'}); }
+        else G.log.unshift({cls:'info',text:`⏳ Pre-Season: ${G.preseasonWeeksLeft} weeks left!`});
+        payWeeklyIncome(false);
+        processPendingTransfers();
+        processInjuriesAndAutoSub();
+        pushConfidenceSnapshot();
+        saveState(); renderAll(); showToast('Advanced 1 week!');
+        return;
+    }
+    // Check if week limit reached
+    if(G.week >= SEASON_WEEKS){
+        showEndSeason();
+        return;
+    }
+    // Start of a new league week: run economy/negotiations once and build this week's match plan
+    if(G.dayCursor === 0){
+        weekTick();
+    }
+    const todaysMatch = G.weekPlan.find(item => item.dayOffset === G.dayCursor);
+    G.currentDate = addDays(G.weekBaseDate, G.dayCursor);
+    if(todaysMatch){
+        weekPendingMatches = [planItemToPending(todaysMatch, G.weekBaseDate)];
+        weekPendingIndex = 0;
+        G.pcPreMatchAvailable = true;
+        G.dayCursor = G.dayCursor >= 6 ? 0 : G.dayCursor + 1;
+        saveState(); renderAll();
+        showToast('⚽ Match day! Press "Play Match" when ready.');
+        return;
+    }
+    fillEmptyDay();
+    processPendingTransfers();
+    if(G.dayCursor >= 6){
+        G.dayCursor = 0;
+        pushConfidenceSnapshot();
+    } else {
+        G.dayCursor++;
+    }
+    saveState(); renderAll();
+}
+
 function processInjuriesAndAutoSub() {
     const medLvl = (G.stadium && G.stadium.medicalLevel) || 1;
     if(!Array.isArray(G.squads)) return;
@@ -2194,12 +2415,35 @@ function processInjuriesAndAutoSub() {
                 const anyBench = sq.filter(b => !b.inXI && b.injury === 0 && (b.suspensionMatchesLeft || 0) === 0).sort((a,b)=>b.ovr-a.ovr);
                 if(anyBench.length > 0) {
                     const sub = anyBench[0]; sub.inXI = true; sub.slotPos = p.slotPos; p.inXI = false; p.slotPos = null;
-                } else {
-                    // No valid replacement — just bench the suspended player
-                    p.inXI = false; p.slotPos = null;
                 }
+                // else: no valid replacement anywhere on the bench — leave the suspended player
+                // flagged in the XI (same as the injury case above) so the F7 pre-match check can
+                // name them specifically, rather than silently leaving an unexplained empty slot.
             }
         });
+        // General XI top-up: catches gaps the two sweeps above can't see — e.g. a player sent off
+        // with a red card mid-match already has inXI=false by the time this weekly sweep runs, so
+        // it was never being backfilled and the team would silently show up to the next match a
+        // player short. Fill any remaining empty formation slots with the best healthy player
+        // available, without touching anyone else's spot in the XI.
+        try {
+            const tacticKey = TACTICS_MAP[G.tactics[idx]] || '4-3-3';
+            const formationSlots = FORMATIONS[tacticKey] ? [...FORMATIONS[tacticKey]] : [];
+            if(formationSlots.length){
+                const slotCounts = {};
+                formationSlots.forEach(s=>{ slotCounts[s] = (slotCounts[s]||0)+1; });
+                sq.filter(p=>p.inXI).forEach(p=>{ if(slotCounts[p.slotPos]) slotCounts[p.slotPos]--; });
+                Object.keys(slotCounts).forEach(slot=>{
+                    for(let i=0;i<slotCounts[slot];i++){
+                        let pool=sq.filter(p=>!p.inXI&&p.pos===slot&&p.injury===0&&!(p.suspensionMatchesLeft>0)).sort((a,b)=>b.ovr-a.ovr);
+                        if(!pool.length)pool=sq.filter(p=>!p.inXI&&POS_MAP[p.pos]&&POS_MAP[p.pos].s&&POS_MAP[p.pos].s.includes(slot)&&p.injury===0&&!(p.suspensionMatchesLeft>0)).sort((a,b)=>b.ovr-a.ovr);
+                        if(!pool.length)pool=sq.filter(p=>!p.inXI&&POS_MAP[slot]&&p.mainCat===POS_MAP[slot].c&&p.injury===0&&!(p.suspensionMatchesLeft>0)).sort((a,b)=>b.ovr-a.ovr);
+                        if(!pool.length)pool=sq.filter(p=>!p.inXI&&p.injury===0&&!(p.suspensionMatchesLeft>0)).sort((a,b)=>b.ovr-a.ovr);
+                        if(pool.length){ pool[0].inXI=true; pool[0].slotPos=slot; }
+                    }
+                });
+            }
+        } catch(e) { /* never let a lineup top-up crash the weekly cycle */ }
     });
     // Check milestones
     try { checkMilestones(); } catch(e) {}
@@ -2264,17 +2508,60 @@ function applyPostMatchEvents(events, baseDate, compType) {
             }
         }
     });
-    // ── Decrement suspension counters for player team after each match ──
+    // ── Remove newly injured/suspended players from XI for player team after each match ──
     // (only for the player's own team — AI teams are not tracked this precisely)
+    // F7-fix: injury is now handled the same way suspension already was, so a player hurt in
+    // the first match of a multi-match week doesn't stay stuck in the XI for the next match.
     if (G.squads[G.playerTeamIdx]) {
         G.squads[G.playerTeamIdx].forEach(p => {
-            if ((p.suspensionMatchesLeft || 0) > 0 && p.inXI) {
-                // Player is suspended but listed in XI — remove them
+            if (((p.suspensionMatchesLeft || 0) > 0 || p.injury > 0) && p.inXI) {
+                // Player is injured/suspended but listed in XI — remove them
                 p.inXI = false;
                 p.slotPos = null;
             }
         });
     }
+}
+// ─── U-21 development squad: lightweight weekly sim, no live view. Players ≤21 picked into
+// G.u21Selected get a growth nudge + minutes; unselected eligible players get nothing this week. ───
+function _simulateU21Week(){
+    const sq=G.squads[G.playerTeamIdx]; if(!Array.isArray(sq)) return;
+    const eligible=sq.filter(p=>p.age<=21);
+    if(!eligible.length) return;
+    let selected=eligible.filter(p=>G.u21Selected.includes(p.id));
+    if(!selected.length) selected=[...eligible].sort((a,b)=>b.ovr-a.ovr).slice(0,11);
+    const str=selected.reduce((s,p)=>s+p.ovr,0)/selected.length;
+    const oppStr=str+rnd(-8,8);
+    const diff=(str-oppStr)*0.05;
+    const gf=poissonGoals(1.3+diff), ga=poissonGoals(1.3-diff);
+    selected.forEach(p=>{
+        p.u21Apps=(p.u21Apps||0)+1;
+        if(Math.random()<0.5 && p.ovr<p.pot) p.ovr=clamp(p.ovr+1,1,99);
+    });
+    G.u21Results.unshift({week:G.week, gf, ga});
+    if(G.u21Results.length>10) G.u21Results.length=10;
+}
+
+// week is simulated immediately (nothing waits for the user to "watch" it). Liga 2 clubs use
+// generic team strength (teamStrength() already returns a flat 65±5 for any teamIdx>=16, and
+// simulateMatch()/generateEvents() already fall back gracefully with no G.squads entry needed),
+// so this reuses the same match engine as Liga 1 without requiring full squads for 16 more clubs.
+function _simulateLiga2Week(matches){
+    if(!Array.isArray(G.liga2Table) || !G.liga2Table.length) return;
+    matches.forEach(([h,a])=>{
+        const weather = rollWeather();
+        const score = simulateMatch(h+16, a+16, weather.key, false);
+        updateLiga2Table(h, score.home, score.away);
+        updateLiga2Table(a, score.away, score.home);
+        G.liga2Results.push({week:G.week, homeIdx:h, awayIdx:a, homeScore:score.home, awayScore:score.away, weather:weather.key});
+    });
+    G.liga2Table.sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga));
+}
+function updateLiga2Table(teamIdx,gf,ga){
+    const row=G.liga2Table.find(x=>x.teamIdx===teamIdx);
+    if(!row)return;
+    row.played++;row.gf+=gf;row.ga+=ga;row.gd=row.gf-row.ga;
+    if(gf>ga){row.won++;row.pts+=3;}else if(gf===ga){row.drawn++;row.pts+=1;}else{row.lost++;}
 }
 function _simulateLeagueWeek(leagueMatches,baseDate){
     let myMatch=null;
@@ -2291,6 +2578,8 @@ function _simulateLeagueWeek(leagueMatches,baseDate){
         const r={week:G.week,homeIdx:h,awayIdx:a,homeScore:score.home,awayScore:score.away,events:score.events,ratings:score.ratings,motm:score.motm,weather:weather.key,isDerby:derby,_baseDate:baseDate};
         G.leagueResults.push(r);
         if(!isMyMatch){
+            applyMatchFinance(h, score.home, score.away, 1);
+            applyMatchFinance(a, score.away, score.home, 1);
             applyMatchRatingsToPlayers(score.ratings);
             const hT=G.squads[h]||[],aT=G.squads[a]||[];
             hT.forEach(p=>{
@@ -2334,6 +2623,8 @@ function applyMyMatchConsequences(r){
     const baseDate=r._baseDate;
     const derby=r.isDerby;
     updateTable(h,score.home,score.away);updateTable(a,score.away,score.home);
+    applyMatchFinance(h, score.home, score.away, 1);
+    applyMatchFinance(a, score.away, score.home, 1);
     applyMatchRatingsToPlayers(r.ratings);
     const hT=G.squads[h]||[],aT=G.squads[a]||[];
     hT.forEach(p=>{
@@ -2440,7 +2731,7 @@ function playNextPendingMatch(){
     if(item._cupRound){
         const cupRound=item._cupRound;
         const next={"Round of 16":"Quarter-Final","Quarter-Final":"Semi-Final","Semi-Final":"Final"}[cupRound];
-        const res=playKnockout(G.cupBracket,G.cupResults,G.cupRoundsPlayed,cupRound,next);
+        const res=playKnockout(G.cupBracket,G.cupResults,G.cupRoundsPlayed,cupRound,next,2);
         if(!next&&res.length)G.cupWinner=res[0].winner;
         res.forEach(m => { applyPostMatchEvents(m.events, item.dateStr, 'cup'); applyMatchRatingsToPlayers(m.ratings); });
         const myMatch=res.find(m=>m.homeIdx===G.playerTeamIdx||m.awayIdx===G.playerTeamIdx);
@@ -2458,7 +2749,7 @@ function playNextPendingMatch(){
     if(item._aclKnock){
         const lcaKnock=item._aclKnock;
         const nextR={"Round of 16":"Quarter-Final","Quarter-Final":"Semi-Final","Semi-Final":"Final"}[lcaKnock];
-        const aclRes=playKnockout(G.acl.knockout,G.acl.knockout,G.acl.played,lcaKnock,nextR);
+        const aclRes=playKnockout(G.acl.knockout,G.acl.knockout,G.acl.played,lcaKnock,nextR,3);
         if(!nextR&&aclRes.length)G.acl.winner=aclRes[0].winner;
         aclRes.forEach(m => { applyPostMatchEvents(m.events, item.dateStr, 'lca'); applyMatchRatingsToPlayers(m.ratings); });
         const myAcl=aclRes.find(r=>r.homeIdx===G.playerTeamIdx||r.awayIdx===G.playerTeamIdx);
@@ -2475,23 +2766,29 @@ function playNextPendingMatch(){
         return;
     }
 
-    // F7: Pre-match XI validation — if any starting XI player is injured or suspended,
-    // block the match and redirect to the Squad tab so the manager can fix their lineup.
+    // F7: Pre-match XI validation — if any starting XI player is injured or suspended, OR the
+    // XI doesn't have a full 11 players (e.g. a suspended player had no valid bench replacement,
+    // or a starter was sold/loaned out), block the match and redirect to Squad to fix the lineup.
     const mySquad = G.squads[G.playerTeamIdx];
     if(Array.isArray(mySquad)){
         const problems = mySquad.filter(p => p.inXI && (p.injury > 0 || (p.suspensionMatchesLeft||0) > 0));
-        if(problems.length > 0){
+        const xiCount = mySquad.filter(p => p.inXI).length;
+        if(problems.length > 0 || xiCount < 11){
             const problemList = problems.map(p => {
                 const reason = p.injury > 0
                     ? `🚑 Cedera (${p.injury} minggu lagi)`
                     : `🚫 Suspensi (${p.suspensionMatchesLeft} match)`;
                 return `<div style="padding:6px 0;border-bottom:1px solid var(--sf2);font-size:.75rem"><b>${p.pos}</b> ${p.name} — <span style="color:${p.injury>0?'var(--red)':'var(--orng)'}">${reason}</span></div>`;
             }).join('');
+            const incompleteWarning = xiCount < 11
+                ? `<div style="padding:6px 0;border-bottom:1px solid var(--sf2);font-size:.75rem;color:var(--red)">⚠️ Starting XI hanya berisi <b>${xiCount}</b> pemain (butuh 11). Kemungkinan ada slot kosong karena tidak ada pengganti yang sehat/valid.</div>`
+                : '';
             document.getElementById('mtitle').innerHTML = '⚠️ Pemain Tidak Bisa Main';
             document.getElementById('mbody').innerHTML = `
-                <p style="font-size:.75rem;margin-bottom:10px;color:var(--dim)">Pemain berikut ada di Starting XI tapi tidak bisa bermain. Perbaiki lineup-mu terlebih dahulu!</p>
+                <p style="font-size:.75rem;margin-bottom:10px;color:var(--dim)">${xiCount < 11 ? 'Starting XI-mu belum lengkap atau ada' : 'Pemain berikut ada di Starting XI tapi'} tidak bisa bermain. Perbaiki lineup-mu terlebih dahulu!</p>
+                ${incompleteWarning}
                 ${problemList}
-                <p style="font-size:.65rem;color:var(--dim);margin-top:10px">Buka tab Squad, ganti mereka, lalu kembali untuk memainkan pertandingan.</p>
+                <p style="font-size:.65rem;color:var(--dim);margin-top:10px">Buka tab Squad, ganti mereka (atau isi slot kosong), lalu kembali untuk memainkan pertandingan.</p>
             `;
             document.getElementById('mfoot').innerHTML = `
                 <button class="btn btn-p btn-sm" onclick="closeModal();switchTab('squad')">🔧 Buka Squad</button>
@@ -2572,13 +2869,16 @@ function playNextPendingMatch(){
         }, MATCH_TICK_MS);
     }
 
-    function playKnockout(bracketObj,resObj,playedTracker,roundName,nextRoundName){
+    function playKnockout(bracketObj,resObj,playedTracker,roundName,nextRoundName,moneyMult){
         if(!bracketObj[roundName]||!Array.isArray(bracketObj[roundName])||playedTracker[roundName])return[];
         const results=[];const winners=[];
         bracketObj[roundName].forEach(m=>{
             const h=m[0],a=m[1];const score=simulateMatch(h,a);
             let win=h;
             if(score.away>score.home||(score.away===score.home&&Math.random()>0.5))win=a;
+            // Knockout football carries bigger prize money than a routine league fixture.
+            applyMatchFinance(h, score.home, score.away, moneyMult||2);
+            applyMatchFinance(a, score.away, score.home, moneyMult||2);
             results.push({homeIdx:h,awayIdx:a,homeScore:score.home,awayScore:score.away,winner:win,events:score.events,ratings:score.ratings,motm:score.motm});
             winners.push(win);
         });
@@ -3251,7 +3551,7 @@ function playNextPendingMatch(){
     
     // ─── TAB RENDERERS ────────────────────────────────────────────────
     function updateHeader(){
-        document.getElementById('wk-badge').textContent=`📍 ${G.phase==='preseason'?`Pre-Season (${G.preseasonWeeksLeft})`:`Week ${G.week}`}`;
+        document.getElementById('wk-badge').textContent=`📍 ${formatDate(G.currentDate)} · ${G.phase==='preseason'?`Pre-Season (${G.preseasonWeeksLeft})`:`Week ${G.week}`}`;
         document.getElementById('tm-badge').textContent=TEAMS[G.playerTeamIdx];
         document.getElementById('bgt').textContent=fmt(G.budget);
         
@@ -3311,7 +3611,7 @@ function buildMainActionBtn(){
         const effOvr=Math.round(sq.filter(p=>p.inXI).reduce((s,p)=>s+getEffOvr(p,p.slotPos),0)/11)||0;
         const chem=Math.round(calcTeamChemistry(G.playerTeamIdx, tactic));
         
-        const inTW = G.phase === 'preseason' || (G.week >= 14 && G.week <= 17);
+        const inTW = isTransferWindowOpen();
         let pendingHtml='';
         if(weekPendingMatches.length>0&&weekPendingIndex<weekPendingMatches.length){
             const remaining=weekPendingMatches.slice(weekPendingIndex);
@@ -3372,12 +3672,49 @@ function buildMainActionBtn(){
         </div>`;
     }
     
+    let squadSubTab='main';
+    function setSquadSubTab(t){squadSubTab=t;renderSquad();}
+    function toggleU21Select(pid){
+        const i=G.u21Selected.indexOf(pid);
+        if(i>=0) G.u21Selected.splice(i,1);
+        else { if(G.u21Selected.length>=11){ showToast('⚠️ Maks 11 pemain di skuat U-21.'); return; } G.u21Selected.push(pid); }
+        saveState(); renderSquad();
+    }
+    function renderU21Body(sq){
+        const eligible=sq.filter(p=>p.age<=21);
+        const lastResults=G.u21Results.slice(0,5).map(r=>`<div class="row bt" style="font-size:.75rem;padding:5px 0;border-bottom:1px solid var(--sf2)"><span>Pekan ${r.week}</span><b style="color:var(--gold)">${r.gf} - ${r.ga}</b></div>`).join('')||'<div style="font-size:.7rem;color:var(--dim)">Belum ada pertandingan U-21.</div>';
+        return `
+        <div class="card">
+          <div class="sec">🌱 Skuat U-21 (${G.u21Selected.length}/11 dipilih)</div>
+          <p style="font-size:.62rem;color:var(--dim);margin-bottom:8px">Pemain umur ≤21 yang dipilih dapat menit main U-21 tiap pekan + bonus growth. Yang tidak dipilih tidak dapat bonus ini.</p>
+          ${eligible.length ? eligible.sort((a,b)=>b.ovr-a.ovr).map(p=>{
+              const sel=G.u21Selected.includes(p.id);
+              return `<div class="plc" onclick="toggleU21Select('${p.id}')" style="cursor:pointer;${sel?'border-color:var(--gg)':''}">
+                <div style="width:48px;text-align:center;font-weight:900;color:var(--gold);font-size:.65rem">${p.pos}</div>
+                <div style="flex:1;min-width:0">
+                  <div class="pln">${p.name} ${sel?'✅':''}</div>
+                  <div style="font-size:.6rem;color:var(--dim);margin-top:2px">Umur ${p.age} | U-21 Apps: ${p.u21Apps||0}</div>
+                </div>
+                <div class="ovr ${ovrCls(p.ovr)}">${p.ovr}</div>
+              </div>`;
+          }).join('') : '<div style="font-size:.7rem;color:var(--dim)">Tidak ada pemain umur ≤21 di skuat.</div>'}
+        </div>
+        <div class="card" style="margin-top:10px">
+          <div class="sec">📊 Hasil U-21 Terakhir</div>
+          ${lastResults}
+        </div>`;
+    }
     function renderSquad(){
         const sq=G.squads[G.playerTeamIdx]||[];const tactic=G.tactics[G.playerTeamIdx]||'4-3-3';const xiCount=sq.filter(p=>p.inXI).length;
         const chem=Math.round(calcTeamChemistry(G.playerTeamIdx, tactic));
         const trOpts=[['balanced','⚖️ Balanced'],['attack','⚔️ Attack'],['defense','🛡️ Defense'],['fitness','💪 Fitness'],['tactical','🧠 Tactical']];
         document.getElementById('main').innerHTML=`
         <div class="sec">👥 Squad — ${sq.length}/${MAX_SQUAD_SIZE} pemain · <span style="color:var(--gg)">${xiCount} Starting XI</span> · <span style="color:var(--bg2)">${sq.length-xiCount} Bench</span></div>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <button class="btn btn-sm ${squadSubTab==='main'?'btn-p':'btn-s'}" onclick="setSquadSubTab('main')">👥 Skuat Utama</button>
+          <button class="btn btn-sm ${squadSubTab==='u21'?'btn-p':'btn-s'}" onclick="setSquadSubTab('u21')">🌱 U-21</button>
+        </div>
+        ${squadSubTab==='u21' ? renderU21Body(sq) : `
         <div class="card">
           <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:5px;margin-bottom:5px">
             ${TACTICS.map(t=>`<button class="btn btn-sm ${t===tactic?'btn-p':'btn-s'}" onclick="setTactic('${t}')">${t}</button>`).join('')}
@@ -3410,7 +3747,7 @@ function buildMainActionBtn(){
             });
             if(!players.length)return'';
             return`<div style="margin-bottom:10px"><div style="font-size:.7rem;font-weight:bold;color:var(--dim);margin-bottom:5px">${cat}</div>${players.map(p=>playerCardHTML(p)).join('')}</div>`;
-        }).join('')}`;
+        }).join('')}`}`;
     }
     
     function playerCardHTML(p){
@@ -3453,25 +3790,66 @@ function buildMainActionBtn(){
     
     function setTactic(t){G.tactics[G.playerTeamIdx]=t;setDefaultXI(G.squads[G.playerTeamIdx],t);swapIdA=null;saveState();renderTab(activeTab);showToast("Tactic applied!");}
     
+    let leagueSubTab='liga1';
+    function setLeagueSubTab(t){leagueSubTab=t;renderLeague();}
     function renderLeague(){
+        document.getElementById('main').innerHTML=`
+        <div class="subtab-row">
+            <button class="btn btn-sm ${leagueSubTab==='liga1'?'btn-p':'btn-s'}" onclick="setLeagueSubTab('liga1')">🇮🇩 Liga 1</button>
+            <button class="btn btn-sm ${leagueSubTab==='liga2'?'btn-p':'btn-s'}" onclick="setLeagueSubTab('liga2')">🇮🇩 Liga 2</button>
+        </div>
+        <div id="league-subtab-body"></div>`;
+        document.getElementById('league-subtab-body').innerHTML = leagueSubTab==='liga1' ? renderLiga1Body() : renderLiga2Body();
+    }
+    function renderLiga1Body(){
+        const n=G.leagueTable.length;
         const th=G.leagueTable.map((r,i)=>`
-        <tr class="${r.teamIdx===G.playerTeamIdx?'me':''}">
-          <td>${i+1}</td><td><span class="team-link" onclick="openTeamModal(${r.teamIdx})">${r.name}</span>${isDerby(r.teamIdx,G.playerTeamIdx)?'<span class="derby-badge">RIVAL</span>':''}</td>
+        <tr class="${r.teamIdx===G.playerTeamIdx?'me':''}" style="${i>=n-3?'border-left:3px solid var(--red)':''}">
+          <td>${i+1}${i>=n-3?' 🔻':''}</td><td><span class="team-link" onclick="openTeamModal(${r.teamIdx})">${r.name}</span>${isDerby(r.teamIdx,G.playerTeamIdx)?'<span class="derby-badge">RIVAL</span>':''}</td>
           <td class="n">${r.played}</td><td class="n">${r.won}</td><td class="n">${r.drawn}</td><td class="n">${r.lost}</td>
           <td class="n">${r.gd>0?'+':''}${r.gd}</td><td class="n" style="font-weight:800">${r.pts}</td>
         </tr>`).join('');
-        document.getElementById('main').innerHTML=`
-        <div class="sec">📊 League Table</div>
-        <table class="tbl" style="margin-bottom:15px">
+        return `
+        <div class="sec">📊 Liga 1 Table</div>
+        <table class="tbl" style="margin-bottom:5px">
           <thead><tr><th>#</th><th>Team</th><th class="n">P</th><th class="n">W</th><th class="n">D</th><th class="n">L</th><th class="n">GD</th><th class="n">Pts</th></tr></thead>
           <tbody>${th}</tbody>
         </table>
+        <div style="font-size:.62rem;color:var(--red);margin-bottom:12px">🔻 3 tim terbawah terdegradasi ke Liga 2 di akhir musim.</div>
         <div class="card">
           <div class="sec">Recent Results</div>
           ${G.leagueResults.filter(r=>(r.homeIdx===G.playerTeamIdx||r.awayIdx===G.playerTeamIdx)&&!r._pendingReveal).slice(-5).reverse().map(r=>{
             const w=r.weather?WEATHER_TYPES.find(x=>x.key===r.weather):null;
             return `<div class="row bt" style="font-size:.75rem;padding:5px 0;border-bottom:1px solid var(--sf2)"><span>vs ${TEAMS[r.homeIdx===G.playerTeamIdx?r.awayIdx:r.homeIdx]} ${r.isDerby?'<span class="derby-badge">DERBY</span>':''} ${w?w.icon:''}</span><b style="color:var(--gold)">${r.homeScore} - ${r.awayScore}</b></div>`;
           }).join('')||'<div style="font-size:.7rem;color:var(--dim)">No matches played yet.</div>'}
+        </div>`;
+    }
+    function renderLiga2Body(){
+        if(!Array.isArray(G.liga2Table) || !G.liga2Table.length){
+            return `<div class="sec">📊 Liga 2 Table</div><div style="font-size:.7rem;color:var(--dim)">Liga 2 belum tersedia.</div>`;
+        }
+        const n=G.liga2Table.length;
+        const th=G.liga2Table.map((r,i)=>`
+        <tr style="${i<3?'border-left:3px solid var(--gg)':(i>=n-2?'border-left:3px solid var(--red)':'')}">
+          <td>${i+1}${i<3?' 🔺':(i>=n-2?' 🔻':'')}</td><td>${r.name}</td>
+          <td class="n">${r.played}</td><td class="n">${r.won}</td><td class="n">${r.drawn}</td><td class="n">${r.lost}</td>
+          <td class="n">${r.gd>0?'+':''}${r.gd}</td><td class="n" style="font-weight:800">${r.pts}</td>
+        </tr>`).join('');
+        const recent = G.liga2Results.slice(-8).reverse().map(r=>{
+            const w=r.weather?WEATHER_TYPES.find(x=>x.key===r.weather):null;
+            return `<div class="row bt" style="font-size:.75rem;padding:5px 0;border-bottom:1px solid var(--sf2)"><span>${LIGA2_TEAMS[r.homeIdx]} vs ${LIGA2_TEAMS[r.awayIdx]} ${w?w.icon:''}</span><b style="color:var(--gold)">${r.homeScore} - ${r.awayScore}</b></div>`;
+        }).join('') || '<div style="font-size:.7rem;color:var(--dim)">Belum ada pertandingan Liga 2 pekan ini.</div>';
+        return `
+        <div class="sec">📊 Liga 2 Table</div>
+        <table class="tbl" style="margin-bottom:5px">
+          <thead><tr><th>#</th><th>Team</th><th class="n">P</th><th class="n">W</th><th class="n">D</th><th class="n">L</th><th class="n">GD</th><th class="n">Pts</th></tr></thead>
+          <tbody>${th}</tbody>
+        </table>
+        <div style="font-size:.62rem;color:var(--gg);margin-bottom:2px">🔺 3 tim teratas promosi ke Liga 1 di akhir musim.</div>
+        <div style="font-size:.62rem;color:var(--red);margin-bottom:12px">🔻 2 tim terbawah dalam ancaman degradasi.</div>
+        <div class="card">
+          <div class="sec">Hasil Pekan Ini</div>
+          ${recent}
         </div>`;
     }
     
@@ -3711,6 +4089,9 @@ function buildMainActionBtn(){
         if(!capCheck.ok){showToast('❌ '+capCheck.reason);return;}
         
         G.budget = parseFloat((G.budget - msg.fee).toFixed(2));
+        if(p.teamIndex >= 0 && p.teamIndex < 16 && Array.isArray(G.aiBudgets)){
+            G.aiBudgets[p.teamIndex] = parseFloat((((G.aiBudgets[p.teamIndex]||0) + msg.fee)).toFixed(2));
+        }
         // If this listing referenced a real Liga 1 club's actual squad player, remove them
         // from that club's real roster for the duration of the loan.
         if(p.teamIndex >= 0 && p.teamIndex < 16 && Array.isArray(G.squads[p.teamIndex])){
@@ -3744,54 +4125,49 @@ function buildMainActionBtn(){
         const capCheck=checkSquadMaximum(G.squads[G.playerTeamIdx]);
         if(!capCheck.ok){showToast('❌ '+capCheck.reason);return;}
         
-        const sellerName = p.teamIndex >= 16 ? (FOREIGN_CLUBS[p.teamIndex-16]||'European Club') : TEAMS[p.teamIndex];
-        G.budget = parseFloat((G.budget - msg.finalFee).toFixed(2));
-        if(p.teamIndex >= 0 && p.teamIndex < 16 && Array.isArray(G.squads[p.teamIndex])){
-            const origSq = G.squads[p.teamIndex];
-            const origIdx = origSq.indexOf(p);
-            if(origIdx >= 0){
-                origSq.splice(origIdx, 1);
-                if(p.inXI) setDefaultXI(origSq, G.tactics[p.teamIndex] || '4-3-3');
-            }
-        }
-        delete p._listed;
-        p.teamIndex = G.playerTeamIdx;
-        p.contract = rnd(2,4);
-        p.isLoan = false; p.originalTeamIdx = -1; p.inXI = false; p.slotPos = null;
-        if(Array.isArray(G.squads[G.playerTeamIdx])) G.squads[G.playerTeamIdx].push(p);
-        G.transferMarket.splice(pIdx, 1);
         G.inbox.splice(msgIdx, 1);
-        G.news.unshift({
-            date: formatDate(G.currentDate),
-            title: 'New Signing!',
-            body: `${TEAMS[G.playerTeamIdx]} have agreed a deal with ${sellerName} to sign ${p.name} for ${fmt(msg.finalFee)}.`,
-            tags: ['transfer']
-        });
+        if(!isTransferWindowOpen()){
+            queuePendingTransfer(p, msg.finalFee);
+            saveState(); renderAll(); return;
+        }
+        executeTransferDeal(p, msg.finalFee);
         saveState(); showToast(`✅ Deal done! ${p.name} signed for ${fmt(msg.finalFee)}.`); renderAll();
     }
     
     function renderTransfer(){
-        const inTW = G.phase === 'preseason' || (G.week >= 14 && G.week <= 17);
+        const inTW = isTransferWindowOpen();
         let html=`<div class="sec">💰 Transfer Market</div>
         <div class="card" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
           <span style="font-weight:bold;color:var(--dim)">Remaining Budget:</span>
           <span style="font-size:1.2rem;font-weight:900;color:var(--gold)">${fmt(G.budget)}</span>
         </div>`;
         
-        if(!inTW){
-            html+=`<div class="card" style="text-align:center;color:var(--red);font-weight:bold">🔴 Transfer Window Closed! (Open: Pre-Season & Weeks 14-17)</div>`;
-        } else {
-            html+=`
-            <div class="card" style="border-color:var(--bg2); padding-bottom:5px;">
-                <div class="row bt">
-                    <div>
-                        <div style="font-weight:bold; font-size:.8rem; color:var(--bg2)">Academy Scout</div>
-                        <div style="font-size:.65rem; color:var(--dim); margin-top:2px">Search for 16-18yo prospects. (Youth Facility Lv.${(G.stadium&&G.stadium.youthLevel)||1})</div>
+        {
+            if(!inTW){
+                html+=`<div class="card" style="text-align:center;color:var(--gold);font-weight:bold">🔒 Window closed — deals struck now go pending until it opens on ${formatDate(twRange().start)}.</div>`;
+            }
+            // Buy / Loan List mode toggle
+            html+=`<div class="row" style="margin-bottom:10px;gap:6px">
+                <button class="btn btn-sm ${tfMode==='buy'?'btn-p':'btn-s'}" style="flex:1" onclick="setTfMode('buy')">🛒 Beli Pemain</button>
+                <button class="btn btn-sm ${tfMode==='loan'?'btn-p':'btn-s'}" style="flex:1" onclick="setTfMode('loan')">🤝 Loan List</button>
+            </div>`;
+            if(tfMode==='buy'){
+                html+=`
+                <div class="card" style="border-color:var(--bg2); padding-bottom:5px;">
+                    <div class="row bt">
+                        <div>
+                            <div style="font-weight:bold; font-size:.8rem; color:var(--bg2)">Academy Scout</div>
+                            <div style="font-size:.65rem; color:var(--dim); margin-top:2px">Search for 16-18yo prospects. (Youth Facility Lv.${(G.stadium&&G.stadium.youthLevel)||1})</div>
+                        </div>
+                        <button class="btn btn-sm btn-p" onclick="scoutYouth()">Scout Talent (€ 2 M)</button>
                     </div>
-                    <button class="btn btn-sm btn-p" onclick="scoutYouth()">Scout Talent (€ 2 M)</button>
-                </div>
-            </div>
-            
+                </div>`;
+            } else {
+                html+=`<div class="card" style="border-color:var(--bd); background:rgba(255,140,0,.08)">
+                    <div style="font-size:.72rem;color:var(--dim)">📋 Pemain yang tersedia untuk dipinjam musim ini dari klub lain. Pemain muda/cadangan biasanya lebih mudah didapat. Pemain akan kembali ke klub asal di akhir musim, atau bisa ditarik pulang (RECALL) kapan saja.</div>
+                </div>`;
+            }
+            html+=`
             <div class="card" style="padding:8px; margin-bottom:10px; background:var(--sf);">
                 <div class="sec" style="border:none; margin:0 0 5px 0;">🔍 Filter</div>
                 <div class="row bt">
@@ -3816,15 +4192,17 @@ function buildMainActionBtn(){
                     <input type="number" id="f-min-price" placeholder="Min € (M)" class="input-text" style="width:50%; font-size:.75rem; padding:6px;" value="${tfFilters.minPrice}">
                     <input type="number" id="f-max-price" placeholder="Max € (M)" class="input-text" style="width:50%; font-size:.75rem; padding:6px;" value="${tfFilters.maxPrice}">
                 </div>
+                ${tfMode==='buy' ? `
                 <div class="row bt" style="margin-top:6px;">
                     <select id="f-type" class="input-text" style="width:100%; font-size:.75rem; padding:6px;">
                         <option value="all" ${tfFilters.type==='all'?'selected':''}>All Status</option>
                         <option value="free" ${tfFilters.type==='free'?'selected':''}>Free Transfers Only</option>
                         <option value="club" ${tfFilters.type==='club'?'selected':''}>Club Players Only</option>
                     </select>
-                </div>
+                </div>` : `<input type="hidden" id="f-type" value="${tfFilters.type}">`}
             </div>`;
             let pool = G.transferMarket.filter(p => p.teamIndex !== G.playerTeamIdx); // never show own team players
+            if(tfMode==='loan') pool = pool.filter(p => p.teamIndex !== -1); // can't loan a free agent
             if (tfFilters.search) pool = pool.filter(p => p.name.toLowerCase().includes(tfFilters.search));
             if (tfFilters.role) pool = pool.filter(p => p.mainCat === tfFilters.role);
             if (tfFilters.minOvr) pool = pool.filter(p => p.ovr >= parseInt(tfFilters.minOvr));
@@ -3832,10 +4210,18 @@ function buildMainActionBtn(){
             if (tfFilters.maxAge) pool = pool.filter(p => p.age <= parseInt(tfFilters.maxAge));
             if (tfFilters.minPrice) pool = pool.filter(p => p.price >= parseFloat(tfFilters.minPrice));
             if (tfFilters.maxPrice) pool = pool.filter(p => p.price <= parseFloat(tfFilters.maxPrice));
-            if (tfFilters.type === 'free') pool = pool.filter(p => p.teamIndex === -1);
-            if (tfFilters.type === 'club') pool = pool.filter(p => p.teamIndex >= 0);
-            html+=`<div class="sec">Available Players (${pool.length})</div><div class="card" style="padding-bottom:2px;">`;
-            if(pool.length === 0) html += `<div style="font-size:.7rem; color:var(--dim); text-align:center; padding:10px 0;">No players match the filters.</div>`;
+            if (tfMode==='buy' && tfFilters.type === 'free') pool = pool.filter(p => p.teamIndex === -1);
+            if (tfMode==='buy' && tfFilters.type === 'club') pool = pool.filter(p => p.teamIndex >= 0);
+            if(tfMode==='loan'){
+                // Loan List reads like a real one: young/fringe players (typical loan candidates)
+                // surface first, ahead of established starters who are unlikely to be released.
+                pool = [...pool].sort((a,b)=>{
+                    const score=(p)=> (p.inXI?2:0) + (p.age<=23?0:1);
+                    return score(a)-score(b) || b.ovr-a.ovr;
+                });
+            }
+            html+=`<div class="sec">${tfMode==='loan'?'📋 Loan List':'Available Players'} (${pool.length})</div><div class="card" style="padding-bottom:2px;">`;
+            if(pool.length === 0) html += `<div style="font-size:.7rem; color:var(--dim); text-align:center; padding:10px 0;">${tfMode==='loan'?'No players currently available for loan.':'No players match the filters.'}</div>`;
             
             pool.forEach(p=>{
                 const isFree = p.teamIndex === -1;
@@ -3854,18 +4240,24 @@ function buildMainActionBtn(){
                 if (loanFeeRaw < 0.1) loanFeeRaw = 0.1;
                 if (loanFeeRaw > 2.0) loanFeeRaw = 2.0;
                 const loanFee = parseFloat(loanFeeRaw.toFixed(2));
-                const canLoan = !isFree;
                 const pendingBid = G.transferBids.find(b=>b.id===p.id);
                 const pendingMsg = !pendingBid ? G.inbox.find(m=>(m.type==='transfer_bid_response'||m.type==='transfer_bid_accepted') && m.playerId===p.id) : null;
+                const fringeBadge = (tfMode==='loan' && !p.inXI && p.age<=23) ? `<span class="pill" style="border-color:var(--gg);color:var(--gg);font-size:.55rem;margin-left:4px">Prospek</span>` : '';
                 html+=`<div class="row bt" style="background:var(--sf2);padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--brd)">
                     <div>
-                        <div style="font-weight:bold;font-size:.8rem;cursor:pointer" onclick="openPlayerModal('${p.id}')"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> ${p.name}${p.isStar?'⭐':''}</div>
+                        <div style="font-weight:bold;font-size:.8rem;cursor:pointer" onclick="openPlayerModal('${p.id}')"><span style="color:var(--gold);margin-right:5px">${p.pos}</span> ${p.name}${p.isStar?'⭐':''}${fringeBadge}</div>
                         <div style="font-size:.65rem;color:var(--dim)">OVR: <b class="${ovrCls(p.ovr)}">${p.ovr}</b> | Age: ${p.age} | ${clubLabel}</div>
                     </div>
                     <div style="text-align:right; display:flex; gap:4px; flex-direction:column;">
-                        ${isFree ? `
+                        ${tfMode==='loan' ? `
+                            <div style="font-weight:bold;color:var(--bg2);font-size:.7rem">Fee: ${fmt(loanFee)}</div>
+                            <button class="btn btn-sm btn-p" style="width:70px" onclick="initiateLoanBid('${p.id}', ${loanFee})">PINJAM</button>
+                        ` : isFree ? `
                             <div style="font-weight:bold;color:var(--gg);font-size:.7rem; margin-bottom:4px;">FREE</div>
                             <button class="btn btn-sm btn-p" onclick="buyPlayer('${p.id}', true)">SIGN</button>
+                        ` : p.pendingExecution ? `
+                            <div style="font-weight:bold;color:var(--gg);font-size:.65rem; margin-bottom:4px;">✅ Deal agreed</div>
+                            <span style="font-size:.6rem;color:var(--dim);">Joins when window opens (${formatDate(twRange().start)})</span>
                         ` : pendingBid ? `
                             <div style="font-weight:bold;color:var(--gold);font-size:.65rem; margin-bottom:4px;">⏳ Bid Pending</div>
                             <span style="font-size:.6rem;color:var(--dim);">Offered ${fmt(pendingBid.bid)} — awaiting reply</span>
@@ -3876,10 +4268,6 @@ function buildMainActionBtn(){
                             <div style="display:flex; gap:4px; align-items:center; justify-content:flex-end;">
                                 <span style="font-weight:bold;color:var(--gold);font-size:.7rem">${fmt(p.price)}</span>
                                 <button class="btn btn-sm ${canBuy?'btn-p':'btn-s'}" style="width:50px" ${!canBuy?'disabled':''} onclick="buyPlayer('${p.id}', false)">BID</button>
-                            </div>
-                            <div style="display:flex; gap:4px; align-items:center; justify-content:flex-end;">
-                                <span style="font-size:.6rem;color:var(--bg2);">Est Fee: ${fmt(loanFee)}</span>
-                                <button class="btn btn-sm ${canLoan?'btn-s':'btn-s'}" style="width:50px; background:var(--bd)" onclick="initiateLoanBid('${p.id}', ${loanFee})">LOAN</button>
                             </div>
                         `}
                     </div>
@@ -3899,7 +4287,9 @@ function buildMainActionBtn(){
                           `<button class="btn btn-sm btn-d" onclick="terminateLoan('${p.id}')">RECALL</button>` : 
                           p._listed ?
                           `<div style="font-size:.6rem;color:var(--gold);margin-bottom:3px">Listed ${fmt(p.price)}</div><button class="btn btn-sm btn-s" style="font-size:.6rem" onclick="delistPlayer('${p.id}')">Unlist</button>` :
-                          `<button class="btn btn-sm btn-s" onclick="openListForSaleModal('${p.id}')">💲 Jual</button>`
+                          p._loanListed ?
+                          `<div style="font-size:.6rem;color:var(--bg2);margin-bottom:3px">🤝 Loan-listed</div><button class="btn btn-sm btn-s" style="font-size:.6rem" onclick="cancelLoanListing('${p.id}')">Batal</button>` :
+                          `<div style="display:flex;gap:4px"><button class="btn btn-sm btn-s" onclick="openListForSaleModal('${p.id}')">💲 Jual</button><button class="btn btn-sm btn-s" onclick="listForLoan('${p.id}')">🤝 Loankan</button></div>`
                         }
                     </div>
                 </div>`;
@@ -4064,29 +4454,12 @@ function buildMainActionBtn(){
             if(G.budget < finalFee){ showToast('❌ Not enough budget!'); return; }
             const capCheck=checkSquadMaximum(G.squads[G.playerTeamIdx]);
             if(!capCheck.ok){ showToast('❌ '+capCheck.reason); return; }
-            G.budget = parseFloat((G.budget - finalFee).toFixed(2));
-            if(p.teamIndex >= 0 && p.teamIndex < 16 && Array.isArray(G.squads[p.teamIndex])){
-                const origSq = G.squads[p.teamIndex];
-                const origIdx = origSq.indexOf(p);
-                if(origIdx >= 0){
-                    origSq.splice(origIdx, 1);
-                    if(p.inXI) setDefaultXI(origSq, G.tactics[p.teamIndex] || '4-3-3');
-                }
-            }
-            const sellerName = p.teamIndex >= 16 ? (FOREIGN_CLUBS[p.teamIndex-16]||'European Club') : TEAMS[p.teamIndex];
-            delete p._listed;
-            p.teamIndex = G.playerTeamIdx;
-            p.contract = rnd(2,4);
-            p.isLoan = false; p.originalTeamIdx = -1; p.inXI = false; p.slotPos = null;
-            if(Array.isArray(G.squads[G.playerTeamIdx])) G.squads[G.playerTeamIdx].push(p);
-            G.transferMarket.splice(mIdx,1);
             G.inbox.splice(msgIdx,1);
-            G.news.unshift({
-                date: formatDate(G.currentDate),
-                title: 'New Signing!',
-                body: `${TEAMS[G.playerTeamIdx]} have agreed a deal with ${sellerName} to sign ${p.name} for ${fmt(finalFee)}.`,
-                tags: ['transfer']
-            });
+            if(!isTransferWindowOpen()){
+                queuePendingTransfer(p, finalFee);
+                saveState(); closeModal(); renderAll(); return;
+            }
+            executeTransferDeal(p, finalFee);
             saveState(); closeModal();
             showToast(`✅ Deal done! ${p.name} signed for ${fmt(finalFee)}.`);
             renderAll();
@@ -4110,6 +4483,7 @@ function buildMainActionBtn(){
             if(mIdx >= 0) G.transferMarket.splice(mIdx, 1);
             delete p._listed;
         }
+        delete p._loanListed;
         // Sell the player to an actual Liga 1 club: place them in that club's real squad
         // (so the Squad tab for that club genuinely contains them) rather than just tagging
         // a fictional teamIndex onto a free-floating transfer-market entry.
@@ -4176,6 +4550,21 @@ function buildMainActionBtn(){
         saveState();closeModal();
         showToast(`✅ ${p.name} dipasang di market dengan harga ${fmt(p.price)}.`);
         renderAll();
+    }
+    function listForLoan(id){
+        const sq=G.squads[G.playerTeamIdx];
+        const p=sq?sq.find(x=>x.id===id):null;
+        if(!p){showToast('Pemain tidak ditemukan.');return;}
+        if(p.inXI){showToast('❌ Keluarkan dari Starting XI terlebih dahulu!');return;}
+        p._loanListed=true;
+        saveState();showToast(`✅ ${p.name} dipasang untuk dipinjamkan. Klub lain bisa mengajukan pinjaman lewat Inbox.`);renderAll();
+    }
+    function cancelLoanListing(id){
+        const sq=G.squads[G.playerTeamIdx];
+        const p=sq?sq.find(x=>x.id===id):null;
+        if(!p) return;
+        delete p._loanListed;
+        saveState();showToast(`${p.name} dihapus dari daftar loan.`);renderAll();
     }
     function delistPlayer(id){
         const sq=G.squads[G.playerTeamIdx];
@@ -4273,7 +4662,7 @@ function buildMainActionBtn(){
         renderNews();
     }
     function renderNews() {
-        const inTW = G.phase === 'preseason' || (G.week >= 14 && G.week <= 17);
+        const inTW = isTransferWindowOpen();
         const counts = {all: G.news.length, transfer:0, match:0, injury:0, club:0};
         G.news.forEach(n => { const t = newsItemTag(n); if(counts[t]!==undefined) counts[t]++; });
         const filterBtn = (key, label) => `<button class="btn btn-sm ${newsFilter===key?'btn-p':'btn-s'}" style="flex:1;white-space:nowrap" onclick="setNewsFilter('${key}')">${label}${counts[key]?` (${counts[key]})`:''}</button>`;
@@ -4442,7 +4831,7 @@ function buildMainActionBtn(){
 
     function openPreMatchPressAndPlay(){
         // Show pre-match press conference, with a callback to start the actual match
-        const inTW = G.phase === 'preseason' || (G.week >= 14 && G.week <= 17);
+        const inTW = isTransferWindowOpen();
         if(!G.pcPreMatchAvailable || G.phase==='preseason'){
             // Skip presser and go straight to match
             startLiveMatch();
@@ -4756,7 +5145,7 @@ function buildMainActionBtn(){
             <div class="sec" style="margin-bottom:6px">🎤 Press Conferences</div>
             <div class="row bt" style="padding:4px 0"><span style="font-size:.75rem;color:var(--dim)">Pre-Match</span>${G.pcPreMatchAvailable&&G.phase!=='preseason'?`<button class="btn btn-g btn-sm" onclick="openPressConference('prematch')">Hold Now</button>`:`<span style="font-size:.65rem;color:var(--dim)">Not available</span>`}</div>
             <div class="row bt" style="padding:4px 0"><span style="font-size:.75rem;color:var(--dim)">Post-Match</span>${G.pcAvailable?`<button class="btn btn-g btn-sm" onclick="openPressConference('postmatch')">Hold Now</button>`:`<span style="font-size:.65rem;color:var(--dim)">Done this week</span>`}</div>
-            <div class="row bt" style="padding:4px 0"><span style="font-size:.75rem;color:var(--dim)">Transfer Window</span>${(G.phase==='preseason'||(G.week>=14&&G.week<=17))&&G.pcTransferAvailable?`<button class="btn btn-g btn-sm" onclick="openPressConference('transfer')">Hold Now</button>`:`<span style="font-size:.65rem;color:var(--dim)">Not available</span>`}</div>
+            <div class="row bt" style="padding:4px 0"><span style="font-size:.75rem;color:var(--dim)">Transfer Window</span>${isTransferWindowOpen()&&G.pcTransferAvailable?`<button class="btn btn-g btn-sm" onclick="openPressConference('transfer')">Hold Now</button>`:`<span style="font-size:.65rem;color:var(--dim)">Not available</span>`}</div>
         </div>
         <div style="margin-bottom:2px;font-size:.65rem;color:var(--dim);font-weight:bold">SEASON ${G.season}</div>
         ${renderConfidenceMeter()}
@@ -4865,6 +5254,7 @@ function buildMainActionBtn(){
             p.loanDuration = 1;
             p.originalTeamIdx = G.playerTeamIdx;
             p.teamIndex = msg.targetTeamIdx;
+            delete p._loanListed;
             
             if(Array.isArray(G.squads[G.playerTeamIdx])) G.squads[G.playerTeamIdx] = G.squads[G.playerTeamIdx].filter(x => x.id !== p.id);
             if(Array.isArray(G.squads[msg.targetTeamIdx])) G.squads[msg.targetTeamIdx].push(p);
@@ -4879,14 +5269,14 @@ function buildMainActionBtn(){
         if ((G.budgetRequestsUsed || 0) >= 2) return;
         const row = G.leagueTable.find(x => x.teamIdx === G.playerTeamIdx);
         const pos = G.leagueTable.indexOf(row) + 1;
-        let chance = 40; 
+        let chance = 30; 
         if (pos <= 3) chance += 30; else if (pos <= 8) chance += 10; else if (pos >= 13) chance -= 30;   
-        if (G.budget > 30) chance -= 20; if (G.budget < 10) chance += 20;
+        if (G.budget > 25) chance -= 25; if (G.budget < 10) chance += 15;
         chance += Math.round((G.boardConfidence-50)/4);
         G.budgetRequestsUsed = (G.budgetRequestsUsed || 0) + 1;
         
         if (Math.random() * 100 < chance) {
-            const granted = rnd(5, 15); G.budget = parseFloat((G.budget + granted).toFixed(2));
+            const granted = rnd(3, 9); G.budget = parseFloat((G.budget + granted).toFixed(2));
             G.inbox.unshift({id: Math.random().toString(36).substr(2,9), title: 'Budget Request Approved ✅', body: `The board is very pleased with your performance. We have agreed to grant a transfer fund boost of ${fmt(granted)}.`, action: null, isRead: false});
             showToast(`✅ Approved! +${fmt(granted)}`);
         } else {
@@ -4972,11 +5362,21 @@ function buildMainActionBtn(){
     
     function showEndSeason(){
         const row=G.leagueTable.find(x=>x.teamIdx===G.playerTeamIdx);const pos=G.leagueTable.indexOf(row)+1;
-        let reward=5; if(pos===1)reward=40;else if(pos===2)reward=30;else if(pos===3)reward=20;else if(pos<=5)reward=10;
-        if(G.cupWinner===G.playerTeamIdx)reward+=15;if(G.acl&&G.acl.winner===G.playerTeamIdx)reward+=50;
+        // Real win/lose stakes: top finishes are rewarded, mid-table is a wash, and finishing in
+        // the relegation zone actually costs the club money (financial penalty) instead of the
+        // old flat "+5 no matter what" floor that made a bad season basically risk-free.
+        let reward=0;
+        if(pos===1)reward=30;else if(pos===2)reward=22;else if(pos===3)reward=16;
+        else if(pos<=5)reward=8;else if(pos<=8)reward=3;else if(pos<=12)reward=0;else reward=-6;
+        if(G.cupWinner===G.playerTeamIdx)reward+=10;if(G.acl&&G.acl.winner===G.playerTeamIdx)reward+=30;
         const objMet = pos <= G.boardObjective.targetPos;
+        const isRelegated = pos >= 14; // bottom 3 of 16
         document.getElementById('mtitle').innerHTML=``;
-        document.getElementById('mbody').innerHTML=`<div style="text-align:center"><h1 style="font-size:3rem;margin:0">🏆</h1><h2 style="color:var(--gold)">Musim ${G.season} Berakhir!</h2><p style="font-size:.8rem;color:var(--txt)">Juara Liga: <b>${G.leagueTable[0].name}</b></p><div style="background:var(--sf2);padding:10px;border-radius:8px;margin:15px 0"><div style="font-size:.75rem;color:var(--dim)">Tim Anda (${TEAMS[G.playerTeamIdx]}):</div><div style="font-size:1.2rem;font-weight:bold;color:var(--wh)">Posisi Akhir: #${pos}</div><div style="font-size:.9rem;color:var(--gg);margin-top:5px">Hadiah Uang: + ${fmt(reward)}</div></div>
+        document.getElementById('mbody').innerHTML=`<div style="text-align:center"><h1 style="font-size:3rem;margin:0">${isRelegated?'🔻':'🏆'}</h1><h2 style="color:${isRelegated?'var(--red)':'var(--gold)'}">Musim ${G.season} Berakhir!</h2><p style="font-size:.8rem;color:var(--txt)">Juara Liga: <b>${G.leagueTable[0].name}</b></p><div style="background:var(--sf2);padding:10px;border-radius:8px;margin:15px 0"><div style="font-size:.75rem;color:var(--dim)">Tim Anda (${TEAMS[G.playerTeamIdx]}):</div><div style="font-size:1.2rem;font-weight:bold;color:var(--wh)">Posisi Akhir: #${pos}</div><div style="font-size:.9rem;color:${reward>=0?'var(--gg)':'var(--red)'};margin-top:5px">${reward>=0?'Hadiah Uang':'Denda Finansial'}: ${reward>=0?'+':''} ${fmt(reward)}</div></div>
+        ${isRelegated ? `<div style="background:rgba(232,85,85,.15);border:1px solid var(--red);padding:10px;border-radius:8px;margin-bottom:10px">
+            <div style="font-weight:bold;color:var(--red);font-size:.85rem">🔻 DEGRADASI KE LIGA 2!</div>
+            <div style="font-size:.68rem;color:var(--dim);margin-top:4px">${TEAMS[G.playerTeamIdx]} finis di zona degradasi. Dewan tetap memberi Anda kesempatan membangun ulang tim, plus dana kompensasi degradasi. 3 klub Liga 1 lain yang juga terdegradasi akan digantikan klub promosi musim depan.</div>
+        </div>` : ''}
         <div style="background:${objMet?'rgba(61,186,130,.15)':'rgba(232,85,85,.15)'};border:1px solid ${objMet?'var(--gg)':'var(--red)'};padding:10px;border-radius:8px;">
             <div style="font-size:.72rem;color:var(--dim)">Target Manajemen: ${G.boardObjective.desc}</div>
             <div style="font-weight:bold;color:${objMet?'var(--gg)':'var(--red)'};margin-top:4px">${objMet?'✅ Target Tercapai!':'❌ Target Gagal'}</div>
@@ -4986,7 +5386,44 @@ function buildMainActionBtn(){
         document.getElementById('mov').classList.add('show');
     }
     
+    // ─── Relegation: swap a relegated AI club's entire identity + squad for a freshly promoted
+    // challenger. The old identity is queued at the back of G.promotionPool so it can resurface
+    // in a later season instead of disappearing forever — clubs go up and down over a long save,
+    // same as a real league.
+    function relegateAndPromote(idx, incomingClub){
+        const oldName = TEAMS[idx], oldShort = TEAMS_SHORT[idx];
+        let incoming = incomingClub;
+        if(!incoming){
+            // Fallback safety net only — normal flow always passes the actual Liga 2 champion in.
+            if(!Array.isArray(G.promotionPool) || G.promotionPool.length === 0){
+                G.promotionPool = RELEGATION_CANDIDATE_POOL.map(t=>({...t}));
+            }
+            incoming = G.promotionPool.shift() || {name:"FC Promosi", short:"Promosi"};
+            G.promotionPool.push({name: oldName, short: oldShort});
+        }
+        TEAMS[idx] = incoming.name;
+        TEAMS_SHORT[idx] = incoming.short;
+        // A newly-promoted club is financially and competitively an underdog — modest budget,
+        // squad quality shaded down from the normal generation range so they feel like a side
+        // that just fought its way up, not an instant title contender.
+        BASE_BUDGETS[idx] = rnd(8, 18);
+        G.aiBudgets[idx] = BASE_BUDGETS[idx];
+        // Clear any stale market listings referencing the outgoing club's old squad before
+        // discarding it, so nothing dangling is left pointing at players who no longer exist here.
+        G.transferMarket = G.transferMarket.filter(p => p.teamIndex !== idx);
+        const freshSquad = genSquad(idx, false);
+        freshSquad.forEach(p => { p.ovr = clamp(p.ovr - rnd(6, 12), 40, 90); p.pot = Math.max(p.ovr, p.pot - rnd(4,8)); p.isStar = p.ovr >= 80; p.price = getPrice(p.ovr, p.age); });
+        setDefaultXI(freshSquad, '4-4-2');
+        G.squads[idx] = freshSquad;
+        G.tactics[idx] = '4-4-2';
+        G.news.unshift({
+            date: 'Pra-Musim', title: '🔻🔺 Degradasi & Promosi',
+            body: `${oldName} terdegradasi ke Liga 2. ${incoming.name} promosi ke Liga 1 musim ini!`,
+            tags: ['club']
+        });
+    }
     function startNewSeason(reward,finalPos,objectiveMet){
+        const originalPlayerTeamIdx = G.playerTeamIdx; // capture before any sacking reassignment below
         const allPlayersHist=[]; G.squads.forEach((sq,ti)=>{if(Array.isArray(sq))sq.forEach(p=>allPlayersHist.push({...p,teamIdx:ti}));});
         const topScorerPlayer = [...allPlayersHist].sort((a,b)=>b.goals-a.goals)[0];
         G.history.push({
@@ -5017,23 +5454,69 @@ function buildMainActionBtn(){
         }
         
         const finalStandingsTop4 = [...G.leagueTable].sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)).slice(0,4).map(x=>x.teamIdx);
+        const finalStandingsFull = [...G.leagueTable].sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga));
+        // ── Relegation: bottom 3 clubs go down, top 3 of the real, fully-simulated Liga 2 table
+        // come up to replace them (instead of a static name queue) ──
+        const relegatedIdxs = finalStandingsFull.slice(-3).map(x=>x.teamIdx);
+        if(!Array.isArray(G.liga2Table) || G.liga2Table.length < 16){
+            G.liga2Table = LIGA2_TEAMS.map((name,i)=>({teamIdx:i,name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0}));
+        }
+        const liga2FinalStandings = [...G.liga2Table].sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga));
+        const promotedLiga2Idxs = liga2FinalStandings.slice(0,3).map(x=>x.teamIdx);
+        // If the manager was just sacked (above), they're no longer at originalPlayerTeamIdx, so
+        // that club's relegation (if any) should be treated like any other AI club's — a full
+        // identity swap — not the "you keep your job, here's a parachute payment" branch below.
+        const playerKeepsSameClub = !sackedMsg;
+        const playerRelegated = playerKeepsSameClub && relegatedIdxs.includes(originalPlayerTeamIdx);
+        relegatedIdxs.forEach((idx, i) => {
+            if(playerKeepsSameClub && idx === originalPlayerTeamIdx) return; // still the human's club — handled below, not an identity swap
+            if(idx === G.playerTeamIdx) return; // safety net: never overwrite whatever club the human is actually managing now
+            const oldName = TEAMS[idx], oldShort = TEAMS_SHORT[idx];
+            const liga2Idx = promotedLiga2Idxs[i];
+            const incoming = (liga2Idx !== undefined) ? {name: LIGA2_TEAMS[liga2Idx], short: LIGA2_TEAMS_SHORT[liga2Idx]} : null;
+            try { relegateAndPromote(idx, incoming); } catch(e) { /* never let a relegation swap break the season rollover */ }
+            // Send the relegated Liga 1 club's identity down into the Liga 2 slot that was just
+            // vacated by promotion — same rotating-identity idea as before, but now grounded in
+            // an actual second-tier table instead of a static queue.
+            if(liga2Idx !== undefined){
+                LIGA2_TEAMS[liga2Idx] = oldName;
+                LIGA2_TEAMS_SHORT[liga2Idx] = oldShort;
+            }
+        });
+        if(playerRelegated){
+            // Real consequence, no bailout: extra reputation hit on top of the normal bottom-table
+            // penalty, but also a "parachute payment" — a genuine top-flight relegation mechanic —
+            // to give a relegated manager a fighting chance to rebuild rather than being left for dead.
+            G.reputation = clamp(G.reputation - rnd(5,10), 0, 100);
+            G.budget = parseFloat((G.budget + 12).toFixed(2));
+            G.inbox.unshift({
+                id: Math.random().toString(36).substr(2,9), isRead: false,
+                title: '🔻 Degradasi ke Liga 2!',
+                body: `${TEAMS[G.playerTeamIdx]} finis di zona degradasi musim ini. Dewan tetap mempertahankan Anda untuk membangun ulang tim, dan memberikan dana kompensasi degradasi (parachute payment) sebesar ${fmt(12)} untuk membantu rebuilding.`,
+                action: null
+            });
+        }
     
         // ── Budget allocation for new season ──
-        // Board gives a base allocation based on reputation & final position
-        // Prize money is added on top of whatever budget remains
+        // Board gives a modest top-up based on reputation & final position — this is added ON TOP
+        // of whatever budget is left, it's not a fresh refill. Prize money is added on top of that.
         const budgetAllocation = parseFloat((
-            BASE_BUDGETS[G.playerTeamIdx] * (1 + G.reputation / 100) +
-            (finalPos <= 3 ? 15 : finalPos <= 6 ? 8 : finalPos <= 10 ? 3 : 0) +
-            (objectiveMet ? 5 : -2)
+            BASE_BUDGETS[G.playerTeamIdx] * (0.35 + G.reputation / 200) +
+            (finalPos <= 3 ? 8 : finalPos <= 6 ? 4 : finalPos <= 10 ? 1 : 0) +
+            (objectiveMet ? 4 : -4)
         ).toFixed(2));
-        // Keep higher of: current budget or new allocation (don't punish good savers)
         const budgetBefore = G.budget;
-        G.budget = parseFloat((Math.max(G.budget, budgetAllocation) + reward).toFixed(2));
+        // NOTE: this used to be Math.max(G.budget, budgetAllocation) + reward, which silently
+        // bumped an overspent budget back up to the allocation floor every season — meaning
+        // blowing the entire transfer budget had no real consequence. Now it's a straight carry
+        // over + top-up, so overspending actually hurts and saving genuinely pays off, without
+        // being an unconditional annual reset.
+        G.budget = parseFloat((Math.max(-10, G.budget + budgetAllocation + reward)).toFixed(2));
 
         // ── Sponsors: expire old deals, generate new season offers ──
         const repFactor = Math.max(0.5, Math.min(2.0, G.reputation / 50));
-        const newShirtValue = parseFloat((Math.random()*0.6+0.4+repFactor*0.3).toFixed(2));
-        const newStadiumValue = parseFloat((Math.random()*0.4+0.2+repFactor*0.2).toFixed(2));
+        const newShirtValue = parseFloat((Math.random()*0.3+0.2+repFactor*0.15).toFixed(2));
+        const newStadiumValue = parseFloat((Math.random()*0.2+0.1+repFactor*0.1).toFixed(2));
         const newShirtName = SPONSOR_NAMES_SHIRT[Math.floor(Math.random()*SPONSOR_NAMES_SHIRT.length)];
         const newStadiumName = SPONSOR_NAMES_STADIUM[Math.floor(Math.random()*SPONSOR_NAMES_STADIUM.length)];
         const oldShirt = G.sponsors && G.sponsors.shirt;
@@ -5060,12 +5543,17 @@ function buildMainActionBtn(){
             body:`Dewan menambahkan hadiah akhir musim sebesar ${fmt(reward)} (posisi liga #${finalPos}${G.cupWinner===G.playerTeamIdx?' + bonus juara piala':''}${(G.acl&&G.acl.winner===G.playerTeamIdx)?' + bonus juara ACL':''}). Budget: ${fmt(budgetBefore)} → ${fmt(G.budget)}.`, action:null});
         G.budgetRequestsUsed = 0; G.season++; G.week=0; G.phase='preseason'; G.preseasonWeeksLeft=8;
         G.boardObjective = generateBoardObjective(finalPos);
+        if(playerRelegated){
+            G.boardObjective = {type:'league', desc:`Musim pembangunan ulang: finis di Top 10 sudah dianggap sukses oleh dewan.`, targetPos: 10, achieved:null};
+        }
         G.pcAvailable = true;
         G.pcPreMatchAvailable = true;
         G.pcTransferAvailable = true;
         weekPendingMatches=weekPendingMatches.length?weekPendingMatches:[]; weekPendingIndex=0;
         G.leagueTable=TEAMS.map((name,i)=>({teamIdx:i,name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0}));
         G.leagueResults=[]; G.schedule=buildSchedule(); G.lcaTeamIndices=finalStandingsTop4;
+        G.liga2Table=LIGA2_TEAMS.map((name,i)=>({teamIdx:i,name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0}));
+        G.liga2Results=[]; G.liga2Schedule=buildSchedule();
         G.acl=null; G.cupBracket={"Round of 16":[...Array(16).keys()].sort(()=>Math.random()-.5).reduce((res,k,i,arr)=>i%2===0?[...res,[arr[i],arr[i+1]==15?99:arr[i+1]]]:res,[])}; G.cupResults={}; G.cupRoundsPlayed={}; G.cupWinner=null;
         
         G.squads.forEach((sq,ti)=>{
@@ -5086,6 +5574,17 @@ function buildMainActionBtn(){
                 
                 if(p.appearances > 15 && p.age < 30 && p.ovr < p.pot) gro += 1;
                 if(p.goals > 10 && p.ovr < p.pot) gro += 1;
+                
+                if(p.indivFocus==='growth' && p.ovr < p.pot) gro += rnd(1,2);
+                else if(p.indivFocus==='fitness'){ p.injuryProneness = clamp((p.injuryProneness||35)-5,5,90); if(gro>0) gro -= 1; }
+                else if(p.indivFocus==='versatility'){
+                    if(gro>0) gro -= 1;
+                    if(Math.random()<0.2){
+                        p.extraPos = p.extraPos || [];
+                        const opts = Object.keys(POS_MAP).filter(k=>k!==p.pos && !POS_MAP[p.pos].s.includes(k) && !p.extraPos.includes(k));
+                        if(opts.length) p.extraPos.push(opts[rnd(0,opts.length-1)]);
+                    }
+                }
                 
                 p.ovr = clamp(p.ovr + gro, 40, 95);
                 if(p.ovr > p.pot) p.pot = p.ovr;
@@ -5181,7 +5680,8 @@ function buildMainActionBtn(){
         if(!p)p=G.transferMarket.find(x=>x.id===pid);
         if(p){
             const mainRole = p.pos;
-            const secondaryRoles = POS_MAP[p.pos].s.length > 0 ? POS_MAP[p.pos].s.join(', ') : 'Tidak ada';
+            const allSecondary = [...POS_MAP[p.pos].s, ...(p.extraPos||[])];
+            const secondaryRoles = allSecondary.length > 0 ? allSecondary.join(', ') : 'Tidak ada';
             const injInfo = p.injury > 0 
                 ? `<div style="color:var(--red); font-weight:bold; margin-top:5px; font-size:.8rem;">🚑 Cedera selama ${p.injury} minggu</div>` 
                 : (p.suspensionMatchesLeft > 0 
@@ -5270,7 +5770,13 @@ function buildMainActionBtn(){
                 ${(p.yellowCards||0)>0 ? `<div class="row bt" style="margin-top:5px"><span>Kartu Kuning (akumulasi)</span><b style="color:#f0c040">🟨 ${p.yellowCards}/3</b></div>` : ''}
                 ${(p.suspensionMatchesLeft||0)>0 ? `<div class="row bt" style="margin-top:5px"><span>Sisa Suspensi</span><b style="color:#ff8c00">🚫 ${p.suspensionMatchesLeft} match</b></div>` : ''}
             </div>
-            ${traitsSection}`;
+            ${traitsSection}
+            ${(p.teamIndex===G.playerTeamIdx && !p.isLoan) ? `
+            <div class="card" style="margin-top:10px">
+                <div class="sec">🎯 Fokus Training Individu</div>
+                ${Object.entries(INDIV_FOCUS).map(([k,v])=>`<button class="btn btn-sm ${(p.indivFocus||'none')===k?'btn-p':'btn-s'}" onclick="setIndivFocus('${p.id}','${k}')">${v.label}</button>`).join(' ')}
+                ${INDIV_FOCUS[p.indivFocus||'none'].desc ? `<p style="font-size:.62rem;color:var(--dim);margin-top:7px">${INDIV_FOCUS[p.indivFocus||'none'].desc}</p>` : ''}
+            </div>` : ''}`;
             
             let retireBtn = '';
             if(p.teamIndex === G.playerTeamIdx && !p.isLoan && p.age >= 32) {
