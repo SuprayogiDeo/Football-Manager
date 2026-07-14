@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-    <title>Football Manager by Deo</title>
+    <title>Football Manager Web</title>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -450,6 +450,25 @@ const TACTICS_MAP = {
     "4-3-3": "4-3-3", "4-3-3 Menyerang": "4-3-3 Attack", "4-4-2": "4-4-2", 
     "3-5-2": "3-5-2", "3-4-3": "3-4-3", "4-2-3-1": "4-2-3-1", 
     "4-2-3-1 Melebar": "4-2-3-1 Wide", "5-3-2": "5-3-2"
+};
+// Real attack/defense trade-off per formation: attacking shapes boost goals scored but leak more
+// at the back, defensive shapes do the reverse. Values are multipliers applied to the split
+// attack/defense ratings in teamStrengthAD(), so they feed straight into the Poisson lambdas.
+const TACTIC_PROFILES = {
+    "4-3-3":        {atk:1.00, def:1.00},
+    "4-3-3 Attack": {atk:1.18, def:0.85},
+    "4-4-2":        {atk:1.00, def:1.00},
+    "3-5-2":        {atk:0.92, def:1.14},
+    "3-4-3":        {atk:1.22, def:0.80},
+    "4-2-3-1":      {atk:1.05, def:0.97},
+    "4-2-3-1 Wide": {atk:1.12, def:0.90},
+    "5-3-2":        {atk:0.78, def:1.28}
+};
+// In-match mentality overlay, stacks on top of the formation's own profile.
+const MENTALITY_PROFILES = {
+    safe:   {atk:0.80, def:1.20, label:'Main Aman'},
+    normal: {atk:1.00, def:1.00, label:'Normal'},
+    attack: {atk:1.25, def:0.75, label:'All-Out Attack'}
 };
 const SEASON_WEEKS = 30;
 const CUP_ROUND_WEEKS = {"Round of 16":7,"Quarter-Final":14,"Semi-Final":21,"Final":29};
@@ -1071,15 +1090,21 @@ function genSquad(teamIndex,isInitial=false){
 }
 function setDefaultXI(squad,tacticName){
     squad.forEach(p=>{p.inXI=false;p.slotPos=null;});
+    const pool0=squad.filter(p=>(p.squadLevel||'senior')==='senior');
     const tacticKey = TACTICS_MAP[tacticName] || '4-3-3';
     const slots=[...FORMATIONS[tacticKey]];
     slots.forEach(slot=>{
-        let pool=squad.filter(p=>!p.inXI&&p.pos===slot&&p.injury===0&&!(p.suspensionMatchesLeft>0)).sort((a,b)=>b.ovr-a.ovr);
+        let pool=pool0.filter(p=>!p.inXI&&p.pos===slot&&p.injury===0&&!(p.suspensionMatchesLeft>0)).sort((a,b)=>b.ovr-a.ovr);
+        if(!pool.length)pool=pool0.filter(p=>!p.inXI&&POS_MAP[p.pos].s.includes(slot)&&p.injury===0&&!(p.suspensionMatchesLeft>0)).sort((a,b)=>b.ovr-a.ovr);
+        if(!pool.length)pool=pool0.filter(p=>!p.inXI&&p.mainCat===POS_MAP[slot].c&&p.injury===0&&!(p.suspensionMatchesLeft>0)).sort((a,b)=>b.ovr-a.ovr);
+        if(!pool.length)pool=pool0.filter(p=>!p.inXI&&p.injury===0&&!(p.suspensionMatchesLeft>0)).sort((a,b)=>b.ovr-a.ovr);
+        if(!pool.length)pool=pool0.filter(p=>!p.inXI&&p.injury===0).sort((a,b)=>b.ovr-a.ovr);
+        if(!pool.length)pool=pool0.filter(p=>!p.inXI).sort((a,b)=>b.ovr-a.ovr);
+        // Last resort: senior squad truly has no fit/healthy player left for this slot —
+        // pull in a youth/reserve player (any squadLevel) rather than leaving the slot empty.
+        if(!pool.length)pool=squad.filter(p=>!p.inXI&&p.pos===slot&&p.injury===0&&!(p.suspensionMatchesLeft>0)).sort((a,b)=>b.ovr-a.ovr);
         if(!pool.length)pool=squad.filter(p=>!p.inXI&&POS_MAP[p.pos].s.includes(slot)&&p.injury===0&&!(p.suspensionMatchesLeft>0)).sort((a,b)=>b.ovr-a.ovr);
-        if(!pool.length)pool=squad.filter(p=>!p.inXI&&p.mainCat===POS_MAP[slot].c&&p.injury===0&&!(p.suspensionMatchesLeft>0)).sort((a,b)=>b.ovr-a.ovr);
         if(!pool.length)pool=squad.filter(p=>!p.inXI&&p.injury===0&&!(p.suspensionMatchesLeft>0)).sort((a,b)=>b.ovr-a.ovr);
-        if(!pool.length)pool=squad.filter(p=>!p.inXI&&p.injury===0).sort((a,b)=>b.ovr-a.ovr);
-        if(!pool.length)pool=squad.filter(p=>!p.inXI).sort((a,b)=>b.ovr-a.ovr);
         if(pool.length){pool[0].inXI=true;pool[0].slotPos=slot;}
     });
 }
@@ -1360,7 +1385,7 @@ function handleSwapClick(pid,isLiveMatch=false){
             p2.inXI=xi1; p2.slotPos=sl1;
             saveState();
             showToast("🔄 Players swapped!"); swapIdA=null;
-            if(isLiveMatch){closeSubModal();return;}
+            if(isLiveMatch){ resimulateRemainingMatch(false); closeSubModal();return;}
         }else{swapIdA=null;}
     }
     if(isLiveMatch)openSubModal(false);else renderTab(activeTab);
@@ -1385,20 +1410,43 @@ function getTrainingBonus(teamIdx){
     if(G.training==='defense') return 1.2;
     return 0;
 }
-function teamStrength(teamIdx,tacticName){
-    if(typeof teamIdx==='string')return G.acl.teams[teamIdx].ovr+rnd(-5,5);
-    if(teamIdx>=16)return 65+rnd(-5,5);
+// Splits a team's rating into separate attack/defense numbers instead of one blended figure.
+// GK/DEF weigh mostly toward defense, FWD mostly toward attack, MID is split evenly — then the
+// formation's TACTIC_PROFILES and any live MENTALITY_PROFILES multiply each side independently,
+// so an attacking shape/mentality genuinely trades goals-for against goals-against, and vice versa.
+function teamStrengthAD(teamIdx,tacticName,mentality){
+    if(typeof teamIdx==='string'){ const v=G.acl.teams[teamIdx].ovr+rnd(-5,5); return {atk:v,def:v}; }
+    if(teamIdx>=16){ const v=65+rnd(-5,5); return {atk:v,def:v}; }
     const squad=G.squads[teamIdx];const xi=squad.filter(p=>p.inXI);
-    if(xi.length<11)return 60;
-    const effOvrSum=xi.reduce((s,p)=>s+getEffOvr(p,p.slotPos),0);
-    let str=effOvrSum/11;
-    str+=xi.reduce((s,p)=>s+p.moral,0)/11*0.05;
+    if(xi.length<11)return {atk:60,def:60};
+    let atkSum=0,atkW=0,defSum=0,defW=0;
+    xi.forEach(p=>{
+        const eo=getEffOvr(p,p.slotPos);
+        const cat=(POS_MAP[p.slotPos]||POS_MAP[p.pos]||{c:'MID'}).c;
+        if(cat==='GK'){ defSum+=eo;defW+=1; }
+        else if(cat==='DEF'){ defSum+=eo*0.85;defW+=0.85; atkSum+=eo*0.15;atkW+=0.15; }
+        else if(cat==='MID'){ atkSum+=eo*0.5;atkW+=0.5; defSum+=eo*0.5;defW+=0.5; }
+        else { atkSum+=eo*0.85;atkW+=0.85; defSum+=eo*0.15;defW+=0.15; }
+    });
+    let atk=atkSum/atkW, def=defSum/defW;
+    const moralAvg=xi.reduce((s,p)=>s+p.moral,0)/11*0.05;
+    atk+=moralAvg; def+=moralAvg;
     const avgEn=xi.reduce((s,p)=>s+p.energy,0)/11;
-    if(avgEn>80)str+=2;else if(avgEn<40)str-=4;
-    str+=calcTeamChemistry(teamIdx,tacticName)*0.08;
-    str+=getTrainingBonus(teamIdx);
-    if(G.stadium && teamIdx===G.playerTeamIdx) str += (G.stadium.trainingLevel||1)*0.4;
-    return str;
+    const enAdj=avgEn>80?2:(avgEn<40?-4:0);
+    atk+=enAdj; def+=enAdj;
+    const chem=calcTeamChemistry(teamIdx,tacticName)*0.08;
+    atk+=chem; def+=chem;
+    const trainBonus=getTrainingBonus(teamIdx);
+    atk+=trainBonus; def+=trainBonus;
+    if(G.stadium && teamIdx===G.playerTeamIdx){ const b=(G.stadium.trainingLevel||1)*0.4; atk+=b; def+=b; }
+    const prof=TACTIC_PROFILES[TACTICS_MAP[tacticName]||tacticName]||{atk:1,def:1};
+    const ment=MENTALITY_PROFILES[mentality]||MENTALITY_PROFILES.normal;
+    return { atk: atk*prof.atk*ment.atk, def: def*prof.def*ment.def };
+}
+// Back-compat single-number strength (used only for press-conference narrative comparisons).
+function teamStrength(teamIdx,tacticName){
+    const ad=teamStrengthAD(teamIdx,tacticName);
+    return (ad.atk+ad.def)/2;
 }
 // Sample a goal count from a Poisson-like distribution for a given expected-goals value (lambda).
 // This produces realistic, continuous-feeling scorelines instead of crude rnd() bracket tables —
@@ -1410,28 +1458,32 @@ function poissonGoals(lambda){
     do { k++; p *= Math.random(); } while (p > L);
     return k - 1;
 }
-function simulateMatch(hIdx,aIdx,weatherKey,derby){
-    const ht=typeof hIdx==='number'&&hIdx<16?(G.tactics[hIdx]||'4-3-3'):'4-3-3';
-    const at=typeof aIdx==='number'&&aIdx<16?(G.tactics[aIdx]||'4-3-3'):'4-3-3';
-    const hStr=teamStrength(hIdx,ht);const aStr=teamStrength(aIdx,at);
-    let diff=hStr-aStr;
-    if(weatherKey) diff = weatherDiffAdjust(weatherKey, diff);
-    if(derby) diff *= 0.55; // derbies run closer than the raw quality gap suggests
-    const tacticalNoise = rnd(-30,30)/10; // small game-to-game variance, kept modest relative to the OVR gap
-    diff += tacticalNoise;
-    // Convert the strength gap into expected goals for each side. ~1.3 is a typical league-average
-    // expected-goals baseline; +0.045 per point of `diff` makes a ~20pt OVR gap a heavy (but not
-    // automatic) favourite, matching the statistics of a real top-vs-bottom table matchup.
-    const homeAdv = 0.22;
-    let hLambda = 1.3 + homeAdv + diff*0.045;
-    let aLambda = 1.3 - homeAdv - diff*0.045;
-    const h = poissonGoals(hLambda);
-    const a = poissonGoals(aLambda);
-    const events=generateEvents(hIdx,aIdx,h,a);
+function simulateMatch(hIdx,aIdx,weatherKey,derby,opts){
+    opts=opts||{};
+    const ht=typeof hIdx==='number'&&hIdx<16?(opts.homeTactic||G.tactics[hIdx]||'4-3-3'):'4-3-3';
+    const at=typeof aIdx==='number'&&aIdx<16?(opts.awayTactic||G.tactics[aIdx]||'4-3-3'):'4-3-3';
+    const hAD=teamStrengthAD(hIdx,ht,opts.homeMentality||'normal');
+    const aAD=teamStrengthAD(aIdx,at,opts.awayMentality||'normal');
+    // Home's attack is judged against away's defense, and vice versa — a defensive tactic/mentality
+    // raises `def` (cutting the opponent's lambda) while lowering its own `atk` (cutting its own lambda).
+    let diffH=hAD.atk-aAD.def;
+    let diffA=aAD.atk-hAD.def;
+    if(weatherKey){ diffH=weatherDiffAdjust(weatherKey,diffH); diffA=weatherDiffAdjust(weatherKey,diffA); }
+    if(derby){ diffH*=0.55; diffA*=0.55; }
+    diffH += rnd(-30,30)/10; diffA += rnd(-30,30)/10;
+    const homeAdv=0.22;
+    const frac = opts.minuteFraction!==undefined ? opts.minuteFraction : 1;
+    let hLambda=(1.3+homeAdv+diffH*0.045)*frac;
+    let aLambda=(1.3-homeAdv+diffA*0.045)*frac;
+    const h=poissonGoals(hLambda);
+    const a=poissonGoals(aLambda);
+    const events=generateEvents(hIdx,aIdx,h,a,opts.minMin,opts.maxMin);
     const ratingData=computeMatchRatings(hIdx,aIdx,h,a,events);
     return{home:h,away:a,events,ratings:ratingData.ratings,motm:ratingData.motm};
 }
-function generateEvents(hIdx,aIdx,hGoals,aGoals){
+function generateEvents(hIdx,aIdx,hGoals,aGoals,minMin,maxMin){
+    minMin = minMin===undefined ? 5 : minMin;
+    maxMin = maxMin===undefined ? 89 : maxMin;
     const evs=[];
     const addGoals=(team,count,idx)=>{
         for(let i=0;i<count;i++){
@@ -1444,7 +1496,7 @@ function generateEvents(hIdx,aIdx,hGoals,aGoals){
                     if(assistPool.length){const as=pick(assistPool);assister=as.name;assisterId=as.id;}
                 }
             }else scorer="Pemain Bintang";
-            evs.push({type:'goal',min:rnd(5,89),team,player:scorer,playerId:scorerId,assistPlayer:assister,assistId:assisterId,teamIdx:idx});
+            evs.push({type:'goal',min:rnd(minMin,maxMin),team,player:scorer,playerId:scorerId,assistPlayer:assister,assistId:assisterId,teamIdx:idx});
         }
     };
     addGoals('home',hGoals,hIdx);addGoals('away',aGoals,aIdx);
@@ -1459,7 +1511,7 @@ function generateEvents(hIdx,aIdx,hGoals,aGoals){
             if(pool.length){ const cp=pick(pool); playerName=cp.name; cardPlayerId=cp.id; }
         }
         const isRed=Math.random()<0.1;
-        evs.push({type:'card',min:rnd(5,89),team,player:playerName,playerId:cardPlayerId,card:isRed?'red':'yellow',teamIdx:idx});
+        evs.push({type:'card',min:rnd(minMin,maxMin),team,player:playerName,playerId:cardPlayerId,card:isRed?'red':'yellow',teamIdx:idx});
     }
     // G4: injury chance scales with the squad's average proneness instead of a flat global rate,
     // and which player gets hurt is a weighted pick favouring more injury-prone players — not a
@@ -1468,21 +1520,23 @@ function generateEvents(hIdx,aIdx,hGoals,aGoals){
     const allXI = [];
     if(typeof hIdx === 'number' && hIdx < 16 && G.squads[hIdx]) G.squads[hIdx].filter(p=>p.inXI).forEach(p=>allXI.push({p,team:'home',idx:hIdx}));
     if(typeof aIdx === 'number' && aIdx < 16 && G.squads[aIdx]) G.squads[aIdx].filter(p=>p.inXI).forEach(p=>allXI.push({p,team:'away',idx:aIdx}));
-    const avgProneness = allXI.length ? allXI.reduce((s,e)=>s+(e.p.injuryProneness||35),0)/allXI.length : 35;
+    const doctorBonus = (G.staff && G.staff.doctor) ? G.staff.doctor.rating*4 : 0; // 0-20 point proneness cut for the player's own team
+    const effProneness = e => Math.max(5, (e.p.injuryProneness||35) - (e.idx===G.playerTeamIdx?doctorBonus:0));
+    const avgProneness = allXI.length ? allXI.reduce((s,e)=>s+effProneness(e),0)/allXI.length : 35;
     const injuryChance = clamp(0.06 + (avgProneness/100)*0.16, 0.04, 0.28); // ~0.06-0.28 per match
     const totalInjuries = Math.random() < injuryChance ? 1 : 0;
     for(let i=0; i<totalInjuries; i++){
         let playerName = '?'; let playerId = null; let team = 'home'; let idx = hIdx; let severityWeeks = 1;
         if(allXI.length){
             // Weighted pick: each player's chance of being the one hurt scales with their proneness.
-            const weights = allXI.map(e => Math.max(5, e.p.injuryProneness || 35));
+            const weights = allXI.map(e => effProneness(e));
             const totalW = weights.reduce((s,w)=>s+w,0);
             let roll = Math.random()*totalW;
             let chosen = allXI[allXI.length-1];
             for(let j=0;j<allXI.length;j++){ roll -= weights[j]; if(roll<=0){ chosen = allXI[j]; break; } }
             playerName = chosen.p.name; playerId = chosen.p.id; team = chosen.team; idx = chosen.idx;
             // Severity: higher proneness skews toward longer lay-offs, but everyone can get unlucky.
-            const pr = chosen.p.injuryProneness || 35;
+            const pr = effProneness(chosen);
             const severityRoll = Math.random()*100 + pr*0.3;
             if(severityRoll > 95) severityWeeks = rnd(6, 10);       // major injury
             else if(severityRoll > 65) severityWeeks = rnd(3, 5);   // moderate injury
@@ -1667,6 +1721,7 @@ let liveMatchState={
     halftimeDone: false,
     shout: null,
     shoutUsed: false,
+    mentality: 'normal',
     attendance: 0,
     highlightsText: [],
     matchSpeed: 1   // 1 = normal (30s total), 2 = double speed (15s total)
@@ -1733,7 +1788,10 @@ function freshState(){
         pcTransferAvailable: true,
         stadium: { capacityLevel:1, trainingLevel:1, medicalLevel:1, youthLevel:1, name: (TEAM_STADIUMS && TEAM_STADIUMS[0]) ? TEAM_STADIUMS[0] : TEAMS[0]+' Stadium' },
         sponsors: { shirt: { name: SPONSOR_NAMES_SHIRT[0], value: 0.28, weeksLeft: 20 }, stadium: { name: SPONSOR_NAMES_STADIUM[0], value: 0.2, weeksLeft: 20 } },
-        history: []
+        history: [],
+        staff: { assistant:null, doctor:null, scout:null },
+        staffCandidates: { assistant:null, doctor:null, scout:null },
+        u21Results: []
     };
 }
 function generateBoardObjective(prevPos){
@@ -1766,6 +1824,9 @@ function buildSchedule(){
 let currentSlot = 1;
 function slotKey(n){ return 'fmweb_slot_'+n; }
 function saveState(){
+    if(G.news && G.news.length>200) G.news.length=200;
+    if(G.log && G.log.length>100) G.log.length=100;
+    if(G.inbox && G.inbox.length>150) G.inbox=G.inbox.filter(m=>!m.isRead).concat(G.inbox.filter(m=>m.isRead)).slice(0,150);
     try{ localStorage.setItem(slotKey(currentSlot), JSON.stringify(G)); localStorage.setItem('fmweb_current_slot', String(currentSlot)); }catch(e){}
 }
 // ─── E6: Dark/Light Mode Toggle ─────────────────────────────
@@ -1821,8 +1882,9 @@ function migrateState(){
     // ── Core scalar fields ──
     if(G.godMode === undefined) G.godMode = false;
     if(G.training === undefined) G.training = 'balanced';
-    if(!Array.isArray(G.u21Selected)) G.u21Selected = [];
     if(!Array.isArray(G.u21Results)) G.u21Results = [];
+    if(G.staff === undefined) G.staff = { assistant:null, doctor:null, scout:null };
+    if(!G.staffCandidates) G.staffCandidates = { assistant:null, doctor:null, scout:null };
     if(G.boardConfidence === undefined) G.boardConfidence = 60;
     if(G.fanSupport === undefined) G.fanSupport = 55;
     if(G.reputation === undefined) G.reputation = 35;
@@ -1859,6 +1921,7 @@ function migrateState(){
             if(p.injuryProneness === undefined) p.injuryProneness = rollInjuryProneness(p.age||25);
             if(p.injuryHistory === undefined) p.injuryHistory = 0;
             if(p.injury > 0 && p.injuryTotalWeeks === undefined) p.injuryTotalWeeks = p.injury;
+            if(p.squadLevel === undefined) p.squadLevel = 'senior';
         });
     });
     if(!Array.isArray(G.tactics) || G.tactics.length < 16){
@@ -1985,14 +2048,15 @@ function migrateState(){
 function applyTrainingEffects(){
     const sq=G.squads[G.playerTeamIdx];
     if(!sq) return;
+    const assistantBonus = (G.staff && G.staff.assistant) ? G.staff.assistant.rating : 0; // 0-5 stars
     if(G.training==='fitness'){
-        sq.forEach(p=>{ p.energy=clamp(p.energy+12,0,100); });
+        sq.forEach(p=>{ p.energy=clamp(p.energy+12+assistantBonus,0,100); });
     } else if(G.training==='tactical'){
-        sq.forEach(p=>{ p.chem=clamp(p.chem+rnd(2,4),0,100); });
+        sq.forEach(p=>{ p.chem=clamp(p.chem+rnd(2,4)+assistantBonus,0,100); });
     } else if(G.training==='attack'){
-        sq.filter(p=>p.mainCat==='FWD'||p.mainCat==='MID').forEach(p=>{ if(Math.random()<0.15 && p.ovr<p.pot) p.ovr=clamp(p.ovr+1,1,99); });
+        sq.filter(p=>p.mainCat==='FWD'||p.mainCat==='MID').forEach(p=>{ if(Math.random()<0.15+assistantBonus*0.02 && p.ovr<p.pot) p.ovr=clamp(p.ovr+1,1,99); });
     } else if(G.training==='defense'){
-        sq.filter(p=>p.mainCat==='DEF'||p.mainCat==='GK').forEach(p=>{ if(Math.random()<0.15 && p.ovr<p.pot) p.ovr=clamp(p.ovr+1,1,99); });
+        sq.filter(p=>p.mainCat==='DEF'||p.mainCat==='GK').forEach(p=>{ if(Math.random()<0.15+assistantBonus*0.02 && p.ovr<p.pot) p.ovr=clamp(p.ovr+1,1,99); });
     }
 }
 function setTraining(t){
@@ -2009,6 +2073,50 @@ function setIndivFocus(pid,f){
     let p=null; for(const sq of G.squads){ if(!Array.isArray(sq))continue; p=sq.find(x=>x.id===pid); if(p)break; }
     if(!p) return;
     p.indivFocus=f; saveState(); openPlayerModal(pid); showToast(`🎯 Fokus Individu: ${INDIV_FOCUS[f].label}`);
+}
+// ─── Senior ⇄ U-21 squad membership. A U-21 player is unavailable for the senior XI/bench until
+// moved back; moving down clears them out of the senior lineup so the two rosters stay exclusive.
+function moveToU21(pid){
+    const sq=G.squads[G.playerTeamIdx]; const p=sq&&sq.find(x=>x.id===pid); if(!p) return;
+    if(p.age>21){ showToast('❌ Only players aged 21 or under can join the U-21 squad.'); return; }
+    p.squadLevel='u21'; p.inXI=false; p.slotPos=null;
+    saveState(); openPlayerModal(pid); showToast(`🌱 ${p.name} moved to the U-21 squad.`);
+}
+function moveToSenior(pid){
+    const sq=G.squads[G.playerTeamIdx]; const p=sq&&sq.find(x=>x.id===pid); if(!p) return;
+    p.squadLevel='senior';
+    saveState(); openPlayerModal(pid); showToast(`⬆️ ${p.name} promoted to the senior squad.`);
+}
+// ─── Coaching staff: a weekly-wage economy sink with real gameplay hooks (training/injury/scouting). ───
+const STAFF_ROLES = {
+    assistant: {label:'Assistant Coach', icon:'🎯', desc:"Boosts your team's Training Focus effects."},
+    doctor: {label:'Team Doctor', icon:'🩺', desc:"Cuts your players' injury risk and recovery time."},
+    scout: {label:'Head Scout', icon:'🔭', desc:'Improves the quality of scouted youth prospects.'}
+};
+function genStaffCandidate(role){
+    const rating = rnd(1,5);
+    const salary = parseFloat((0.02 + rating*0.03 + rnd(0,2)/100).toFixed(3));
+    return {id:Math.random().toString(36).substr(2,9), role, name:randName(pick(['ID','EU','FR'])), rating, salary};
+}
+function refreshStaffCandidates(role){
+    const cost = 0.05;
+    if(G.budget < cost){ showToast('❌ Not enough budget to scout new candidates.'); return; }
+    G.budget = parseFloat((G.budget-cost).toFixed(2));
+    G.staffCandidates[role] = [genStaffCandidate(role), genStaffCandidate(role), genStaffCandidate(role)];
+    saveState(); renderManager(); showToast('🔄 New candidates found.');
+}
+function hireStaff(role, candIdx){
+    const cand = G.staffCandidates[role] && G.staffCandidates[role][candIdx];
+    if(!cand) return;
+    if(G.staff[role]) fireStaff(role, true);
+    G.staff[role] = cand; G.staffCandidates[role] = null;
+    saveState(); renderManager(); showToast(`✅ Hired ${cand.name} as ${STAFF_ROLES[role].label}.`);
+}
+function fireStaff(role, silent){
+    if(!G.staff[role]) return;
+    const name = G.staff[role].name;
+    G.staff[role] = null;
+    saveState(); if(!silent){ renderManager(); showToast(`❌ ${name} released.`); }
 }
 // ─── Weekly income (sponsors + stadium attendance) ─────────
 // ─── Match-day finance: every match now has real financial stakes. Winning brings prize/bonus
@@ -2033,6 +2141,10 @@ function applyMatchFinance(teamIdx, gf, ga, mult){
         G.aiBudgets[teamIdx] = parseFloat((Math.max(-15, (G.aiBudgets[teamIdx]||0) + delta)).toFixed(2));
     }
 }
+function staffWeeklyWageTotal(){
+    if(!G.staff) return 0;
+    return Object.values(G.staff).reduce((s,st)=>s+(st?st.salary:0),0);
+}
 function payWeeklyIncome(isHomeMatchThisWeek){
     let income=0;
     if(G.sponsors){
@@ -2044,7 +2156,8 @@ function payWeeklyIncome(isHomeMatchThisWeek){
         const attendanceRevenue = parseFloat((cap * 0.12 * (G.fanSupport/100)).toFixed(2));
         income += attendanceRevenue;
     }
-    if(income>0){ G.budget=parseFloat((G.budget+income).toFixed(2)); }
+    income -= staffWeeklyWageTotal();
+    if(income!==0){ G.budget=parseFloat((G.budget+income).toFixed(2)); }
     return income;
 }
 function checkSponsorExpiry(){
@@ -2177,7 +2290,7 @@ function weekTick(){
     G.pcAvailable = false; G.pcPreMatchAvailable = false;
     const inTW = isTransferWindowOpen();
     G.pcTransferAvailable = inTW;
-    if(inTW){ try { processAITransferActivity(); } catch(e) {} }
+    if(inTW){ try { processAITransferActivity(); } catch(e) { console.error('processAITransferActivity failed:', e); } }
     processPendingTransfers();
     if (G.scoutQueue && G.scoutQueue.length > 0) {
         G.scoutQueue.forEach(q => {
@@ -2185,11 +2298,13 @@ function weekTick(){
             if (q.weeksLeft <= 0) {
                 const prospects = [];
                 const yLvl = (G.stadium && G.stadium.youthLevel) || 1;
+                const scoutLvl = (G.staff && G.staff.scout) ? G.staff.scout.rating : 0; // 0-5 stars: better scouts unearth better prospects
                 for(let i=0; i<3; i++) {
                     let cat = pick(['DEF','MID','FWD','GK']);
                     let p = genPlayer(cat, -1, false, 'ID');
                     p.age = rnd(16, 18);
-                    p.ovr = rnd(50+yLvl*2, 72+yLvl*3); p.isStar = p.ovr >= 70;
+                    p.ovr = clamp(rnd(50+yLvl*2, 72+yLvl*3) + scoutLvl*2, 40, 90); p.isStar = p.ovr >= 70;
+                    if(p.pot < p.ovr) p.pot = Math.min(95, p.ovr + rnd(2,6));
                     prospects.push(p);
                 }
                 G.inbox.unshift({
@@ -2280,7 +2395,7 @@ function weekTick(){
     G.week++;
     G.weekBaseDate = G.currentDate;
     if(!Array.isArray(G.schedule) || G.schedule.length < SEASON_WEEKS){ G.schedule = buildSchedule(); }
-    if(G.week % 4 === 0){ try { aiAdjustTactics(); } catch(e) {} }
+    if(G.week % 4 === 0){ try { aiAdjustTactics(); } catch(e) { console.error('aiAdjustTactics failed:', e); } }
     const leagueMatches=G.schedule[G.week-1] || [];
     const isHomeThisWeek = leagueMatches.some(([h,a])=>h===G.playerTeamIdx);
     payWeeklyIncome(isHomeThisWeek);
@@ -2292,8 +2407,8 @@ function weekTick(){
     }
     G._weekMyLeagueMatch = _simulateLeagueWeek(leagueMatches, G.weekBaseDate);
     if(!Array.isArray(G.liga2Schedule) || G.liga2Schedule.length < SEASON_WEEKS){ G.liga2Schedule = buildSchedule(); }
-    try { _simulateLiga2Week(G.liga2Schedule[G.week-1] || []); } catch(e) { /* never let Liga 2 sim break the main week advance */ }
-    try { _simulateU21Week(); } catch(e) { /* never let U21 sim break the main week advance */ }
+    try { _simulateLiga2Week(G.liga2Schedule[G.week-1] || []); } catch(e) { console.error('Liga 2 sim failed (week advance continues):', e); }
+    try { _simulateU21Week(); } catch(e) { console.error('U21 sim failed (week advance continues):', e); }
     G.weekPlan = buildWeekPlan();
     processInjuriesAndAutoSub();
 }
@@ -2323,7 +2438,13 @@ function advanceWeek(){
         G.dayCursor = 0;
         G.currentDate = addDays(G.currentDate, 1);
         G.preseasonWeeksLeft--;
-        if(G.preseasonWeeksLeft<=0){ G.phase='league'; G.log.unshift({cls:'info',text:'🏁 The league has started!'}); }
+        if(G.preseasonWeeksLeft<=0){
+            G.phase='league';
+            G.log.unshift({cls:'info',text:'🏁 The league has started!'});
+            const hadJobOffer = G.inbox.some(m=>m.type==='job_offer');
+            G.inbox = G.inbox.filter(m=>m.type!=='job_offer');
+            if(hadJobOffer) G.log.unshift({cls:'info',text:'📭 Tawaran pekerjaan yang belum dijawab kadaluarsa saat pramusim berakhir.'});
+        }
         else G.log.unshift({cls:'info',text:`⏳ Pre-Season: ${G.preseasonWeeksLeft} weeks left!`});
         payWeeklyIncome(false);
         processPendingTransfers();
@@ -2395,11 +2516,11 @@ function processInjuriesAndAutoSub() {
         // Auto-bench injured players in XI
         const injuredInXI = sq.filter(p => p.inXI && p.injury > 0);
         injuredInXI.forEach(p => {
-            const bench = sq.filter(b => !b.inXI && b.injury === 0 && POS_MAP[b.pos].c === p.mainCat).sort((a,b)=>b.ovr-a.ovr);
+            const bench = sq.filter(b => !b.inXI && b.injury === 0 && (b.squadLevel||'senior')==='senior' && POS_MAP[b.pos].c === p.mainCat).sort((a,b)=>b.ovr-a.ovr);
             if(bench.length > 0) {
                 const sub = bench[0]; sub.inXI = true; sub.slotPos = p.slotPos; p.inXI = false; p.slotPos = null;
             } else {
-                const anyBench = sq.filter(b => !b.inXI && b.injury === 0).sort((a,b)=>b.ovr-a.ovr);
+                const anyBench = sq.filter(b => !b.inXI && b.injury === 0 && (b.squadLevel||'senior')==='senior').sort((a,b)=>b.ovr-a.ovr);
                 if(anyBench.length > 0) {
                     const sub = anyBench[0]; sub.inXI = true; sub.slotPos = p.slotPos; p.inXI = false; p.slotPos = null;
                 }
@@ -2408,11 +2529,11 @@ function processInjuriesAndAutoSub() {
         // Auto-bench suspended players in XI
         const suspendedInXI = sq.filter(p => p.inXI && (p.suspensionMatchesLeft || 0) > 0);
         suspendedInXI.forEach(p => {
-            const bench = sq.filter(b => !b.inXI && b.injury === 0 && (b.suspensionMatchesLeft || 0) === 0 && POS_MAP[b.pos] && POS_MAP[b.pos].c === p.mainCat).sort((a,b)=>b.ovr-a.ovr);
+            const bench = sq.filter(b => !b.inXI && b.injury === 0 && (b.suspensionMatchesLeft || 0) === 0 && (b.squadLevel||'senior')==='senior' && POS_MAP[b.pos] && POS_MAP[b.pos].c === p.mainCat).sort((a,b)=>b.ovr-a.ovr);
             if(bench.length > 0) {
                 const sub = bench[0]; sub.inXI = true; sub.slotPos = p.slotPos; p.inXI = false; p.slotPos = null;
             } else {
-                const anyBench = sq.filter(b => !b.inXI && b.injury === 0 && (b.suspensionMatchesLeft || 0) === 0).sort((a,b)=>b.ovr-a.ovr);
+                const anyBench = sq.filter(b => !b.inXI && b.injury === 0 && (b.suspensionMatchesLeft || 0) === 0 && (b.squadLevel||'senior')==='senior').sort((a,b)=>b.ovr-a.ovr);
                 if(anyBench.length > 0) {
                     const sub = anyBench[0]; sub.inXI = true; sub.slotPos = p.slotPos; p.inXI = false; p.slotPos = null;
                 }
@@ -2443,10 +2564,10 @@ function processInjuriesAndAutoSub() {
                     }
                 });
             }
-        } catch(e) { /* never let a lineup top-up crash the weekly cycle */ }
+        } catch(e) { console.error('Lineup top-up failed:', e); }
     });
     // Check milestones
-    try { checkMilestones(); } catch(e) {}
+    try { checkMilestones(); } catch(e) { console.error('checkMilestones failed:', e); }
 }
 function applyPostMatchEvents(events, baseDate, compType) {
     if(!Array.isArray(events)) return;
@@ -2461,6 +2582,7 @@ function applyPostMatchEvents(events, baseDate, compType) {
                 p.injuryHistory = (p.injuryHistory || 0) + 1;
                 const medLvl = (G.stadium && e.teamIdx===G.playerTeamIdx) ? G.stadium.medicalLevel : 1;
                 if(medLvl>=4) p.injury = Math.max(1, p.injury-1);
+                if(e.teamIdx===G.playerTeamIdx && G.staff && G.staff.doctor) p.injury = Math.max(1, p.injury - Math.floor(G.staff.doctor.rating/2));
                 const severityLabel = p.injury >= 6 ? 'a major injury' : p.injury >= 3 ? 'a moderate injury' : 'a minor knock';
                 G.news.unshift({
                     date: formatDate(baseDate),
@@ -2522,19 +2644,19 @@ function applyPostMatchEvents(events, baseDate, compType) {
         });
     }
 }
-// ─── U-21 development squad: lightweight weekly sim, no live view. Players ≤21 picked into
-// G.u21Selected get a growth nudge + minutes; unselected eligible players get nothing this week. ───
+// ─── U-21 development squad: lightweight weekly sim, no live view. Every player rostered in the
+// U-21 squad (squadLevel==='u21') gets minutes + a growth chance; the best 11 by OVR determine
+// the scoreline, but the growth bonus applies to the whole U-21 roster since real minutes rotate. ───
 function _simulateU21Week(){
     const sq=G.squads[G.playerTeamIdx]; if(!Array.isArray(sq)) return;
-    const eligible=sq.filter(p=>p.age<=21);
-    if(!eligible.length) return;
-    let selected=eligible.filter(p=>G.u21Selected.includes(p.id));
-    if(!selected.length) selected=[...eligible].sort((a,b)=>b.ovr-a.ovr).slice(0,11);
-    const str=selected.reduce((s,p)=>s+p.ovr,0)/selected.length;
+    const roster=sq.filter(p=>(p.squadLevel||'senior')==='u21');
+    if(!roster.length) return;
+    const xi=[...roster].sort((a,b)=>b.ovr-a.ovr).slice(0,11);
+    const str=xi.reduce((s,p)=>s+p.ovr,0)/xi.length;
     const oppStr=str+rnd(-8,8);
     const diff=(str-oppStr)*0.05;
     const gf=poissonGoals(1.3+diff), ga=poissonGoals(1.3-diff);
-    selected.forEach(p=>{
+    roster.forEach(p=>{
         p.u21Apps=(p.u21Apps||0)+1;
         if(Math.random()<0.5 && p.ovr<p.pot) p.ovr=clamp(p.ovr+1,1,99);
     });
@@ -2721,6 +2843,12 @@ function renderConfidenceMeter(compact){
             ${warningHtml}
         </div>`;
 }
+function autoFixLineup(){
+    const mySquad = G.squads[G.playerTeamIdx];
+    if(Array.isArray(mySquad)) setDefaultXI(mySquad, G.tactics[G.playerTeamIdx] || '4-3-3');
+    saveState(); closeModal();
+    playNextPendingMatch();
+}
 function playNextPendingMatch(){
     if(weekPendingIndex>=weekPendingMatches.length){
         renderAll();showToast("All matches for this week are complete!");return;
@@ -2791,7 +2919,8 @@ function playNextPendingMatch(){
                 <p style="font-size:.65rem;color:var(--dim);margin-top:10px">Buka tab Squad, ganti mereka (atau isi slot kosong), lalu kembali untuk memainkan pertandingan.</p>
             `;
             document.getElementById('mfoot').innerHTML = `
-                <button class="btn btn-p btn-sm" onclick="closeModal();switchTab('squad')">🔧 Buka Squad</button>
+                <button class="btn btn-p btn-sm" onclick="autoFixLineup()">🔄 Auto-Isi Lineup</button>
+                <button class="btn btn-s btn-sm" onclick="closeModal();switchTab('squad')">🔧 Buka Squad</button>
                 <button class="btn btn-s btn-sm" onclick="closeModal()">Tutup</button>
             `;
             document.getElementById('mov').classList.add('show');
@@ -2813,7 +2942,7 @@ function playNextPendingMatch(){
         // (e.g. in advanceWeek), or the outcome would leak before the PLAY animation even starts.
         if(liveMatchState.myMatch && liveMatchState.myMatch._pendingReveal){
             applyMyMatchConsequences(liveMatchState.myMatch);
-            try { checkMilestones(); } catch(e) {}
+            try { checkMilestones(); } catch(e) { console.error('checkMilestones failed:', e); }
             saveState();
         }
         // Show post-match press conference
@@ -2908,7 +3037,7 @@ function playNextPendingMatch(){
             const isHome=my.homeIdx===G.playerTeamIdx;
             const myIdx=G.playerTeamIdx;
             const oppIdx=isHome?my.awayIdx:my.homeIdx;
-            const mySq=G.squads[myIdx];
+            const mySq=G.squads[myIdx].filter(p=>(p.squadLevel||'senior')==='senior');
             const oppSq=getTeamSquad(oppIdx);
             const myTac=G.tactics[myIdx];
             const oppTac=getTeamTactic(oppIdx);
@@ -2986,6 +3115,7 @@ function playNextPendingMatch(){
             ?`${my&&my.ratings?`<button class="btn btn-s btn-sm" onclick="openMatchReport()">📋 Match Report</button>`:''}
               <button class="btn btn-p btn-blk" onclick="continueToNext()" style="flex:1">${weekPendingIndex+1<weekPendingMatches.length?'🎤 Post-Match & Next ➔':'🎤 Finish & Press Conference'}</button>`
             :`${shoutBtn}
+              <button class="btn btn-g btn-sm" onclick="openTacticsModal()">⚙️ Taktik</button>
               <button class="btn btn-g btn-sm" onclick="openSubModal(true)">🔄 Subs (${st.subsLeft})</button>
               <button class="btn btn-s btn-sm" onclick="toggleMatchSpeed()" style="${st.matchSpeed===2?'background:var(--gold);color:#000':''}">⚡ ${st.matchSpeed===2?'2× ON':'2×'}</button>`
           }
@@ -3061,6 +3191,62 @@ function playNextPendingMatch(){
         document.getElementById('mov').classList.add('show');
     }
 
+    // Re-rolls only the GOALS for the time remaining in the match (cards/injuries already on the
+    // books stay untouched), using whatever formation/mentality the user currently has live. This
+    // is what makes an in-match tactical switch actually change the rest of the match, not just
+    // look different — the new attack/defense split feeds straight back into fresh Poisson lambdas.
+    function resimulateRemainingMatch(withDisruption){
+        const st = liveMatchState, my = st.myMatch;
+        if(!my || st.min >= 89) return;
+        const cutoff = st.min;
+        const kept = my.events.filter(e => e.type!=='goal' || e.min<=cutoff);
+        const pastHomeGoals = my.events.filter(e=>e.type==='goal'&&e.team==='home'&&e.min<=cutoff).length;
+        const pastAwayGoals = my.events.filter(e=>e.type==='goal'&&e.team==='away'&&e.min<=cutoff).length;
+        const isHomeUser = my.homeIdx === G.playerTeamIdx;
+        const hMentality = isHomeUser ? st.mentality : 'normal';
+        const aMentality = !isHomeUser ? st.mentality : 'normal';
+        let frac = Math.max(1, 90-cutoff)/90;
+        if(withDisruption) frac *= 0.9; // players still settling into a fresh shape — small, temporary cost
+        const result = simulateMatch(my.homeIdx, my.awayIdx, my.weather, my.isDerby, {
+            homeMentality: hMentality, awayMentality: aMentality, minuteFraction: frac, minMin: cutoff+1, maxMin: 89
+        });
+        const newGoals = result.events.filter(e=>e.type==='goal');
+        my.events = kept.concat(newGoals).sort((a,b)=>a.min-b.min);
+        my.homeScore = pastHomeGoals + newGoals.filter(e=>e.team==='home').length;
+        my.awayScore = pastAwayGoals + newGoals.filter(e=>e.team==='away').length;
+    }
+    function openTacticsModal(){
+        const st = liveMatchState;
+        document.getElementById('mtitle').innerHTML = '⚙️ Ubah Taktik';
+        document.getElementById('mbody').innerHTML = `
+            <div style="font-size:.7rem;color:var(--dim);margin-bottom:8px">Mentalitas — efek langsung ke peluang gol sisa pertandingan:</div>
+            <div class="row bt" style="gap:6px;margin-bottom:14px">
+                ${Object.keys(MENTALITY_PROFILES).map(k=>`<button class="btn btn-sm ${st.mentality===k?'btn-p':'btn-s'}" style="flex:1" onclick="applyMentality('${k}')">${MENTALITY_PROFILES[k].label}</button>`).join('')}
+            </div>
+            <div style="font-size:.7rem;color:var(--dim);margin-bottom:8px">Formasi — ganti sekarang (butuh sedikit waktu penyesuaian):</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+                ${TACTICS.map(t=>`<button class="btn btn-sm ${G.tactics[G.playerTeamIdx]===t?'btn-p':'btn-s'}" onclick="applyFormationChange('${t}')">${t}</button>`).join('')}
+            </div>
+        `;
+        document.getElementById('mfoot').innerHTML = `<button class="btn btn-s btn-sm" onclick="closeModal(true)">Tutup</button>`;
+        document.getElementById('mov').classList.add('show');
+    }
+    function applyMentality(key){
+        liveMatchState.mentality = key;
+        resimulateRemainingMatch(false);
+        closeModal(true);
+        showToast(`🎯 Mentalitas: ${MENTALITY_PROFILES[key].label}`);
+        renderLiveBoardFull();
+    }
+    function applyFormationChange(tacticName){
+        if(G.tactics[G.playerTeamIdx]===tacticName){ closeModal(true); return; }
+        G.tactics[G.playerTeamIdx] = tacticName;
+        setDefaultXI(G.squads[G.playerTeamIdx], tacticName);
+        resimulateRemainingMatch(true);
+        saveState(); closeModal(true);
+        showToast(`⚙️ Formasi diubah ke ${tacticName} — butuh waktu penyesuaian.`);
+        renderLiveBoardFull();
+    }
     function applyShout(key) {
         liveMatchState.shout = key;
         liveMatchState.shoutUsed = true;
@@ -3429,6 +3615,7 @@ function playNextPendingMatch(){
                     const p  = sq ? sq.find(x => x.id === e.playerId) : null;
                     if (p && p.inXI) {
                         p.injury = e.severityWeeks || rnd(1,3);
+                        if(G.staff && G.staff.doctor) p.injury = Math.max(1, p.injury - Math.floor(G.staff.doctor.rating/2));
                         p.injuryTotalWeeks = p.injury;
                         p.injuryHistory = (p.injuryHistory || 0) + 1;
                         st.isPaused = true;
@@ -3492,7 +3679,7 @@ function playNextPendingMatch(){
     }
     function openSubModal(resetSwap=true){
         liveMatchState.isPaused=true;if(resetSwap)swapIdA=null;
-        const sq=G.squads[G.playerTeamIdx];const tactic=G.tactics[G.playerTeamIdx];
+        const sq=G.squads[G.playerTeamIdx].filter(p=>(p.squadLevel||'senior')==='senior');const tactic=G.tactics[G.playerTeamIdx];
         let html=`<p style="font-size:.7rem;color:var(--dim);text-align:center">Select a player on the pitch, then a substitute. (Remaining: <b>${liveMatchState.subsLeft}</b>)</p>
         <div style="transform:scale(0.85);transform-origin:top center;margin-bottom:-30px;">
           ${renderSquadPitchVertical(sq,tactic,'sub')}
@@ -3674,47 +3861,43 @@ function buildMainActionBtn(){
     
     let squadSubTab='main';
     function setSquadSubTab(t){squadSubTab=t;renderSquad();}
-    function toggleU21Select(pid){
-        const i=G.u21Selected.indexOf(pid);
-        if(i>=0) G.u21Selected.splice(i,1);
-        else { if(G.u21Selected.length>=11){ showToast('⚠️ Maks 11 pemain di skuat U-21.'); return; } G.u21Selected.push(pid); }
-        saveState(); renderSquad();
-    }
     function renderU21Body(sq){
-        const eligible=sq.filter(p=>p.age<=21);
-        const lastResults=G.u21Results.slice(0,5).map(r=>`<div class="row bt" style="font-size:.75rem;padding:5px 0;border-bottom:1px solid var(--sf2)"><span>Pekan ${r.week}</span><b style="color:var(--gold)">${r.gf} - ${r.ga}</b></div>`).join('')||'<div style="font-size:.7rem;color:var(--dim)">Belum ada pertandingan U-21.</div>';
+        const u21sq=sq.filter(p=>(p.squadLevel||'senior')==='u21');
+        const lastResults=G.u21Results.slice(0,5).map(r=>`<div class="row bt" style="font-size:.75rem;padding:5px 0;border-bottom:1px solid var(--sf2)"><span>Week ${r.week}</span><b style="color:var(--gold)">${r.gf} - ${r.ga}</b></div>`).join('')||'<div style="font-size:.7rem;color:var(--dim)">No U-21 matches played yet.</div>';
         return `
         <div class="card">
-          <div class="sec">🌱 Skuat U-21 (${G.u21Selected.length}/11 dipilih)</div>
-          <p style="font-size:.62rem;color:var(--dim);margin-bottom:8px">Pemain umur ≤21 yang dipilih dapat menit main U-21 tiap pekan + bonus growth. Yang tidak dipilih tidak dapat bonus ini.</p>
-          ${eligible.length ? eligible.sort((a,b)=>b.ovr-a.ovr).map(p=>{
-              const sel=G.u21Selected.includes(p.id);
-              return `<div class="plc" onclick="toggleU21Select('${p.id}')" style="cursor:pointer;${sel?'border-color:var(--gg)':''}">
+          <div class="sec">🌱 U-21 Squad (${u21sq.length} players)</div>
+          <p style="font-size:.62rem;color:var(--dim);margin-bottom:8px">Every U-21 squad player gets minutes + a growth bonus each week. To add a player (age ≤21), open them from the Senior Squad and tap "Move to U-21 Squad" on their info screen.</p>
+          ${u21sq.length ? u21sq.sort((a,b)=>b.ovr-a.ovr).map(p=>{
+              return `<div class="plc">
                 <div style="width:48px;text-align:center;font-weight:900;color:var(--gold);font-size:.65rem">${p.pos}</div>
                 <div style="flex:1;min-width:0">
-                  <div class="pln">${p.name} ${sel?'✅':''}</div>
-                  <div style="font-size:.6rem;color:var(--dim);margin-top:2px">Umur ${p.age} | U-21 Apps: ${p.u21Apps||0}</div>
+                  <div class="pln">${p.name}</div>
+                  <div style="font-size:.6rem;color:var(--dim);margin-top:2px">Age ${p.age} | U-21 Apps: ${p.u21Apps||0}</div>
                 </div>
                 <div class="ovr ${ovrCls(p.ovr)}">${p.ovr}</div>
+                <button class="info-btn" onclick="event.stopPropagation();openPlayerModal('${p.id}')">i</button>
               </div>`;
-          }).join('') : '<div style="font-size:.7rem;color:var(--dim)">Tidak ada pemain umur ≤21 di skuat.</div>'}
+          }).join('') : '<div style="font-size:.7rem;color:var(--dim)">No players in the U-21 squad yet.</div>'}
         </div>
         <div class="card" style="margin-top:10px">
-          <div class="sec">📊 Hasil U-21 Terakhir</div>
+          <div class="sec">📊 Recent U-21 Results</div>
           ${lastResults}
         </div>`;
     }
     function renderSquad(){
-        const sq=G.squads[G.playerTeamIdx]||[];const tactic=G.tactics[G.playerTeamIdx]||'4-3-3';const xiCount=sq.filter(p=>p.inXI).length;
+        const fullSq=G.squads[G.playerTeamIdx]||[];
+        const sq=fullSq.filter(p=>(p.squadLevel||'senior')==='senior'); // U-21 players are unavailable for the senior XI/bench
+        const tactic=G.tactics[G.playerTeamIdx]||'4-3-3';const xiCount=sq.filter(p=>p.inXI).length;
         const chem=Math.round(calcTeamChemistry(G.playerTeamIdx, tactic));
         const trOpts=[['balanced','⚖️ Balanced'],['attack','⚔️ Attack'],['defense','🛡️ Defense'],['fitness','💪 Fitness'],['tactical','🧠 Tactical']];
         document.getElementById('main').innerHTML=`
-        <div class="sec">👥 Squad — ${sq.length}/${MAX_SQUAD_SIZE} pemain · <span style="color:var(--gg)">${xiCount} Starting XI</span> · <span style="color:var(--bg2)">${sq.length-xiCount} Bench</span></div>
+        <div class="sec">👥 Squad — ${fullSq.length}/${MAX_SQUAD_SIZE} players · <span style="color:var(--gg)">${xiCount} Starting XI</span> · <span style="color:var(--bg2)">${sq.length-xiCount} Bench</span></div>
         <div style="display:flex;gap:6px;margin-bottom:10px">
-          <button class="btn btn-sm ${squadSubTab==='main'?'btn-p':'btn-s'}" onclick="setSquadSubTab('main')">👥 Skuat Utama</button>
+          <button class="btn btn-sm ${squadSubTab==='main'?'btn-p':'btn-s'}" onclick="setSquadSubTab('main')">👥 Senior Squad</button>
           <button class="btn btn-sm ${squadSubTab==='u21'?'btn-p':'btn-s'}" onclick="setSquadSubTab('u21')">🌱 U-21</button>
         </div>
-        ${squadSubTab==='u21' ? renderU21Body(sq) : `
+        ${squadSubTab==='u21' ? renderU21Body(fullSq) : `
         <div class="card">
           <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:5px;margin-bottom:5px">
             ${TACTICS.map(t=>`<button class="btn btn-sm ${t===tactic?'btn-p':'btn-s'}" onclick="setTactic('${t}')">${t}</button>`).join('')}
@@ -3728,7 +3911,7 @@ function buildMainActionBtn(){
               <div class="chem-bar" style="margin-top:3px;"><div class="chem-fill" style="width:${chem}%"></div></div>
           </div>
           ${renderSquadPitchVertical(sq,tactic,'squad')}
-          <p style="font-size:.65rem;color:var(--gold);text-align:center;margin-top:8px">💡 Klik pemain (XI atau Bench) lalu klik pemain lain untuk <b>menukar posisi</b>. Bisa tukar XI↔Bench atau sesama Bench.</p>
+          <p style="font-size:.65rem;color:var(--gold);text-align:center;margin-top:8px">💡 Click a player (XI or Bench), then click another player to <b>swap positions</b>. Works XI↔Bench or Bench↔Bench.</p>
         </div>
         <div class="card" style="border-color:var(--bg2)">
           <div class="sec">🏋️ Training Focus</div>
@@ -3780,7 +3963,7 @@ function buildMainActionBtn(){
           <div style="width:48px;text-align:center;font-weight:900;color:var(--gold);font-size:.65rem">${p.pos}<div style="font-size:.48rem;color:var(--dim);font-weight:normal;white-space:nowrap;overflow:hidden">${POS_LABELS[p.pos]||''}</div></div>
           <div style="flex:1;min-width:0">
               <div class="pln"><span class="${p.injury>0?'injured-text':isSuspended?'suspended-text':''}">${p.name}</span> ${p.isStar?'⭐':''} ${loanBadge} ${suspBadge} ${statusBadge}${formStr}</div>
-              <div style="font-size:.6rem;color:var(--dim);margin-top:2px">${effStr} | Contract: ${p.contract}y | Rtg: <b style="color:var(--gold)">${avgR}</b> | ${injStr}${ycStr}</div>
+              <div style="font-size:.6rem;color:var(--dim);margin-top:2px">${effStr} | Age: ${p.age} | Contract: ${p.contract}y | Rtg: <b style="color:var(--gold)">${avgR}</b> | ${injStr}${ycStr}</div>
               ${traitsHtml}
           </div>
           <div class="ovr ${ovrCls(p.ovr)}">${p.ovr}</div>
@@ -4903,6 +5086,7 @@ function buildMainActionBtn(){
         liveMatchState.halftimeDone = false;
         liveMatchState.shout = null;
         liveMatchState.shoutUsed = false;
+        liveMatchState.mentality = 'normal';
         liveMatchState.highlightsText = [];
         // Calculate attendance
         const capLvl = (G.stadium && G.stadium.capacityLevel) || 1;
@@ -5101,6 +5285,9 @@ function buildMainActionBtn(){
                                 <button class="btn btn-p btn-sm" onclick="chooseSponsor('${kind}', ${i})">Choose</button>
                             </div>`).join('')}</div>`;
                     }
+                } else if (msg.type === 'job_offer') {
+                    const targetId = msg.targetTeamIdx !== undefined ? msg.targetTeamIdx : rnd(0, 15);
+                    extraHtml = `<div style="display:flex;gap:6px;margin-top:8px"><button class="btn btn-sm btn-p" style="flex:1" onclick="acceptJob(${targetId}, ${idx})">Accept Offer</button><button class="btn btn-d btn-sm" onclick="dismissMsg('${msg.id}');showToast('Tawaran pekerjaan ditolak.')">❌ Tolak</button></div>`;
                 } else if (msg.action) {
                     const targetId = msg.targetTeamIdx !== undefined ? msg.targetTeamIdx : rnd(0, 15);
                     extraHtml = `<div style="margin-top:8px"><button class="btn btn-sm btn-p" onclick="acceptJob(${targetId}, ${idx})">Accept Offer</button></div>`;
@@ -5116,6 +5303,25 @@ function buildMainActionBtn(){
     }
     
     // ─── Render Manager Tab ────────────────────────────────────────
+    function renderStaffRoleHTML(role){
+        const meta=STAFF_ROLES[role];
+        const hired=G.staff[role];
+        const stars=n=>'★'.repeat(n)+'☆'.repeat(5-n);
+        if(hired){
+            return `<div style="padding:8px 0;border-bottom:1px solid var(--sf2)">
+                <div class="row bt"><div><div style="font-size:.78rem;font-weight:bold">${meta.icon} ${meta.label}: ${hired.name}</div><div style="font-size:.62rem;color:var(--dim)">${meta.desc}</div><div style="font-size:.65rem;color:var(--gold);margin-top:2px">${stars(hired.rating)} · ${fmt(hired.salary)}/week</div></div>
+                <button class="btn btn-d btn-sm" onclick="fireStaff('${role}')">Release</button></div>
+            </div>`;
+        }
+        const cands=G.staffCandidates[role];
+        return `<div style="padding:8px 0;border-bottom:1px solid var(--sf2)">
+            <div style="font-size:.78rem;font-weight:bold">${meta.icon} ${meta.label}: <span style="color:var(--dim);font-weight:normal">Vacant</span></div>
+            <div style="font-size:.62rem;color:var(--dim);margin-bottom:6px">${meta.desc}</div>
+            ${cands ? cands.map((c,i)=>`<div class="row bt" style="padding:4px 0"><span style="font-size:.72rem">${c.name} — ${stars(c.rating)} <span style="color:var(--dim)">(${fmt(c.salary)}/wk)</span></span><button class="btn btn-g btn-sm" onclick="hireStaff('${role}',${i})">Hire</button></div>`).join('')
+                + `<button class="btn btn-s btn-sm btn-blk" style="margin-top:5px" onclick="refreshStaffCandidates('${role}')">🔄 Refresh Candidates (${fmt(0.05)})</button>`
+                : `<button class="btn btn-p btn-sm" onclick="refreshStaffCandidates('${role}')">🔍 Scout Candidates (${fmt(0.05)})</button>`}
+        </div>`;
+    }
     function renderManager(){
         const reqUsed = G.budgetRequestsUsed || 0;
         
@@ -5156,6 +5362,10 @@ function buildMainActionBtn(){
                     <div><div style="font-size:.78rem;font-weight:bold">${label} <span style="color:var(--gold)">Lv.${G.stadium[f]}</span></div><div style="font-size:.62rem;color:var(--dim)">${desc}</div></div>
                     ${G.stadium[f]>=5?'<span class="pill" style="border-color:var(--gg);color:var(--gg)">MAX</span>':`<button class="btn btn-sm btn-p" onclick="upgradeStadium('${f}')">+1 (${fmt(stadiumUpgradeCost(G.stadium[f]))})</button>`}
                 </div>`).join('')}
+        </div>
+        <div class="card" style="border-color:var(--bg2)">
+            <div class="sec" style="color:var(--bg2)">🧑‍💼 Coaching Staff</div>
+            ${Object.keys(STAFF_ROLES).map(role=>renderStaffRoleHTML(role)).join('')}
         </div>
         <div class="card" style="border-color:var(--gg)">
             <div class="sec" style="color:var(--gg)">🤝 Sponsorship Deals</div>
@@ -5474,7 +5684,7 @@ function buildMainActionBtn(){
             const oldName = TEAMS[idx], oldShort = TEAMS_SHORT[idx];
             const liga2Idx = promotedLiga2Idxs[i];
             const incoming = (liga2Idx !== undefined) ? {name: LIGA2_TEAMS[liga2Idx], short: LIGA2_TEAMS_SHORT[liga2Idx]} : null;
-            try { relegateAndPromote(idx, incoming); } catch(e) { /* never let a relegation swap break the season rollover */ }
+            try { relegateAndPromote(idx, incoming); } catch(e) { console.error('relegateAndPromote failed:', e); }
             // Send the relegated Liga 1 club's identity down into the Liga 2 slot that was just
             // vacated by promotion — same rotating-identity idea as before, but now grounded in
             // an actual second-tier table instead of a static queue.
@@ -5567,6 +5777,7 @@ function buildMainActionBtn(){
             }
             sq.forEach(p=>{
                 p.energy=100; p.contract--; p.age++; p.injury=0;
+                if((p.squadLevel||'senior')==='u21' && p.age>21) p.squadLevel='senior';
                 let gro=0;
                 if(p.age < 24 && p.ovr < p.pot) gro = rnd(1, 3);
                 else if(p.age >= 24 && p.age < 30 && p.ovr < p.pot) gro = rnd(0, 2);
@@ -5665,7 +5876,7 @@ function buildMainActionBtn(){
         G.news.unshift({date: formatDate(G.currentDate), title: `Selamat Datang di Musim ${G.season}!`, body: `Musim baru di depan mata. Semua klub memantapkan taktik dan merampungkan transfer demi musim yang mendebarkan.`, tags:['club']});
         if(!sackedMsg && (finalPos<=5||Math.random()>0.6) && G.reputation>=30){
             let target=rnd(0,15);while(target===G.playerTeamIdx)target=rnd(0,15);
-            G.inbox.unshift({id:Math.random().toString(36).substr(2,9),title:'Tawaran Pekerjaan',body:`Manajemen ${TEAMS[target]} terkesan dengan kinerja Anda. Mereka ingin Anda menjadi manajer baru!`,action:true,targetTeamIdx:target, isRead: false});
+            G.inbox.unshift({id:Math.random().toString(36).substr(2,9),type:'job_offer',title:'Tawaran Pekerjaan',body:`Manajemen ${TEAMS[target]} terkesan dengan kinerja Anda. Mereka ingin Anda menjadi manajer baru!`,action:true,targetTeamIdx:target, isRead: false});
         }
         saveState();closeModal(true);renderAll();showToast(sackedMsg||"Musim Baru Dimulai!");
     }
@@ -5776,6 +5987,13 @@ function buildMainActionBtn(){
                 <div class="sec">🎯 Fokus Training Individu</div>
                 ${Object.entries(INDIV_FOCUS).map(([k,v])=>`<button class="btn btn-sm ${(p.indivFocus||'none')===k?'btn-p':'btn-s'}" onclick="setIndivFocus('${p.id}','${k}')">${v.label}</button>`).join(' ')}
                 ${INDIV_FOCUS[p.indivFocus||'none'].desc ? `<p style="font-size:.62rem;color:var(--dim);margin-top:7px">${INDIV_FOCUS[p.indivFocus||'none'].desc}</p>` : ''}
+            </div>
+            <div class="card" style="margin-top:10px">
+                <div class="sec">🌱 Squad Level</div>
+                <div class="row bt"><span>Currently in:</span><b style="color:${(p.squadLevel||'senior')==='u21'?'var(--gold)':'var(--gg)'}">${(p.squadLevel||'senior')==='u21'?'U-21 Squad':'Senior Squad'}</b></div>
+                ${(p.squadLevel||'senior')==='u21'
+                    ? `<button class="btn btn-g btn-sm" style="margin-top:7px" onclick="moveToSenior('${p.id}')">⬆️ Move to Senior Squad</button>`
+                    : (p.age<=21 ? `<button class="btn btn-s btn-sm" style="margin-top:7px" onclick="moveToU21('${p.id}')">🌱 Move to U-21 Squad</button>` : `<p style="font-size:.62rem;color:var(--dim);margin-top:7px">Only players aged 21 or under are eligible for the U-21 squad.</p>`)}
             </div>` : ''}`;
             
             let retireBtn = '';
